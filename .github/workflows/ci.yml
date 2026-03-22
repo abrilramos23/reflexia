@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [development]
+  pull_request:
+    branches: [development, main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout codi
+        uses: actions/checkout@v3
+
+      - name: Instal·lar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+
+      - name: Instal·lar dependències backend
+        working-directory: reflexia-backend
+        run: npm install
+
+      - name: Executar linting backend
+        working-directory: reflexia-backend
+        run: npm run lint
+
+      - name: Executar tests backend
+        working-directory: reflexia-backend
+        run: npm test
+
+      - name: Instal·lar dependències frontend
+        working-directory: reflexia-frontend
+        run: npm install
+
+      - name: Executar linting frontend
+        working-directory: reflexia-frontend
+        run: npm run lint
