@@ -2,3 +2,10 @@
 node_modules/
 *.log
 .DS_Store
+
+# Python / Django
+reflexia-backend/venv/
+reflexia-backend/__pycache__/
+reflexia-backend/**/__pycache__/
+reflexia-backend/**/*.pyc
+reflexia-backend/db.sqlite3
