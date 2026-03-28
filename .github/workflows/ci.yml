@@ -14,22 +14,17 @@ jobs:
       - name: Checkout codi
         uses: actions/checkout@v3
 
-      - name: Instal·lar Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 22
-
       - name: Instal·lar dependències backend
         working-directory: reflexia-backend
-        run: npm install
+        run: pip install -r requirements.txt
 
       - name: Executar linting backend
         working-directory: reflexia-backend
-        run: npm run lint
+        run: python manage.py check
 
       - name: Executar tests backend
         working-directory: reflexia-backend
-        run: npm test
+        run: python manage.py test
 
       - name: Instal·lar dependències frontend
         working-directory: reflexia-frontend
