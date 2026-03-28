@@ -1,0 +1,62 @@
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+
+from apps.users.models import Patient, Therapist, TherapistPatient, User
+
+
+@admin.register(User)
+class UserAdmin(DjangoUserAdmin):
+    model = User
+    ordering = ("email",)
+    list_display = (
+        "email",
+        "first_name",
+        "last_name",
+        "is_staff",
+        "is_active",
+        "two_factor_enabled",
+    )
+    list_filter = ("is_staff", "is_active", "two_factor_enabled")
+    search_fields = ("email", "first_name", "last_name")
+
+    fieldsets = (
+        (None, {"fields": ("email", "password")}),
+        ("Personal info", {"fields": ("first_name", "last_name")}),
+        ("Security", {"fields": ("two_factor_enabled",)}),
+        ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
+        ("Important dates", {"fields": ("last_login", "registration_date")}),
+    )
+    add_fieldsets = (
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": ("email", "first_name", "last_name", "password1", "password2", "is_staff", "is_active"),
+            },
+        ),
+    )
+
+
+@admin.register(Patient)
+class PatientAdmin(admin.ModelAdmin):
+    list_display = ("email", "first_name", "last_name", "birth_date", "consent_accepted")
+    list_filter = ("consent_accepted",)
+    search_fields = ("email", "first_name", "last_name")
+
+
+@admin.register(Therapist)
+class TherapistAdmin(admin.ModelAdmin):
+    list_display = ("email", "first_name", "last_name", "license_number", "specialty")
+    search_fields = ("email", "first_name", "last_name", "license_number", "specialty")
+
+
+@admin.register(TherapistPatient)
+class TherapistPatientAdmin(admin.ModelAdmin):
+    list_display = ("patient", "therapist")
+    search_fields = (
+        "patient__email",
+        "patient__first_name",
+        "patient__last_name",
+        "therapist__email",
+        "therapist__license_number",
+    )
