@@ -9,10 +9,37 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: reflexiadb
+          POSTGRES_USER: reflexia
+          POSTGRES_PASSWORD: reflexia
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U reflexia -d reflexiadb"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: reflexiadb
+      DB_USER: reflexia
+      DB_PASSWORD: reflexia
+      SECRET_KEY: ci-secret-key
+      DEBUG: False
 
     steps:
       - name: Checkout codi
         uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
 
       - name: Instal·lar dependències backend
         working-directory: reflexia-backend
