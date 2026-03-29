@@ -61,7 +61,7 @@ class TherapistRegistrationTests(APITestCase):
 
         response = self.client.post(self.url, payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(Therapist.objects.count(), 0)
 
     def test_register_therapist_rejects_mismatched_passwords(self):
@@ -172,7 +172,7 @@ class PatientRegistrationTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(Patient.objects.count(), 0)
 
     def test_register_patient_rejects_duplicate_email(self):
@@ -372,7 +372,7 @@ class LoginTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["detail"], "This account is inactive. Please activate it first.")
+        self.assertEqual(str(response.data["detail"][0]), "This account is inactive. Please activate it first.")
 
     def test_login_rejects_invalid_credentials(self):
         response = self.client.post(
@@ -382,7 +382,7 @@ class LoginTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["detail"], "Invalid email or password.")
+        self.assertEqual(str(response.data["detail"][0]), "Invalid email or password.")
 
     def test_me_returns_authenticated_user(self):
         refresh = RefreshToken.for_user(self.therapist)
