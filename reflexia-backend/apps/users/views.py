@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.http import FileResponse, Http404
 from rest_framework import status
 from django.conf import settings
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
@@ -211,4 +214,19 @@ class TwoFactorDisableView(APIView):
                 "user": UserSummarySerializer(user).data,
             },
             status=status.HTTP_200_OK,
+        )
+
+
+class ConsentDocumentView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        pdf_path = Path(__file__).resolve().parent / "data" / "Reflexia_ Consentiment Informat.pdf"
+        if not pdf_path.exists():
+            raise Http404("Consent document not found.")
+
+        return FileResponse(
+            pdf_path.open("rb"),
+            content_type="application/pdf",
+            filename="Reflexia_Consentiment_Informat.pdf",
         )

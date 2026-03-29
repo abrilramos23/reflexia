@@ -505,3 +505,11 @@ class LoginTests(APITestCase):
         self.therapist.refresh_from_db()
         self.assertFalse(self.therapist.two_factor_enabled)
         self.assertEqual(self.therapist.two_factor_secret, "")
+
+
+class ConsentDocumentTests(APITestCase):
+    def test_consent_document_is_available(self):
+        response = self.client.get("/api/auth/consent/document/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "application/pdf")

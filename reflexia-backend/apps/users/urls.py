@@ -2,6 +2,7 @@ from django.http import JsonResponse
 from django.urls import path
 
 from apps.users.views import (
+    ConsentDocumentView,
     LoginView,
     LogoutView,
     MeView,
@@ -22,6 +23,7 @@ def index(request):
 
 urlpatterns = [
     path('', index),
+    path('auth/consent/document/', ConsentDocumentView.as_view(), name='consent-document'),
     path('auth/login/', LoginView.as_view(), name='login'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     path('auth/me/', MeView.as_view(), name='me'),
