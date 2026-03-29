@@ -37,6 +37,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     registration_date = models.DateTimeField(default=timezone.now)
     two_factor_enabled = models.BooleanField(default=False)
+    two_factor_secret = models.CharField(max_length=64, blank=True)
+    two_factor_pending_secret = models.CharField(max_length=64, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 

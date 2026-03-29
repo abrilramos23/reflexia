@@ -3,8 +3,11 @@ from django.core import mail
 from django.test import override_settings
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+import pyotp
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.models import Patient, ProfessionalDirectoryEntry, Therapist, TherapistPatient, User
 
@@ -266,3 +269,239 @@ class PatientActivationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.patient.refresh_from_db()
         self.assertFalse(self.patient.is_active)
+
+
+class LoginTests(APITestCase):
+    def setUp(self):
+        self.therapist = Therapist.objects.create_user(
+            email="therapist@example.com",
+            password="StrongPass123!",
+            first_name="Marta",
+            last_name="Lopez",
+            license_number="16385",
+            specialty="Clinical Psychology",
+        )
+        self.patient = Patient.objects.create_user(
+            email="patient@example.com",
+            password="StrongPass123!",
+            first_name="Paula",
+            last_name="Sanchez",
+            birth_date="2001-01-10",
+            is_active=True,
+        )
+        self.inactive_patient = Patient.objects.create(
+            email="inactive@example.com",
+            first_name="Inactive",
+            last_name="Patient",
+            birth_date="2002-02-02",
+            is_active=False,
+        )
+        self.inactive_patient.set_password("StrongPass123!")
+        self.inactive_patient.save(update_fields=["password", "is_active"])
+        self.login_url = "/api/auth/login/"
+        self.logout_url = "/api/auth/logout/"
+        self.me_url = "/api/auth/me/"
+        self.accept_consent_url = "/api/auth/consent/accept/"
+        self.reject_consent_url = "/api/auth/consent/reject/"
+        self.two_factor_setup_url = "/api/auth/2fa/setup/"
+        self.two_factor_enable_url = "/api/auth/2fa/enable/"
+        self.two_factor_verify_url = "/api/auth/2fa/verify/"
+        self.two_factor_disable_url = "/api/auth/2fa/disable/"
+
+    def test_login_returns_jwt_tokens_for_therapist(self):
+        response = self.client.post(
+            self.login_url,
+            {"email": "therapist@example.com", "password": "StrongPass123!"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["login_status"], "authenticated")
+        self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
+        self.assertEqual(response.data["user"]["role"], "therapist")
+
+    def test_login_returns_jwt_tokens_for_patient_with_consent(self):
+        self.patient.consent_accepted = True
+        self.patient.save(update_fields=["consent_accepted"])
+
+        response = self.client.post(
+            self.login_url,
+            {"email": "patient@example.com", "password": "StrongPass123!"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["login_status"], "authenticated")
+        self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
+        self.assertEqual(response.data["user"]["role"], "patient")
+
+    def test_login_requires_patient_consent_before_home(self):
+        response = self.client.post(
+            self.login_url,
+            {"email": "patient@example.com", "password": "StrongPass123!"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["login_status"], "consent_required")
+        self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
+
+    def test_login_flags_two_factor_when_enabled(self):
+        self.therapist.two_factor_enabled = True
+        self.therapist.save(update_fields=["two_factor_enabled"])
+
+        response = self.client.post(
+            self.login_url,
+            {"email": "therapist@example.com", "password": "StrongPass123!"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["login_status"], "two_factor_required")
+        self.assertIsNone(response.data["access"])
+        self.assertIsNone(response.data["refresh"])
+
+    def test_login_rejects_inactive_patient(self):
+        response = self.client.post(
+            self.login_url,
+            {"email": "inactive@example.com", "password": "StrongPass123!"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["detail"], "This account is inactive. Please activate it first.")
+
+    def test_login_rejects_invalid_credentials(self):
+        response = self.client.post(
+            self.login_url,
+            {"email": "therapist@example.com", "password": "wrong-password"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["detail"], "Invalid email or password.")
+
+    def test_me_returns_authenticated_user(self):
+        refresh = RefreshToken.for_user(self.therapist)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.get(self.me_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["email"], "therapist@example.com")
+        self.assertEqual(response.data["role"], "therapist")
+
+    def test_logout_blacklists_refresh_token(self):
+        refresh = RefreshToken.for_user(self.therapist)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.post(self.logout_url, {"refresh": str(refresh)}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        outstanding_token = OutstandingToken.objects.get(user=self.therapist)
+        self.assertTrue(BlacklistedToken.objects.filter(token=outstanding_token).exists())
+
+    def test_patient_can_accept_consent(self):
+        refresh = RefreshToken.for_user(self.patient)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.post(self.accept_consent_url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.patient.refresh_from_db()
+        self.assertTrue(self.patient.consent_accepted)
+        self.assertIsNotNone(self.patient.consent_date)
+
+    def test_patient_can_reject_consent_and_account_becomes_inactive(self):
+        refresh = RefreshToken.for_user(self.patient)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.post(
+            self.reject_consent_url,
+            {"refresh": str(refresh)},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.patient.refresh_from_db()
+        self.assertFalse(self.patient.consent_accepted)
+        self.assertFalse(self.patient.is_active)
+        outstanding_token = OutstandingToken.objects.get(user=self.patient)
+        self.assertTrue(BlacklistedToken.objects.filter(token=outstanding_token).exists())
+
+    def test_user_can_setup_and_enable_two_factor(self):
+        refresh = RefreshToken.for_user(self.therapist)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        setup_response = self.client.post(self.two_factor_setup_url, format="json")
+
+        self.assertEqual(setup_response.status_code, status.HTTP_200_OK)
+        self.assertIn("secret", setup_response.data)
+        self.assertIn("otpauth_url", setup_response.data)
+
+        code = pyotp.TOTP(setup_response.data["secret"]).now()
+        enable_response = self.client.post(
+            self.two_factor_enable_url,
+            {"code": code},
+            format="json",
+        )
+
+        self.assertEqual(enable_response.status_code, status.HTTP_200_OK)
+        self.therapist.refresh_from_db()
+        self.assertTrue(self.therapist.two_factor_enabled)
+        self.assertTrue(self.therapist.two_factor_secret)
+
+    def test_login_with_two_factor_can_be_completed(self):
+        secret = pyotp.random_base32()
+        self.therapist.two_factor_enabled = True
+        self.therapist.two_factor_secret = secret
+        self.therapist.save(update_fields=["two_factor_enabled", "two_factor_secret"])
+
+        login_response = self.client.post(
+            self.login_url,
+            {"email": "therapist@example.com", "password": "StrongPass123!"},
+            format="json",
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(login_response.data["login_status"], "two_factor_required")
+
+        verify_response = self.client.post(
+            self.two_factor_verify_url,
+            {
+                "email": "therapist@example.com",
+                "password": "StrongPass123!",
+                "code": pyotp.TOTP(secret).now(),
+            },
+            format="json",
+        )
+
+        self.assertEqual(verify_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(verify_response.data["login_status"], "authenticated")
+        self.assertIn("access", verify_response.data)
+        self.assertIn("refresh", verify_response.data)
+
+    def test_user_can_disable_two_factor(self):
+        secret = pyotp.random_base32()
+        self.therapist.two_factor_enabled = True
+        self.therapist.two_factor_secret = secret
+        self.therapist.save(update_fields=["two_factor_enabled", "two_factor_secret"])
+
+        refresh = RefreshToken.for_user(self.therapist)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.post(
+            self.two_factor_disable_url,
+            {
+                "password": "StrongPass123!",
+                "code": pyotp.TOTP(secret).now(),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.therapist.refresh_from_db()
+        self.assertFalse(self.therapist.two_factor_enabled)
+        self.assertEqual(self.therapist.two_factor_secret, "")
