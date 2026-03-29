@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from apps.users.models import Patient, Therapist, TherapistPatient, User
+from apps.users.models import Patient, ProfessionalDirectoryEntry, Therapist, TherapistPatient, User
 
 
 @admin.register(User)
@@ -60,3 +60,9 @@ class TherapistPatientAdmin(admin.ModelAdmin):
         "therapist__email",
         "therapist__license_number",
     )
+
+
+@admin.register(ProfessionalDirectoryEntry)
+class ProfessionalDirectoryEntryAdmin(admin.ModelAdmin):
+    list_display = ("license_number", "complete_name")
+    search_fields = ("license_number", "complete_name")

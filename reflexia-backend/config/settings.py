@@ -90,6 +90,13 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@reflexia.local')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',
+)
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.User'

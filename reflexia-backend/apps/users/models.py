@@ -80,7 +80,7 @@ class Therapist(User):
         db_column="id",
         related_name="therapist_profile",
     )
-    license_number = models.CharField(max_length=100)
+    license_number = models.CharField(max_length=100, unique=True)
     specialty = models.CharField(max_length=150)
 
     class Meta:
@@ -109,3 +109,15 @@ class TherapistPatient(models.Model):
                 name="unique_patient_therapist_relationship",
             )
         ]
+
+
+class ProfessionalDirectoryEntry(models.Model):
+    license_number = models.CharField(max_length=100, unique=True)
+    complete_name = models.CharField(max_length=255)
+
+    class Meta:
+        verbose_name = "professional directory entry"
+        verbose_name_plural = "professional directory entries"
+
+    def __str__(self):
+        return f"{self.license_number} - {self.complete_name}"
