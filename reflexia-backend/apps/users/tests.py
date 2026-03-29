@@ -153,7 +153,8 @@ class PatientRegistrationTests(APITestCase):
         self.assertFalse(patient.is_active)
         self.assertFalse(patient.has_usable_password())
         self.assertEqual(len(mail.outbox), 1)
-        self.assertIn("activate-account", response.data["activation_url"])
+        self.assertTrue(response.data["activation_email_sent"])
+        self.assertIn("activate-account", mail.outbox[0].body)
         self.assertEqual(mail.outbox[0].to, ["pablo@example.com"])
 
     def test_register_patient_requires_therapist_user(self):
