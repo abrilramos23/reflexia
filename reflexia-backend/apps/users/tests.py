@@ -513,3 +513,76 @@ class ConsentDocumentTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response["Content-Type"], "application/pdf")
+
+
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    FRONTEND_URL="http://localhost:5173",
+)
+class PasswordRecoveryTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="recover@example.com",
+            password="StrongPass123!",
+            first_name="Recover",
+            last_name="User",
+        )
+        self.forgot_url = "/api/auth/password/forgot/"
+        self.reset_url = "/api/auth/password/reset/"
+
+    def test_forgot_password_sends_email_when_user_exists(self):
+        response = self.client.post(
+            self.forgot_url,
+            {"email": "recover@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("reset-password", mail.outbox[0].body)
+        self.assertEqual(mail.outbox[0].to, ["recover@example.com"])
+
+    def test_forgot_password_returns_same_response_for_unknown_email(self):
+        response = self.client.post(
+            self.forgot_url,
+            {"email": "unknown@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_reset_password_updates_user_password(self):
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        token = default_token_generator.make_token(self.user)
+
+        response = self.client.post(
+            self.reset_url,
+            {
+                "uid": uid,
+                "token": token,
+                "password": "NewStrongPass123!",
+                "password_confirm": "NewStrongPass123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("NewStrongPass123!"))
+
+    def test_reset_password_rejects_invalid_token(self):
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+
+        response = self.client.post(
+            self.reset_url,
+            {
+                "uid": uid,
+                "token": "invalid-token",
+                "password": "NewStrongPass123!",
+                "password_confirm": "NewStrongPass123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

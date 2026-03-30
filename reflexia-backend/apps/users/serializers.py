@@ -9,7 +9,14 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.models import Patient, ProfessionalDirectoryEntry, Therapist, User
-from apps.users.services import activate_patient_account, register_patient, register_therapist
+from apps.users.services import (
+    activate_patient_account,
+    build_password_reset_url,
+    register_patient,
+    register_therapist,
+    reset_user_password,
+    send_password_reset_email,
+)
 
 
 class UserSummarySerializer(serializers.ModelSerializer):
@@ -363,3 +370,52 @@ class TwoFactorDisableSerializer(serializers.Serializer):
         user.two_factor_pending_secret = ""
         user.save(update_fields=["two_factor_enabled", "two_factor_secret", "two_factor_pending_secret"])
         return user
+
+
+class PasswordForgotSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def save(self, **kwargs):
+        email = self.validated_data["email"].strip().lower()
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return None
+
+        reset_url = build_password_reset_url(user)
+        send_password_reset_email(user=user, reset_url=reset_url)
+        return user
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    password = serializers.CharField(write_only=True, min_length=8, style={"input_type": "password"})
+    password_confirm = serializers.CharField(write_only=True, style={"input_type": "password"})
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password_confirm"]:
+            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+
+        user = self._get_user(attrs["uid"])
+        if user is None:
+            raise serializers.ValidationError({"uid": "Invalid reset identifier."})
+        if not default_token_generator.check_token(user, attrs["token"]):
+            raise serializers.ValidationError({"token": "Invalid or expired reset token."})
+
+        attrs["user"] = user
+        return attrs
+
+    def _get_user(self, uid):
+        try:
+            decoded_uid = force_str(urlsafe_base64_decode(uid))
+            return User.objects.get(pk=decoded_uid)
+        except (User.DoesNotExist, TypeError, ValueError, OverflowError):
+            return None
+
+    def save(self, **kwargs):
+        user = self.validated_data["user"]
+        try:
+            return reset_user_password(user=user, password=self.validated_data["password"])
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)}) from exc

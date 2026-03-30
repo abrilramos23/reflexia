@@ -10,6 +10,8 @@ from rest_framework.views import APIView
 from apps.users.permissions import IsTherapistUser
 from apps.users.serializers import (
     LoginSerializer,
+    PasswordForgotSerializer,
+    PasswordResetSerializer,
     PatientConsentAcceptSerializer,
     PatientConsentRejectSerializer,
     PatientActivationSerializer,
@@ -104,6 +106,36 @@ class LogoutView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.blacklist()
         return Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
+
+
+class PasswordForgotView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasswordForgotSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {
+                "message": "If the email exists, a password reset link has been sent.",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class PasswordResetView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {
+                "message": "Password updated successfully.",
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class MeView(APIView):
