@@ -747,3 +747,39 @@ class ProfileManagementTests(APITestCase):
         assigned_patient.refresh_from_db()
         self.assertFalse(assigned_patient.is_active)
         self.assertTrue(assigned_patient.email.startswith("deleted-"))
+
+    def test_therapist_can_delete_account_after_deactivating_assigned_patients(self):
+        assigned_patient = Patient.objects.create_user(
+            email="assigned@example.com",
+            password="StrongPass123!",
+            first_name="Assigned",
+            last_name="Patient",
+            birth_date="2000-01-01",
+            is_active=True,
+        )
+        TherapistPatient.objects.create(patient=assigned_patient, therapist=self.therapist)
+
+        therapist_refresh = RefreshToken.for_user(self.therapist)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {therapist_refresh.access_token}")
+
+        deactivate_response = self.client.post(
+            self.patient_deactivate_url,
+            {"patient_id": str(assigned_patient.pk)},
+            format="json",
+        )
+
+        self.assertEqual(deactivate_response.status_code, status.HTTP_200_OK)
+
+        delete_response = self.client.post(
+            self.delete_account_url,
+            {
+                "password": "StrongPass123!",
+                "refresh": str(therapist_refresh),
+            },
+            format="json",
+        )
+
+        self.assertEqual(delete_response.status_code, status.HTTP_200_OK)
+        self.therapist.refresh_from_db()
+        self.assertFalse(self.therapist.is_active)
+        self.assertTrue(self.therapist.email.startswith("deleted-"))
