@@ -139,6 +139,11 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
+    'SWAGGER_UI_SETTINGS': {
+        'persistAuthorization': True,
+        'displayRequestDuration': True,
+        'filter': True,
+    },
     'TAGS': [
         {'name': 'auth', 'description': 'Autenticacio, registre, recuperacio i tancament de sessio.'},
         {'name': 'profile', 'description': 'Gestio del perfil, consentiment i eliminacio de compte.'},

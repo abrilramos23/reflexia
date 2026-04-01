@@ -3,7 +3,6 @@ from pathlib import Path
 from django.http import FileResponse, Http404
 from rest_framework import status
 from django.conf import settings
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, inline_serializer
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
@@ -43,6 +42,21 @@ class TherapistRegistrationView(APIView):
         responses={
             201: TherapistRegistrationSerializer,
         },
+        examples=[
+            OpenApiExample(
+                "Crear terapeuta",
+                value={
+                    "first_name": "Marta",
+                    "last_name": "Lopez",
+                    "email": "therapist@example.com",
+                    "password": "StrongPass123!",
+                    "password_confirm": "StrongPass123!",
+                    "license_number": "21039",
+                    "specialty": "Clinical Psychology",
+                },
+                request_only=True,
+            )
+        ],
     )
     def post(self, request):
         serializer = TherapistRegistrationSerializer(data=request.data)
@@ -78,6 +92,19 @@ class PatientRegistrationView(APIView):
                 },
             ),
         },
+        examples=[
+            OpenApiExample(
+                "Crear pacient",
+                value={
+                    "first_name": "Paula",
+                    "last_name": "Sanchez",
+                    "email": "patient@example.com",
+                    "birth_date": "2001-01-10",
+                    "consent_accepted": False,
+                },
+                request_only=True,
+            )
+        ],
     )
     def post(self, request):
         serializer = PatientRegistrationSerializer(
@@ -219,6 +246,13 @@ class PasswordForgotView(APIView):
         responses={
             200: inline_serializer(name="PasswordForgotResponse", fields={"message": serializers.CharField()}),
         },
+        examples=[
+            OpenApiExample(
+                "Recuperar contrasenya",
+                value={"email": "user@example.com"},
+                request_only=True,
+            )
+        ],
     )
     def post(self, request):
         serializer = PasswordForgotSerializer(data=request.data)
@@ -336,6 +370,16 @@ class DeleteAccountView(APIView):
                 description="El terapeuta encara te pacients actius assignats.",
             ),
         },
+        examples=[
+            OpenApiExample(
+                "Eliminar compte",
+                value={
+                    "password": "StrongPass123!",
+                    "refresh": "jwt-refresh-token",
+                },
+                request_only=True,
+            )
+        ],
     )
     def post(self, request):
         serializer = DeleteAccountSerializer(data=request.data, context={"user": request.user})
