@@ -100,6 +100,22 @@ def send_password_reset_email(*, user, reset_url):
     )
 
 
+def send_account_deleted_email(*, user_email):
+    subject = "Your Reflexia account has been deleted"
+    message = (
+        "Your Reflexia account has been deactivated successfully.\n\n"
+        "Non-clinical profile data has been removed, and clinical records will be retained "
+        "only for the legally required period."
+    )
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [user_email],
+        fail_silently=False,
+    )
+
+
 @transaction.atomic
 def activate_patient_account(*, patient, password):
     validate_password(password, user=patient)
@@ -119,3 +135,115 @@ def reset_user_password(*, user, password):
     else:
         user.save(update_fields=["password"])
     return user
+
+
+@transaction.atomic
+def update_user_profile(*, user, email=None, specialty=None):
+    update_fields = []
+
+    if email is not None and user.email != email:
+        user.email = email
+        update_fields.append("email")
+
+    if hasattr(user, "therapist_profile") and specialty is not None:
+        therapist = user.therapist_profile
+        if therapist.specialty != specialty:
+            therapist.specialty = specialty
+            therapist.save(update_fields=["specialty"])
+
+    if update_fields:
+        user.save(update_fields=update_fields)
+    return user
+
+
+@transaction.atomic
+def change_user_password(*, user, current_password, new_password):
+    if not user.check_password(current_password):
+        raise DjangoValidationError({"current_password": ["Current password is incorrect."]})
+
+    validate_password(new_password, user=user)
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
+    return user
+
+
+@transaction.atomic
+def delete_user_account(*, user):
+    if hasattr(user, "therapist_profile"):
+        active_patient_links = TherapistPatient.objects.filter(
+            therapist=user.therapist_profile,
+            patient__is_active=True,
+        ).select_related("patient")
+        active_patients_count = active_patient_links.count()
+        if active_patients_count > 0:
+            raise DjangoValidationError(
+                {
+                    "assigned_patients": [f"This therapist still has {active_patients_count} active patients."],
+                    "patients": [
+                        {
+                            "id": str(link.patient.pk),
+                            "first_name": link.patient.first_name,
+                            "last_name": link.patient.last_name,
+                            "email": link.patient.email,
+                        }
+                        for link in active_patient_links
+                    ],
+                }
+            )
+
+    original_email = user.email
+    anonymized_identifier = str(user.pk)
+    user.email = f"deleted-{anonymized_identifier}@deleted.reflexia.local"
+    user.first_name = "Deleted"
+    user.last_name = "User"
+    user.two_factor_enabled = False
+    user.two_factor_secret = ""
+    user.two_factor_pending_secret = ""
+    user.is_active = False
+    user.set_unusable_password()
+    user.save(
+        update_fields=[
+            "email",
+            "first_name",
+            "last_name",
+            "two_factor_enabled",
+            "two_factor_secret",
+            "two_factor_pending_secret",
+            "is_active",
+            "password",
+        ]
+    )
+    send_account_deleted_email(user_email=original_email)
+    return user
+
+
+@transaction.atomic
+def deactivate_patient_by_therapist(*, therapist, patient):
+    relation_exists = TherapistPatient.objects.filter(
+        therapist=therapist,
+        patient=patient,
+    ).exists()
+    if not relation_exists:
+        raise DjangoValidationError({"patient": ["This patient is not assigned to the authenticated therapist."]})
+
+    patient.email = f"deleted-{patient.pk}@deleted.reflexia.local"
+    patient.first_name = "Deleted"
+    patient.last_name = "Patient"
+    patient.two_factor_enabled = False
+    patient.two_factor_secret = ""
+    patient.two_factor_pending_secret = ""
+    patient.is_active = False
+    patient.set_unusable_password()
+    patient.save(
+        update_fields=[
+            "email",
+            "first_name",
+            "last_name",
+            "two_factor_enabled",
+            "two_factor_secret",
+            "two_factor_pending_secret",
+            "is_active",
+            "password",
+        ]
+    )
+    return patient

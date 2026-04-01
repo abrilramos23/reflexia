@@ -586,3 +586,164 @@ class PasswordRecoveryTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class ProfileManagementTests(APITestCase):
+    def setUp(self):
+        self.patient = Patient.objects.create_user(
+            email="patient-profile@example.com",
+            password="StrongPass123!",
+            first_name="Paula",
+            last_name="Sanchez",
+            birth_date="2001-01-10",
+            is_active=True,
+        )
+        self.therapist = Therapist.objects.create_user(
+            email="therapist-profile@example.com",
+            password="StrongPass123!",
+            first_name="Marta",
+            last_name="Lopez",
+            license_number="21039",
+            specialty="Clinical Psychology",
+        )
+        self.patient_me_url = "/api/auth/me/"
+        self.change_password_url = "/api/auth/change-password/"
+        self.delete_account_url = "/api/auth/delete-account/"
+        self.patient_deactivate_url = "/api/auth/patients/deactivate/"
+
+    def test_patient_can_update_email(self):
+        refresh = RefreshToken.for_user(self.patient)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.patch(
+            self.patient_me_url,
+            {"email": "new-patient@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.patient.refresh_from_db()
+        self.assertEqual(self.patient.email, "new-patient@example.com")
+
+    def test_therapist_can_update_email_and_specialty(self):
+        refresh = RefreshToken.for_user(self.therapist)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.patch(
+            self.patient_me_url,
+            {
+                "email": "new-therapist@example.com",
+                "specialty": "Trauma Therapy",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.therapist.refresh_from_db()
+        self.assertEqual(self.therapist.email, "new-therapist@example.com")
+        self.assertEqual(self.therapist.specialty, "Trauma Therapy")
+
+    def test_patient_cannot_update_specialty(self):
+        refresh = RefreshToken.for_user(self.patient)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.patch(
+            self.patient_me_url,
+            {"specialty": "Not Allowed"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("specialty", response.data)
+
+    def test_user_can_change_password(self):
+        refresh = RefreshToken.for_user(self.patient)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.post(
+            self.change_password_url,
+            {
+                "current_password": "StrongPass123!",
+                "new_password": "NewStrongPass123!",
+                "new_password_confirm": "NewStrongPass123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.patient.refresh_from_db()
+        self.assertTrue(self.patient.check_password("NewStrongPass123!"))
+
+    def test_patient_can_delete_own_account(self):
+        refresh = RefreshToken.for_user(self.patient)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.post(
+            self.delete_account_url,
+            {
+                "password": "StrongPass123!",
+                "refresh": str(refresh),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.patient.refresh_from_db()
+        self.assertFalse(self.patient.is_active)
+        self.assertTrue(self.patient.email.startswith("deleted-"))
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_therapist_cannot_delete_account_with_assigned_patients(self):
+        assigned_patient = Patient.objects.create_user(
+            email="assigned@example.com",
+            password="StrongPass123!",
+            first_name="Assigned",
+            last_name="Patient",
+            birth_date="2000-01-01",
+            is_active=True,
+        )
+        TherapistPatient.objects.create(patient=assigned_patient, therapist=self.therapist)
+
+        refresh = RefreshToken.for_user(self.therapist)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.post(
+            self.delete_account_url,
+            {
+                "password": "StrongPass123!",
+                "refresh": str(refresh),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("assigned_patients", response.data)
+        self.assertIn("patients", response.data)
+        self.assertEqual(len(response.data["patients"]), 1)
+        self.assertEqual(response.data["patients"][0]["email"], "assigned@example.com")
+
+    def test_therapist_can_deactivate_patient_from_delete_flow(self):
+        assigned_patient = Patient.objects.create_user(
+            email="assigned@example.com",
+            password="StrongPass123!",
+            first_name="Assigned",
+            last_name="Patient",
+            birth_date="2000-01-01",
+            is_active=True,
+        )
+        TherapistPatient.objects.create(patient=assigned_patient, therapist=self.therapist)
+
+        refresh = RefreshToken.for_user(self.therapist)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+        response = self.client.post(
+            self.patient_deactivate_url,
+            {"patient_id": str(assigned_patient.pk)},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assigned_patient.refresh_from_db()
+        self.assertFalse(assigned_patient.is_active)
+        self.assertTrue(assigned_patient.email.startswith("deleted-"))

@@ -12,10 +12,14 @@ from apps.users.models import Patient, ProfessionalDirectoryEntry, Therapist, Us
 from apps.users.services import (
     activate_patient_account,
     build_password_reset_url,
+    change_user_password,
+    deactivate_patient_by_therapist,
+    delete_user_account,
     register_patient,
     register_therapist,
     reset_user_password,
     send_password_reset_email,
+    update_user_profile,
 )
 
 
@@ -419,3 +423,104 @@ class PasswordResetSerializer(serializers.Serializer):
             return reset_user_password(user=user, password=self.validated_data["password"])
         except DjangoValidationError as exc:
             raise serializers.ValidationError({"password": list(exc.messages)}) from exc
+
+
+class ProfileUpdateSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=False)
+    specialty = serializers.CharField(required=False, allow_blank=False)
+
+    def validate(self, attrs):
+        user = self.context["user"]
+
+        if hasattr(user, "patient_profile"):
+            allowed_fields = {"email"}
+        elif hasattr(user, "therapist_profile"):
+            allowed_fields = {"email", "specialty"}
+        else:
+            allowed_fields = {"email"}
+
+        invalid_fields = set(attrs.keys()) - allowed_fields
+        if invalid_fields:
+            raise serializers.ValidationError(
+                {field: "This field cannot be updated for this user." for field in invalid_fields}
+            )
+
+        email = attrs.get("email")
+        if email and User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
+            raise serializers.ValidationError({"email": "A user with this email already exists."})
+
+        return attrs
+
+    def save(self, **kwargs):
+        user = self.context["user"]
+        return update_user_profile(
+            user=user,
+            email=self.validated_data.get("email"),
+            specialty=self.validated_data.get("specialty"),
+        )
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    new_password = serializers.CharField(write_only=True, min_length=8, style={"input_type": "password"})
+    new_password_confirm = serializers.CharField(write_only=True, style={"input_type": "password"})
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password_confirm"]:
+            raise serializers.ValidationError({"new_password_confirm": "Passwords do not match."})
+        return attrs
+
+    def save(self, **kwargs):
+        user = self.context["user"]
+        try:
+            return change_user_password(
+                user=user,
+                current_password=self.validated_data["current_password"],
+                new_password=self.validated_data["new_password"],
+            )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict) from exc
+
+
+class DeleteAccountSerializer(RefreshTokenSerializer):
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        user = self.context["user"]
+        if not user.check_password(attrs["password"]):
+            raise serializers.ValidationError({"password": "Current password is incorrect."})
+        return attrs
+
+    def save(self, **kwargs):
+        user = self.context["user"]
+        try:
+            deleted_user = delete_user_account(user=user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict) from exc
+        self.blacklist()
+        return deleted_user
+
+
+class TherapistPatientDeactivateSerializer(serializers.Serializer):
+    patient_id = serializers.UUIDField()
+
+    def validate(self, attrs):
+        therapist = self.context["therapist"]
+        try:
+            patient = Patient.objects.get(pk=attrs["patient_id"])
+        except Patient.DoesNotExist as exc:
+            raise serializers.ValidationError({"patient_id": "Patient not found."}) from exc
+
+        attrs["patient"] = patient
+        attrs["therapist"] = therapist
+        return attrs
+
+    def save(self, **kwargs):
+        try:
+            return deactivate_patient_by_therapist(
+                therapist=self.validated_data["therapist"],
+                patient=self.validated_data["patient"],
+            )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict) from exc

@@ -9,6 +9,8 @@ from rest_framework.views import APIView
 
 from apps.users.permissions import IsTherapistUser
 from apps.users.serializers import (
+    ChangePasswordSerializer,
+    DeleteAccountSerializer,
     LoginSerializer,
     PasswordForgotSerializer,
     PasswordResetSerializer,
@@ -17,7 +19,9 @@ from apps.users.serializers import (
     PatientActivationSerializer,
     PatientRegistrationSerializer,
     RefreshTokenSerializer,
+    ProfileUpdateSerializer,
     TherapistRegistrationSerializer,
+    TherapistPatientDeactivateSerializer,
     TwoFactorDisableSerializer,
     TwoFactorEnableSerializer,
     TwoFactorSetupSerializer,
@@ -143,6 +147,67 @@ class MeView(APIView):
 
     def get(self, request):
         return Response(UserSummarySerializer(request.user).data, status=status.HTTP_200_OK)
+
+    def patch(self, request):
+        serializer = ProfileUpdateSerializer(data=request.data, context={"user": request.user})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(
+            {
+                "message": "Profile updated successfully.",
+                "user": UserSummarySerializer(user).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={"user": request.user})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {
+                "message": "Password updated successfully.",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class DeleteAccountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = DeleteAccountSerializer(data=request.data, context={"user": request.user})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {
+                "message": "Account deleted successfully.",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class TherapistPatientDeactivateView(APIView):
+    permission_classes = [IsTherapistUser]
+
+    def post(self, request):
+        serializer = TherapistPatientDeactivateSerializer(
+            data=request.data,
+            context={"therapist": request.user.therapist_profile},
+        )
+        serializer.is_valid(raise_exception=True)
+        patient = serializer.save()
+        return Response(
+            {
+                "message": "Patient deactivated successfully.",
+                "patient_id": str(patient.pk),
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class PatientConsentAcceptView(APIView):
