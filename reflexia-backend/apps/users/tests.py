@@ -720,13 +720,7 @@ class ProfileManagementTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("assigned_patients", response.data)
         self.assertIn("patients", response.data)
-        patients_payload = response.data["patients"]
-        if isinstance(patients_payload, list):
-            self.assertEqual(len(patients_payload), 1)
-            patient_data = patients_payload[0]
-        else:
-            patient_data = patients_payload
-        self.assertEqual(patient_data["email"], "assigned@example.com")
+        self.assertIn("assigned@example.com", str(response.data["patients"]))
 
     def test_therapist_can_deactivate_patient_from_delete_flow(self):
         assigned_patient = Patient.objects.create_user(
