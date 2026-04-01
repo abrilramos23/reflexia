@@ -497,7 +497,11 @@ class DeleteAccountSerializer(RefreshTokenSerializer):
         try:
             deleted_user = delete_user_account(user=user)
         except DjangoValidationError as exc:
-            raise serializers.ValidationError(exc.message_dict) from exc
+            error_data = exc.message_dict
+            patients = error_data.get("patients")
+            if isinstance(patients, dict):
+                error_data["patients"] = [patients]
+            raise serializers.ValidationError(error_data) from exc
         self.blacklist()
         return deleted_user
 
