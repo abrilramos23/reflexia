@@ -3,9 +3,12 @@ from pathlib import Path
 from django.http import FileResponse, Http404
 from rest_framework import status
 from django.conf import settings
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, inline_serializer
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import serializers
 
 from apps.users.permissions import IsTherapistUser
 from apps.users.serializers import (
@@ -33,6 +36,14 @@ from apps.users.serializers import (
 class TherapistRegistrationView(APIView):
     permission_classes = [IsAdminUser]
 
+    @extend_schema(
+        tags=["auth"],
+        summary="Registrar terapeuta",
+        request=TherapistRegistrationSerializer,
+        responses={
+            201: TherapistRegistrationSerializer,
+        },
+    )
     def post(self, request):
         serializer = TherapistRegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -45,6 +56,29 @@ class TherapistRegistrationView(APIView):
 class PatientRegistrationView(APIView):
     permission_classes = [IsTherapistUser]
 
+    @extend_schema(
+        tags=["auth"],
+        summary="Registrar pacient",
+        request=PatientRegistrationSerializer,
+        responses={
+            201: inline_serializer(
+                name="PatientRegistrationResponse",
+                fields={
+                    "id": serializers.UUIDField(),
+                    "first_name": serializers.CharField(),
+                    "last_name": serializers.CharField(),
+                    "email": serializers.EmailField(),
+                    "birth_date": serializers.DateField(),
+                    "consent_accepted": serializers.BooleanField(),
+                    "consent_date": serializers.DateTimeField(allow_null=True),
+                    "registration_date": serializers.DateTimeField(),
+                    "two_factor_enabled": serializers.BooleanField(),
+                    "activation_email_sent": serializers.BooleanField(),
+                    "activation_url": serializers.CharField(required=False),
+                },
+            ),
+        },
+    )
     def post(self, request):
         serializer = PatientRegistrationSerializer(
             data=request.data,
@@ -66,6 +100,22 @@ class PatientRegistrationView(APIView):
 class PatientActivationView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        tags=["auth"],
+        summary="Activar compte de pacient",
+        request=PatientActivationSerializer,
+        responses={
+            200: inline_serializer(
+                name="PatientActivationResponse",
+                fields={
+                    "id": serializers.UUIDField(),
+                    "email": serializers.EmailField(),
+                    "is_active": serializers.BooleanField(),
+                    "message": serializers.CharField(),
+                },
+            ),
+        },
+    )
     def post(self, request):
         serializer = PatientActivationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -85,6 +135,47 @@ class PatientActivationView(APIView):
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        tags=["auth"],
+        summary="Iniciar sessio",
+        request=LoginSerializer,
+        responses={
+            200: inline_serializer(
+                name="LoginResponse",
+                fields={
+                    "login_status": serializers.ChoiceField(
+                        choices=["authenticated", "consent_required", "two_factor_required"]
+                    ),
+                    "user": UserSummarySerializer(),
+                    "access": serializers.CharField(required=False, allow_null=True),
+                    "refresh": serializers.CharField(required=False, allow_null=True),
+                    "message": serializers.CharField(required=False, allow_null=True),
+                },
+            ),
+        },
+        examples=[
+            OpenApiExample(
+                "Login amb 2FA",
+                value={
+                    "login_status": "two_factor_required",
+                    "user": {
+                        "id": "11111111-1111-1111-1111-111111111111",
+                        "first_name": "Marta",
+                        "last_name": "Lopez",
+                        "email": "therapist@example.com",
+                        "two_factor_enabled": True,
+                        "is_active": True,
+                        "consent_accepted": None,
+                        "role": "therapist",
+                    },
+                    "access": None,
+                    "refresh": None,
+                    "message": "Two-factor verification is required to complete login.",
+                },
+                response_only=True,
+            )
+        ],
+    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
@@ -105,6 +196,12 @@ class LoginView(APIView):
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["auth"],
+        summary="Tancar sessio",
+        request=RefreshTokenSerializer,
+        responses={200: inline_serializer(name="LogoutResponse", fields={"message": serializers.CharField()})},
+    )
     def post(self, request):
         serializer = RefreshTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -115,6 +212,14 @@ class LogoutView(APIView):
 class PasswordForgotView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        tags=["auth"],
+        summary="Sollicitar recuperacio de contrasenya",
+        request=PasswordForgotSerializer,
+        responses={
+            200: inline_serializer(name="PasswordForgotResponse", fields={"message": serializers.CharField()}),
+        },
+    )
     def post(self, request):
         serializer = PasswordForgotSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -130,6 +235,14 @@ class PasswordForgotView(APIView):
 class PasswordResetView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        tags=["auth"],
+        summary="Restablir contrasenya",
+        request=PasswordResetSerializer,
+        responses={
+            200: inline_serializer(name="PasswordResetResponse", fields={"message": serializers.CharField()}),
+        },
+    )
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -145,9 +258,28 @@ class PasswordResetView(APIView):
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["profile"],
+        summary="Obtenir usuari autenticat",
+        responses={200: UserSummarySerializer},
+    )
     def get(self, request):
         return Response(UserSummarySerializer(request.user).data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        tags=["profile"],
+        summary="Actualitzar perfil",
+        request=ProfileUpdateSerializer,
+        responses={
+            200: inline_serializer(
+                name="ProfileUpdateResponse",
+                fields={
+                    "message": serializers.CharField(),
+                    "user": UserSummarySerializer(),
+                },
+            )
+        },
+    )
     def patch(self, request):
         serializer = ProfileUpdateSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
@@ -164,6 +296,14 @@ class MeView(APIView):
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["profile"],
+        summary="Canviar contrasenya",
+        request=ChangePasswordSerializer,
+        responses={
+            200: inline_serializer(name="ChangePasswordResponse", fields={"message": serializers.CharField()}),
+        },
+    )
     def post(self, request):
         serializer = ChangePasswordSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
@@ -179,6 +319,24 @@ class ChangePasswordView(APIView):
 class DeleteAccountView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["profile"],
+        summary="Eliminar compte",
+        request=DeleteAccountSerializer,
+        responses={
+            200: inline_serializer(name="DeleteAccountResponse", fields={"message": serializers.CharField()}),
+            400: OpenApiResponse(
+                response=inline_serializer(
+                    name="DeleteAccountBlockedResponse",
+                    fields={
+                        "assigned_patients": serializers.ListField(child=serializers.CharField()),
+                        "patients": serializers.JSONField(),
+                    },
+                ),
+                description="El terapeuta encara te pacients actius assignats.",
+            ),
+        },
+    )
     def post(self, request):
         serializer = DeleteAccountSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
@@ -194,6 +352,20 @@ class DeleteAccountView(APIView):
 class TherapistPatientDeactivateView(APIView):
     permission_classes = [IsTherapistUser]
 
+    @extend_schema(
+        tags=["profile"],
+        summary="Donar de baixa un pacient assignat",
+        request=TherapistPatientDeactivateSerializer,
+        responses={
+            200: inline_serializer(
+                name="PatientDeactivateResponse",
+                fields={
+                    "message": serializers.CharField(),
+                    "patient_id": serializers.UUIDField(),
+                },
+            ),
+        },
+    )
     def post(self, request):
         serializer = TherapistPatientDeactivateSerializer(
             data=request.data,
@@ -213,6 +385,20 @@ class TherapistPatientDeactivateView(APIView):
 class PatientConsentAcceptView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["profile"],
+        summary="Acceptar consentiment informat",
+        request=None,
+        responses={
+            200: inline_serializer(
+                name="PatientConsentAcceptResponse",
+                fields={
+                    "message": serializers.CharField(),
+                    "user": UserSummarySerializer(),
+                },
+            ),
+        },
+    )
     def post(self, request):
         if not hasattr(request.user, "patient_profile"):
             return Response(
@@ -234,6 +420,12 @@ class PatientConsentAcceptView(APIView):
 class PatientConsentRejectView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["profile"],
+        summary="Rebutjar consentiment informat",
+        request=RefreshTokenSerializer,
+        responses={200: inline_serializer(name="PatientConsentRejectResponse", fields={"message": serializers.CharField()})},
+    )
     def post(self, request):
         if not hasattr(request.user, "patient_profile"):
             return Response(
@@ -258,6 +450,20 @@ class PatientConsentRejectView(APIView):
 class TwoFactorSetupView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["2fa"],
+        summary="Iniciar configuracio 2FA",
+        request=None,
+        responses={
+            200: inline_serializer(
+                name="TwoFactorSetupResponse",
+                fields={
+                    "secret": serializers.CharField(),
+                    "otpauth_url": serializers.CharField(),
+                },
+            ),
+        },
+    )
     def post(self, request):
         serializer = TwoFactorSetupSerializer(context={"user": request.user})
         setup_data = serializer.save()
@@ -267,6 +473,20 @@ class TwoFactorSetupView(APIView):
 class TwoFactorEnableView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["2fa"],
+        summary="Activar 2FA",
+        request=TwoFactorEnableSerializer,
+        responses={
+            200: inline_serializer(
+                name="TwoFactorEnableResponse",
+                fields={
+                    "message": serializers.CharField(),
+                    "user": UserSummarySerializer(),
+                },
+            )
+        },
+    )
     def post(self, request):
         serializer = TwoFactorEnableSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
@@ -283,6 +503,22 @@ class TwoFactorEnableView(APIView):
 class TwoFactorVerifyView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        tags=["2fa"],
+        summary="Verificar codi 2FA en login",
+        request=TwoFactorVerifySerializer,
+        responses={
+            200: inline_serializer(
+                name="TwoFactorVerifyResponse",
+                fields={
+                    "login_status": serializers.ChoiceField(choices=["authenticated", "consent_required"]),
+                    "user": UserSummarySerializer(),
+                    "access": serializers.CharField(),
+                    "refresh": serializers.CharField(),
+                },
+            ),
+        },
+    )
     def post(self, request):
         serializer = TwoFactorVerifySerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
@@ -301,6 +537,20 @@ class TwoFactorVerifyView(APIView):
 class TwoFactorDisableView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["2fa"],
+        summary="Desactivar 2FA",
+        request=TwoFactorDisableSerializer,
+        responses={
+            200: inline_serializer(
+                name="TwoFactorDisableResponse",
+                fields={
+                    "message": serializers.CharField(),
+                    "user": UserSummarySerializer(),
+                },
+            )
+        },
+    )
     def post(self, request):
         serializer = TwoFactorDisableSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
@@ -317,6 +567,13 @@ class TwoFactorDisableView(APIView):
 class ConsentDocumentView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        tags=["documents"],
+        summary="Descarregar document de consentiment",
+        responses={
+            200: OpenApiResponse(description="Fitxer PDF del consentiment informat."),
+        },
+    )
     def get(self, request):
         pdf_path = Path(__file__).resolve().parent / "data" / "Reflexia_ Consentiment Informat.pdf"
         if not pdf_path.exists():

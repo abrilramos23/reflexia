@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
+    'drf_spectacular',
     'config',
     'apps.users',
     'apps.contacts',
@@ -121,6 +122,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 SIMPLE_JWT = {
@@ -129,6 +131,20 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Reflexia API',
+    'DESCRIPTION': 'Documentacio OpenAPI dels endpoints de Reflexia.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'TAGS': [
+        {'name': 'auth', 'description': 'Autenticacio, registre, recuperacio i tancament de sessio.'},
+        {'name': 'profile', 'description': 'Gestio del perfil, consentiment i eliminacio de compte.'},
+        {'name': '2fa', 'description': 'Configuracio i verificacio del doble factor d’autenticacio.'},
+        {'name': 'documents', 'description': 'Documents legals i recursos descarregables.'},
+    ],
 }
 
 # CORS — allow all origins in development
