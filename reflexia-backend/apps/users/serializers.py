@@ -26,6 +26,7 @@ from apps.users.services import (
 class UserSummarySerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
     consent_accepted = serializers.SerializerMethodField()
+    specialty = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -37,6 +38,7 @@ class UserSummarySerializer(serializers.ModelSerializer):
             "two_factor_enabled",
             "is_active",
             "consent_accepted",
+            "specialty",
             "role",
         )
 
@@ -52,6 +54,11 @@ class UserSummarySerializer(serializers.ModelSerializer):
     def get_consent_accepted(self, obj):
         if hasattr(obj, "patient_profile"):
             return obj.patient_profile.consent_accepted
+        return None
+
+    def get_specialty(self, obj):
+        if hasattr(obj, "therapist_profile"):
+            return obj.therapist_profile.specialty
         return None
 
 
