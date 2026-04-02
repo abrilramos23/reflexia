@@ -37,7 +37,7 @@ export function ActivateAccountPage() {
     setIsSubmitting(true)
 
     try {
-      await api.post('/auth/activate/patient/', {
+      await api.post('/auth/activate/account/', {
         uid,
         token,
         password,
@@ -63,10 +63,10 @@ export function ActivateAccountPage() {
       <div className="screen-grid">
         <aside className="screen-card hero-panel">
           <div className="hero-copy">
-            <p className="eyebrow">Activació de pacient</p>
+            <p className="eyebrow">Activació de compte</p>
             <h1>Defineix la teva contrasenya inicial.</h1>
             <p className="hero-lead">
-              Aquest pas activa el compte que t’ha creat el teu terapeuta i et permet entrar a Reflexia.
+              Aquest pas activa el teu compte de Reflexia i et permet definir la teva contrasenya inicial.
             </p>
           </div>
         </aside>

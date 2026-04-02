@@ -11,6 +11,7 @@ from rest_framework import serializers
 
 from apps.users.permissions import IsTherapistUser
 from apps.users.serializers import (
+    AccountActivationSerializer,
     ChangePasswordSerializer,
     DeleteAccountSerializer,
     LoginSerializer,
@@ -18,7 +19,6 @@ from apps.users.serializers import (
     PasswordResetSerializer,
     PatientConsentAcceptSerializer,
     PatientConsentRejectSerializer,
-    PatientActivationSerializer,
     PatientRegistrationSerializer,
     RefreshTokenSerializer,
     ProfileUpdateSerializer,
@@ -40,7 +40,21 @@ class TherapistRegistrationView(APIView):
         summary="Registrar terapeuta",
         request=TherapistRegistrationSerializer,
         responses={
-            201: TherapistRegistrationSerializer,
+            201: inline_serializer(
+                name="TherapistRegistrationResponse",
+                fields={
+                    "id": serializers.UUIDField(),
+                    "first_name": serializers.CharField(),
+                    "last_name": serializers.CharField(),
+                    "email": serializers.EmailField(),
+                    "license_number": serializers.CharField(),
+                    "specialty": serializers.CharField(),
+                    "registration_date": serializers.DateTimeField(),
+                    "two_factor_enabled": serializers.BooleanField(),
+                    "activation_email_sent": serializers.BooleanField(),
+                    "activation_url": serializers.CharField(required=False),
+                },
+            ),
         },
         examples=[
             OpenApiExample(
@@ -49,8 +63,6 @@ class TherapistRegistrationView(APIView):
                     "first_name": "Marta",
                     "last_name": "Lopez",
                     "email": "therapist@example.com",
-                    "password": "StrongPass123!",
-                    "password_confirm": "StrongPass123!",
                     "license_number": "21039",
                     "specialty": "Clinical Psychology",
                 },
@@ -64,7 +76,13 @@ class TherapistRegistrationView(APIView):
         therapist = serializer.save()
 
         response_serializer = TherapistRegistrationSerializer(therapist)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        response_data = {
+            **response_serializer.data,
+            "activation_email_sent": True,
+        }
+        if settings.DEBUG:
+            response_data["activation_url"] = serializer.context.get("activation_url")
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class PatientRegistrationView(APIView):
@@ -124,16 +142,16 @@ class PatientRegistrationView(APIView):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 
-class PatientActivationView(APIView):
+class AccountActivationView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
         tags=["auth"],
-        summary="Activar compte de pacient",
-        request=PatientActivationSerializer,
+        summary="Activar compte",
+        request=AccountActivationSerializer,
         responses={
             200: inline_serializer(
-                name="PatientActivationResponse",
+                name="AccountActivationResponse",
                 fields={
                     "id": serializers.UUIDField(),
                     "email": serializers.EmailField(),
@@ -144,16 +162,16 @@ class PatientActivationView(APIView):
         },
     )
     def post(self, request):
-        serializer = PatientActivationSerializer(data=request.data)
+        serializer = AccountActivationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        patient = serializer.save()
+        user = serializer.save()
 
         return Response(
             {
-                "id": str(patient.pk),
-                "email": patient.email,
-                "is_active": patient.is_active,
-                "message": "Patient account activated successfully.",
+                "id": str(user.pk),
+                "email": user.email,
+                "is_active": user.is_active,
+                "message": "Account activated successfully.",
             },
             status=status.HTTP_200_OK,
         )

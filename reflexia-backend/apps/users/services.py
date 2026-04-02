@@ -11,18 +11,20 @@ from apps.users.models import Patient, Therapist, TherapistPatient, User
 
 
 @transaction.atomic
-def register_therapist(*, first_name, last_name, email, password, license_number, specialty):
-    validate_password(password)
-
-    therapist = Therapist.objects.create_user(
+def register_therapist(*, first_name, last_name, email, license_number, specialty):
+    therapist = Therapist(
         email=email,
-        password=password,
         first_name=first_name,
         last_name=last_name,
         license_number=license_number,
         specialty=specialty,
+        is_active=False,
     )
-    return therapist
+    therapist.set_unusable_password()
+    therapist.save()
+    activation_url = build_account_activation_url(therapist)
+    send_therapist_activation_email(therapist=therapist, activation_url=activation_url)
+    return therapist, activation_url
 
 
 @transaction.atomic
@@ -48,15 +50,33 @@ def register_patient(
     patient.set_unusable_password()
     patient.save()
     TherapistPatient.objects.create(patient=patient, therapist=therapist)
-    activation_url = build_patient_activation_url(patient)
+    activation_url = build_account_activation_url(patient)
     send_patient_activation_email(patient=patient, therapist=therapist, activation_url=activation_url)
     return patient, activation_url
 
 
-def build_patient_activation_url(patient):
-    uid = urlsafe_base64_encode(force_bytes(patient.pk))
-    token = default_token_generator.make_token(patient)
+def build_account_activation_url(user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
     return f"{settings.FRONTEND_URL.rstrip('/')}/activate-account?uid={uid}&token={token}"
+
+
+def send_therapist_activation_email(*, therapist, activation_url):
+    subject = "Activate your Reflexia therapist account"
+    message = (
+        f"Hello {therapist.first_name},\n\n"
+        "An administrator has created your Reflexia therapist account.\n"
+        "Use the following link to set your password and activate your access:\n\n"
+        f"{activation_url}\n\n"
+        "If you were not expecting this email, you can ignore it."
+    )
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [therapist.email],
+        fail_silently=False,
+    )
 
 
 def send_patient_activation_email(*, patient, therapist, activation_url):
@@ -118,12 +138,12 @@ def send_account_deleted_email(*, user_email):
 
 
 @transaction.atomic
-def activate_patient_account(*, patient, password):
-    validate_password(password, user=patient)
-    patient.set_password(password)
-    patient.is_active = True
-    patient.save(update_fields=["password", "is_active"])
-    return patient
+def activate_user_account(*, user, password):
+    validate_password(password, user=user)
+    user.set_password(password)
+    user.is_active = True
+    user.save(update_fields=["password", "is_active"])
+    return user
 
 
 @transaction.atomic

@@ -12,6 +12,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.users.models import Patient, ProfessionalDirectoryEntry, Therapist, TherapistPatient, User
 
 
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    FRONTEND_URL="http://localhost:5173",
+)
 class TherapistRegistrationTests(APITestCase):
     def setUp(self):
         ProfessionalDirectoryEntry.objects.create(
@@ -32,8 +36,6 @@ class TherapistRegistrationTests(APITestCase):
             "first_name": "Laura",
             "last_name": "Gomez",
             "email": "laura@example.com",
-            "password": "StrongPass123!",
-            "password_confirm": "StrongPass123!",
             "license_number": "30809",
             "specialty": "Clinical Psychology",
         }
@@ -45,7 +47,11 @@ class TherapistRegistrationTests(APITestCase):
         therapist = Therapist.objects.get(email="laura@example.com")
         self.assertEqual(therapist.first_name, "Laura")
         self.assertEqual(therapist.license_number, "30809")
-        self.assertTrue(therapist.check_password("StrongPass123!"))
+        self.assertFalse(therapist.is_active)
+        self.assertFalse(therapist.has_usable_password())
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("activate-account", mail.outbox[0].body)
+        self.assertEqual(mail.outbox[0].to, ["laura@example.com"])
         self.assertNotIn("password", response.data)
 
     def test_register_therapist_requires_admin_user(self):
@@ -53,8 +59,6 @@ class TherapistRegistrationTests(APITestCase):
             "first_name": "Laura",
             "last_name": "Gomez",
             "email": "laura@example.com",
-            "password": "StrongPass123!",
-            "password_confirm": "StrongPass123!",
             "license_number": "30809",
             "specialty": "Clinical Psychology",
         }
@@ -64,49 +68,12 @@ class TherapistRegistrationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(Therapist.objects.count(), 0)
 
-    def test_register_therapist_rejects_mismatched_passwords(self):
-        self.client.force_authenticate(user=self.admin_user)
-        payload = {
-            "first_name": "Laura",
-            "last_name": "Gomez",
-            "email": "laura@example.com",
-            "password": "StrongPass123!",
-            "password_confirm": "DifferentPass123!",
-            "license_number": "30809",
-            "specialty": "Clinical Psychology",
-        }
-
-        response = self.client.post(self.url, payload, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(Therapist.objects.count(), 0)
-
-    def test_register_therapist_rejects_weak_password(self):
-        self.client.force_authenticate(user=self.admin_user)
-        payload = {
-            "first_name": "Laura",
-            "last_name": "Gomez",
-            "email": "laura@example.com",
-            "password": "weakpass",
-            "password_confirm": "weakpass",
-            "license_number": "30809",
-            "specialty": "Clinical Psychology",
-        }
-
-        response = self.client.post(self.url, payload, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("password", response.data)
-        self.assertEqual(Therapist.objects.count(), 0)
-
     def test_register_therapist_rejects_unknown_license_number(self):
         self.client.force_authenticate(user=self.admin_user)
         payload = {
             "first_name": "Laura",
             "last_name": "Gomez",
             "email": "laura@example.com",
-            "password": "StrongPass123!",
-            "password_confirm": "StrongPass123!",
             "license_number": "99999",
             "specialty": "Clinical Psychology",
         }
@@ -219,7 +186,7 @@ class PatientRegistrationTests(APITestCase):
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
-class PatientActivationTests(APITestCase):
+class AccountActivationTests(APITestCase):
     def setUp(self):
         self.patient = Patient.objects.create(
             email="patient@example.com",
@@ -230,7 +197,17 @@ class PatientActivationTests(APITestCase):
         )
         self.patient.set_unusable_password()
         self.patient.save(update_fields=["password", "is_active"])
-        self.url = "/api/auth/activate/patient/"
+        self.therapist = Therapist.objects.create(
+            email="therapist@example.com",
+            first_name="Marta",
+            last_name="Lopez",
+            license_number="16385",
+            specialty="Clinical Psychology",
+            is_active=False,
+        )
+        self.therapist.set_unusable_password()
+        self.therapist.save(update_fields=["password", "is_active"])
+        self.url = "/api/auth/activate/account/"
 
     def test_activate_patient_account_successfully(self):
         uid = urlsafe_base64_encode(force_bytes(self.patient.pk))
@@ -251,6 +228,26 @@ class PatientActivationTests(APITestCase):
         self.patient.refresh_from_db()
         self.assertTrue(self.patient.is_active)
         self.assertTrue(self.patient.check_password("StrongPass123!"))
+
+    def test_activate_therapist_account_successfully(self):
+        uid = urlsafe_base64_encode(force_bytes(self.therapist.pk))
+        token = default_token_generator.make_token(self.therapist)
+
+        response = self.client.post(
+            self.url,
+            {
+                "uid": uid,
+                "token": token,
+                "password": "StrongPass123!",
+                "password_confirm": "StrongPass123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.therapist.refresh_from_db()
+        self.assertTrue(self.therapist.is_active)
+        self.assertTrue(self.therapist.check_password("StrongPass123!"))
 
     def test_activate_patient_account_rejects_invalid_token(self):
         uid = urlsafe_base64_encode(force_bytes(self.patient.pk))

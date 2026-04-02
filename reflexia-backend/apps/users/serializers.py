@@ -10,7 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.models import Patient, ProfessionalDirectoryEntry, Therapist, User
 from apps.users.services import (
-    activate_patient_account,
+    activate_user_account,
     build_password_reset_url,
     change_user_password,
     deactivate_patient_by_therapist,
@@ -63,9 +63,6 @@ class UserSummarySerializer(serializers.ModelSerializer):
 
 
 class TherapistRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=8, style={"input_type": "password"})
-    password_confirm = serializers.CharField(write_only=True, style={"input_type": "password"})
-
     class Meta:
         model = Therapist
         fields = (
@@ -73,8 +70,6 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "email",
-            "password",
-            "password_confirm",
             "license_number",
             "specialty",
             "registration_date",
@@ -96,17 +91,10 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This license number is already assigned to another therapist.")
         return normalized_value
 
-    def validate(self, attrs):
-        if attrs["password"] != attrs["password_confirm"]:
-            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
-        return attrs
-
     def create(self, validated_data):
-        validated_data.pop("password_confirm")
-        try:
-            return register_therapist(**validated_data)
-        except DjangoValidationError as exc:
-            raise serializers.ValidationError({"password": list(exc.messages)}) from exc
+        therapist, activation_url = register_therapist(**validated_data)
+        self.context["activation_url"] = activation_url
+        return therapist
 
 
 class PatientRegistrationSerializer(serializers.ModelSerializer):
@@ -146,7 +134,7 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
         return patient
 
 
-class PatientActivationSerializer(serializers.Serializer):
+class AccountActivationSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()
     password = serializers.CharField(write_only=True, min_length=8, style={"input_type": "password"})
@@ -156,26 +144,26 @@ class PatientActivationSerializer(serializers.Serializer):
         if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
 
-        patient = self._get_patient(attrs["uid"])
-        if patient is None:
+        user = self._get_user(attrs["uid"])
+        if user is None:
             raise serializers.ValidationError({"uid": "Invalid activation identifier."})
-        if not default_token_generator.check_token(patient, attrs["token"]):
+        if not default_token_generator.check_token(user, attrs["token"]):
             raise serializers.ValidationError({"token": "Invalid or expired activation token."})
 
-        attrs["patient"] = patient
+        attrs["user"] = user
         return attrs
 
-    def _get_patient(self, uid):
+    def _get_user(self, uid):
         try:
             decoded_uid = force_str(urlsafe_base64_decode(uid))
-            return Patient.objects.get(pk=decoded_uid)
-        except (Patient.DoesNotExist, TypeError, ValueError, OverflowError):
+            return User.objects.get(pk=decoded_uid)
+        except (User.DoesNotExist, TypeError, ValueError, OverflowError):
             return None
 
     def save(self, **kwargs):
-        patient = self.validated_data["patient"]
+        user = self.validated_data["user"]
         try:
-            return activate_patient_account(patient=patient, password=self.validated_data["password"])
+            return activate_user_account(user=user, password=self.validated_data["password"])
         except DjangoValidationError as exc:
             raise serializers.ValidationError({"password": list(exc.messages)}) from exc
 

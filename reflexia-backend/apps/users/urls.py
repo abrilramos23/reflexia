@@ -2,6 +2,7 @@ from django.http import JsonResponse
 from django.urls import path
 
 from apps.users.views import (
+    AccountActivationView,
     ChangePasswordView,
     ConsentDocumentView,
     DeleteAccountView,
@@ -12,7 +13,6 @@ from apps.users.views import (
     PasswordResetView,
     PatientConsentAcceptView,
     PatientConsentRejectView,
-    PatientActivationView,
     PatientRegistrationView,
     TherapistRegistrationView,
     TherapistPatientDeactivateView,
@@ -39,7 +39,7 @@ urlpatterns = [
     path('auth/register/therapist/', TherapistRegistrationView.as_view(), name='therapist-register'),
     path('auth/register/patient/', PatientRegistrationView.as_view(), name='patient-register'),
     path('auth/patients/deactivate/', TherapistPatientDeactivateView.as_view(), name='patient-deactivate'),
-    path('auth/activate/patient/', PatientActivationView.as_view(), name='patient-activate'),
+    path('auth/activate/account/', AccountActivationView.as_view(), name='account-activate'),
     path('auth/consent/accept/', PatientConsentAcceptView.as_view(), name='patient-consent-accept'),
     path('auth/consent/reject/', PatientConsentRejectView.as_view(), name='patient-consent-reject'),
     path('auth/2fa/setup/', TwoFactorSetupView.as_view(), name='two-factor-setup'),
