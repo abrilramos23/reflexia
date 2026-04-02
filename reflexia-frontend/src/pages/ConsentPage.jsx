@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import { AppHeader } from '../components/AppHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { consentDocumentUrl } from '../lib/api.js'
 
@@ -66,13 +67,14 @@ export function ConsentPage() {
 
   return (
     <div className="screen-shell">
+      <AppHeader />
       <div className="screen-grid">
         <aside className="screen-card hero-panel">
           <div className="hero-copy">
             <p className="eyebrow">Consentiment informat</p>
             <h1>Abans d’entrar, necessitem la teva decisió explícita.</h1>
             <p className="hero-lead">
-              Aquest és el primer accés al teu compte. Llegeix l’abast del tractament de dades i decideix si vols
+              Llegeix l’abast del tractament de dades i decideix si vols
               continuar amb l’eina.
             </p>
           </div>
@@ -94,10 +96,10 @@ export function ConsentPage() {
           <div className="content-card section-stack">
             <h3>Informació essencial</h3>
             <div className="info-list muted">
-              <p><strong>Finalitat del tractament:</strong> anàlisi emocional assistida per IA per donar suport al seguiment terapèutic.</p>
-              <p><strong>Qui hi tindrà accés:</strong> el teu terapeuta assignat i, en cas d’alerta, terapeutes de suport autoritzats.</p>
+              <p><strong>Finalitat del tractament:</strong> anàlisi emocional amb IA per donar suport al seguiment terapèutic.</p>
+              <p><strong>Qui tindrà accés:</strong> el teu terapeuta assignat i, en cas d’alerta, terapeutes de suport autoritzats.</p>
               <p><strong>Període de conservació:</strong> mínim 5 anys per obligació legal.</p>
-              <p><strong>Drets:</strong> accés, rectificació, portabilitat i la resta de drets previstos per la normativa aplicable.</p>
+              <p><strong>Drets:</strong> accés, rectificació, portabilitat i la resta de drets de la normativa aplicable.</p>
               <p><strong>Important:</strong> Reflexia no diagnostica ni substitueix el criteri clínic professional.</p>
             </div>
           </div>

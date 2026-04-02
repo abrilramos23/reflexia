@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import { AppHeader } from '../components/AppHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
 function extractErrorMessage(error) {
@@ -52,6 +53,7 @@ export function TwoFactorPage() {
 
   return (
     <div className="screen-shell">
+      <AppHeader />
       <div className="screen-grid">
         <aside className="screen-card hero-panel">
           <div className="hero-copy">

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { AppHeader } from '../components/AppHeader.jsx'
 import { api } from '../lib/api.js'
 
 export function ForgotPasswordPage() {
@@ -26,6 +27,7 @@ export function ForgotPasswordPage() {
 
   return (
     <div className="screen-shell">
+      <AppHeader />
       <div className="screen-grid">
         <aside className="screen-card hero-panel">
           <div className="hero-copy">
@@ -62,7 +64,7 @@ export function ForgotPasswordPage() {
               <button className="button-secondary" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Enviant...' : 'Enviar enllaç'}
               </button>
-              <Link className="text-link" to="/login">
+              <Link style={{ textDecoration: 'none' }} className="text-link" to="/login">
                 Tornar al login
               </Link>
             </div>

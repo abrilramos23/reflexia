@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { AppHeader } from '../components/AppHeader.jsx'
 import { api } from '../lib/api.js'
 
 function extractErrorMessage(error) {
@@ -60,6 +61,7 @@ export function ActivateAccountPage() {
 
   return (
     <div className="screen-shell">
+      <AppHeader />
       <div className="screen-grid">
         <aside className="screen-card hero-panel">
           <div className="hero-copy">
@@ -108,7 +110,7 @@ export function ActivateAccountPage() {
               <button className="button" type="submit" disabled={isSubmitting || !uid || !token}>
                 {isSubmitting ? 'Activant...' : 'Activar compte'}
               </button>
-              <Link className="text-link" to="/login">
+              <Link style={{ textDecoration: 'none' }} className="text-link" to="/login">
                 Tornar al login
               </Link>
             </div>
