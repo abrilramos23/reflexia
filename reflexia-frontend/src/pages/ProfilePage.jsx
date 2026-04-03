@@ -62,6 +62,7 @@ export function ProfilePage() {
   const [specialty, setSpecialty] = useState(user?.role === 'therapist' ? (user.specialty || '') : '')
   const [profileMessage, setProfileMessage] = useState('')
   const [profileError, setProfileError] = useState('')
+  const [isProfileSectionOpen, setIsProfileSectionOpen] = useState(false)
   const [passwordState, setPasswordState] = useState({
     current_password: '',
     new_password: '',
@@ -69,6 +70,7 @@ export function ProfilePage() {
   })
   const [passwordMessage, setPasswordMessage] = useState('')
   const [passwordError, setPasswordError] = useState('')
+  const [isPasswordSectionOpen, setIsPasswordSectionOpen] = useState(false)
   const [twoFactorSetup, setTwoFactorSetup] = useState(null)
   const [twoFactorQr, setTwoFactorQr] = useState('')
   const [twoFactorCode, setTwoFactorCode] = useState('')
@@ -484,204 +486,130 @@ export function ProfilePage() {
 
       <div className="profile-grid">
         <section className="screen-card profile-card">
-          <div className="panel-heading">
-            <p className="eyebrow">Dades personals</p>
-            <h3>Editar perfil</h3>
-          </div>
-
-          {profileMessage ? <div className="message">{profileMessage}</div> : null}
-          {profileError ? <div className="error-banner">{profileError}</div> : null}
-
-          <form className="form-stack" onSubmit={handleProfileSubmit}>
-            <div className="field-group">
-              <label htmlFor="profile-name">Nom</label>
-              <input className="input-disabled" id="profile-name" type="text" value={user.first_name} disabled />
-              <label htmlFor="profile-last-name">Cognoms</label>
-              <input className="input-disabled" id="profile-last-name" type="text" value={user.last_name} disabled />
-              <label htmlFor="profile-email">Correu electrònic</label>
-              <input id="profile-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
-              <label htmlFor="profile-status">Estat</label>
-              <input className="input-disabled" id="profile-status" type="text" value={user.is_active ? 'Actiu' : 'Inactiu'} disabled />
+          <button
+            className="section-toggle"
+            type="button"
+            onClick={() => setIsProfileSectionOpen((currentState) => !currentState)}
+          >
+            <div className="panel-heading">
+              <p className="eyebrow">Dades personals</p>
+              <h3>Editar perfil</h3>
             </div>
+            <span className={`section-toggle-indicator ${isProfileSectionOpen ? 'section-toggle-indicator--open' : ''}`}>
+              <span aria-hidden="true">▾</span>
+            </span>
+          </button>
 
-            {user.role === 'therapist' ? (
-              <div className="field-group">
-                <label htmlFor="profile-specialty">Especialitat</label>
-                <input
-                  id="profile-specialty"
-                  type="text"
-                  value={specialty}
-                  onChange={(event) => setSpecialty(event.target.value)}
-                  placeholder="Trauma Therapy"
-                />
-              </div>
-            ) : null}
-
-            <div className="button-row">
-              <button className="button" type="submit">Guardar canvis</button>
-            </div>
-          </form>
-        </section>
-
-        <section className="screen-card profile-card">
-          <div className="panel-heading">
-            <p className="eyebrow">Contrasenya</p>
-            <h3>Canviar contrasenya</h3>
-          </div>
-
-          {passwordMessage ? <div className="message">{passwordMessage}</div> : null}
-          {passwordError ? <div className="error-banner">{passwordError}</div> : null}
-
-          <form className="form-stack" onSubmit={handlePasswordSubmit}>
-            <div className="field-group">
-              <label htmlFor="current-password">Contrasenya actual</label>
-              <input
-                id="current-password"
-                type="password"
-                value={passwordState.current_password}
-                onChange={(event) =>
-                  setPasswordState((currentState) => ({
-                    ...currentState,
-                    current_password: event.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="field-group">
-              <label htmlFor="new-password">Nova contrasenya</label>
-              <input
-                id="new-password"
-                type="password"
-                value={passwordState.new_password}
-                onChange={(event) =>
-                  setPasswordState((currentState) => ({
-                    ...currentState,
-                    new_password: event.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="field-group">
-              <label htmlFor="new-password-confirm">Confirmar nova contrasenya</label>
-              <input
-                id="new-password-confirm"
-                type="password"
-                value={passwordState.new_password_confirm}
-                onChange={(event) =>
-                  setPasswordState((currentState) => ({
-                    ...currentState,
-                    new_password_confirm: event.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="button-row">
-              <button className="button-secondary" type="submit">Actualitzar contrasenya</button>
-            </div>
-          </form>
-        </section>
-
-        <section className="screen-card profile-card">
-          <div className="panel-heading">
-            <p className="eyebrow">Doble factor</p>
-            <h3>Configurar 2FA</h3>
-          </div>
-
-          {twoFactorMessage ? <div className="message">{twoFactorMessage}</div> : null}
-          {twoFactorError ? <div className="error-banner">{twoFactorError}</div> : null}
-
-          {!user.two_factor_enabled ? (
+          {isProfileSectionOpen ? (
             <>
-              <div className="button-row" style={{padding: '20px 0'}}>
-                <button className="button-secondary" type="button" onClick={handleTwoFactorSetup}>
-                  Generar configuració 2FA
-                </button>
-              </div>
+              {profileMessage ? <div className="message">{profileMessage}</div> : null}
+              {profileError ? <div className="error-banner">{profileError}</div> : null}
 
-              {twoFactorSetup ? (
-                <form className="form-stack" onSubmit={handleTwoFactorEnable}>
-                  <div className="content-card section-stack">
-                    {twoFactorQr ? (
-                      <div className="qr-card">
-                        <img className="qr-image" src={twoFactorQr} alt="QR per configurar el 2FA" />
-                      </div>
-                    ) : null}
-                    <p><strong>Secret TOTP:</strong> {twoFactorSetup.secret}</p>
-                    <p className="qr-link">
-                      <strong>Enllaç otpauth:</strong> {twoFactorSetup.otpauth_url}
-                    </p>
-                  </div>
+              <form className="form-stack collapsible-section-body" onSubmit={handleProfileSubmit}>
+                <div className="field-group">
+                  <label htmlFor="profile-name">Nom</label>
+                  <input className="input-disabled" id="profile-name" type="text" value={user.first_name} disabled />
+                  <label htmlFor="profile-last-name">Cognoms</label>
+                  <input className="input-disabled" id="profile-last-name" type="text" value={user.last_name} disabled />
+                  <label htmlFor="profile-email">Correu electrònic</label>
+                  <input id="profile-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+                  <label htmlFor="profile-status">Estat</label>
+                  <input className="input-disabled" id="profile-status" type="text" value={user.is_active ? 'Actiu' : 'Inactiu'} disabled />
+                </div>
 
+                {user.role === 'therapist' ? (
                   <div className="field-group">
-                    <label htmlFor="enable-2fa-code">Codi de verificació</label>
+                    <label htmlFor="profile-specialty">Especialitat</label>
                     <input
-                      id="enable-2fa-code"
-                      value={twoFactorCode}
-                      onChange={(event) => setTwoFactorCode(event.target.value)}
-                      placeholder="123456"
+                      id="profile-specialty"
+                      type="text"
+                      value={specialty}
+                      onChange={(event) => setSpecialty(event.target.value)}
+                      placeholder="Trauma Therapy"
                     />
                   </div>
+                ) : null}
 
-                  <div className="button-row">
-                    <button className="button" type="submit">Activar 2FA</button>
-                  </div>
-                </form>
-              ) : null}
+                <div className="button-row">
+                  <button className="button" type="submit">Guardar canvis</button>
+                </div>
+              </form>
             </>
-          ) : (
-            <form className="form-stack" onSubmit={handleTwoFactorDisable}>
-              <p className="muted">El doble factor està activat. Introdueix la contrasenya i un codi vàlid per desactivar-lo.</p>
-
-              <div className="field-group">
-                <label htmlFor="disable-2fa-password">Contrasenya</label>
-                <input
-                  id="disable-2fa-password"
-                  type="password"
-                  value={twoFactorDisableState.password}
-                  onChange={(event) =>
-                    setTwoFactorDisableState((currentState) => ({
-                      ...currentState,
-                      password: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="field-group">
-                <label htmlFor="disable-2fa-code">Codi actual</label>
-                <input
-                  id="disable-2fa-code"
-                  value={twoFactorDisableState.code}
-                  onChange={(event) =>
-                    setTwoFactorDisableState((currentState) => ({
-                      ...currentState,
-                      code: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="button-row">
-                <button className="button-ghost" type="submit">Desactivar 2FA</button>
-              </div>
-            </form>
-          )}
+          ) : null}
         </section>
 
-        <section className="screen-card dashboard-panel" style={{ height: 'fit-content' }}>
-          <div className="panel-heading">
-            <p className="eyebrow">Accions ràpides</p>
-            <h2>Seguretat i legal</h2>
-          </div>
+        <section className="screen-card profile-card">
+          <button
+            className="section-toggle"
+            type="button"
+            onClick={() => setIsPasswordSectionOpen((currentState) => !currentState)}
+          >
+            <div className="panel-heading">
+              <p className="eyebrow">Contrasenya</p>
+              <h3>Canviar contrasenya</h3>
+            </div>
+            <span className={`section-toggle-indicator ${isPasswordSectionOpen ? 'section-toggle-indicator--open' : ''}`}>
+              <span aria-hidden="true">▾</span>
+            </span>
+          </button>
 
-          <div className="button-row">
-            <a style={{ textDecoration: 'none' }} className="button-ghost" href={consentDocumentUrl} target="_blank" rel="noreferrer">
-              Veure consentiment PDF
-            </a>
-          </div>
+          {isPasswordSectionOpen ? (
+            <>
+              {passwordMessage ? <div className="message">{passwordMessage}</div> : null}
+              {passwordError ? <div className="error-banner">{passwordError}</div> : null}
+
+              <form className="form-stack collapsible-section-body" onSubmit={handlePasswordSubmit}>
+                <div className="field-group">
+                  <label htmlFor="current-password">Contrasenya actual</label>
+                  <input
+                    id="current-password"
+                    type="password"
+                    value={passwordState.current_password}
+                    onChange={(event) =>
+                      setPasswordState((currentState) => ({
+                        ...currentState,
+                        current_password: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="field-group">
+                  <label htmlFor="new-password">Nova contrasenya</label>
+                  <input
+                    id="new-password"
+                    type="password"
+                    value={passwordState.new_password}
+                    onChange={(event) =>
+                      setPasswordState((currentState) => ({
+                        ...currentState,
+                        new_password: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="field-group">
+                  <label htmlFor="new-password-confirm">Confirmar nova contrasenya</label>
+                  <input
+                    id="new-password-confirm"
+                    type="password"
+                    value={passwordState.new_password_confirm}
+                    onChange={(event) =>
+                      setPasswordState((currentState) => ({
+                        ...currentState,
+                        new_password_confirm: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="button-row">
+                  <button className="button-secondary" type="submit">Actualitzar contrasenya</button>
+                </div>
+              </form>
+            </>
+          ) : null}
         </section>
 
         {user.role === 'patient' ? (
@@ -916,6 +844,106 @@ export function ProfilePage() {
             </div>
           </section>
         ) : null}
+
+        <section className="screen-card profile-card">
+          <div className="panel-heading">
+            <p className="eyebrow">Doble factor</p>
+            <h3>Configurar 2FA</h3>
+          </div>
+
+          {twoFactorMessage ? <div className="message">{twoFactorMessage}</div> : null}
+          {twoFactorError ? <div className="error-banner">{twoFactorError}</div> : null}
+
+          {!user.two_factor_enabled ? (
+            <>
+              <div className="button-row" style={{padding: '20px 0'}}>
+                <button className="button-secondary" type="button" onClick={handleTwoFactorSetup}>
+                  Generar configuració 2FA
+                </button>
+              </div>
+
+              {twoFactorSetup ? (
+                <form className="form-stack" onSubmit={handleTwoFactorEnable}>
+                  <div className="content-card section-stack">
+                    {twoFactorQr ? (
+                      <div className="qr-card">
+                        <img className="qr-image" src={twoFactorQr} alt="QR per configurar el 2FA" />
+                      </div>
+                    ) : null}
+                    <p><strong>Secret TOTP:</strong> {twoFactorSetup.secret}</p>
+                    <p className="qr-link">
+                      <strong>Enllaç otpauth:</strong> {twoFactorSetup.otpauth_url}
+                    </p>
+                  </div>
+
+                  <div className="field-group">
+                    <label htmlFor="enable-2fa-code">Codi de verificació</label>
+                    <input
+                      id="enable-2fa-code"
+                      value={twoFactorCode}
+                      onChange={(event) => setTwoFactorCode(event.target.value)}
+                      placeholder="123456"
+                    />
+                  </div>
+
+                  <div className="button-row">
+                    <button className="button" type="submit">Activar 2FA</button>
+                  </div>
+                </form>
+              ) : null}
+            </>
+          ) : (
+            <form className="form-stack" onSubmit={handleTwoFactorDisable}>
+              <p className="muted">El doble factor està activat. Introdueix la contrasenya i un codi vàlid per desactivar-lo.</p>
+
+              <div className="field-group">
+                <label htmlFor="disable-2fa-password">Contrasenya</label>
+                <input
+                  id="disable-2fa-password"
+                  type="password"
+                  value={twoFactorDisableState.password}
+                  onChange={(event) =>
+                    setTwoFactorDisableState((currentState) => ({
+                      ...currentState,
+                      password: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="field-group">
+                <label htmlFor="disable-2fa-code">Codi actual</label>
+                <input
+                  id="disable-2fa-code"
+                  value={twoFactorDisableState.code}
+                  onChange={(event) =>
+                    setTwoFactorDisableState((currentState) => ({
+                      ...currentState,
+                      code: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="button-row">
+                <button className="button-ghost" type="submit">Desactivar 2FA</button>
+              </div>
+            </form>
+          )}
+        </section>
+
+        <section className="screen-card dashboard-panel" style={{ height: 'fit-content' }}>
+          <div className="panel-heading">
+            <p className="eyebrow">Accions ràpides</p>
+            <h2>Seguretat i legal</h2>
+          </div>
+
+          <div className="button-row">
+            <a style={{ textDecoration: 'none' }} className="button-ghost" href={consentDocumentUrl} target="_blank" rel="noreferrer">
+              Veure consentiment PDF
+            </a>
+          </div>
+        </section>
 
         <section className="screen-card profile-card">
           <div className="panel-heading">

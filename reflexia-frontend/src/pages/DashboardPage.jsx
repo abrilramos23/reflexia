@@ -261,9 +261,7 @@ export function DashboardPage() {
               <p className="eyebrow">Gestió de pacients</p>
               <h2>Registrar un nou pacient</h2>
               <p className="muted">
-                En crear el compte, el backend envia el
-                correu d’activació perquè el pacient estableixi la seva contrasenya i, al primer accés, accepti el
-                consentiment informat.
+                En crear el compte, s’envia un correu d’activació perquè el pacient estableixi la seva contrasenya i, al primer accés, accepti el consentiment informat.
               </p>
             </div>
 
