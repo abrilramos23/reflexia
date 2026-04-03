@@ -134,6 +134,22 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
         return patient
 
 
+class TherapistPatientSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Patient
+        fields = (
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "birth_date",
+            "is_active",
+            "consent_accepted",
+            "consent_date",
+            "registration_date",
+        )
+
+
 class AccountActivationSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()

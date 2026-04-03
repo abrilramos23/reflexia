@@ -281,6 +281,11 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function listTherapistPatients() {
+    const response = await api.get('/auth/patients/')
+    return response.data
+  }
+
   async function setupTwoFactor() {
     const response = await api.post('/auth/2fa/setup/')
     return response.data
@@ -355,6 +360,7 @@ export function AuthProvider({ children }) {
     deleteSupportTherapist,
     registerTherapist,
     registerPatient,
+    listTherapistPatients,
     setupTwoFactor,
     enableTwoFactor,
     disableTwoFactor,

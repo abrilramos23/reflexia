@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from rest_framework import serializers
 
 from apps.users.permissions import IsTherapistUser
+from apps.users.models import User, Patient, Therapist
 from apps.users.serializers import (
     AccountActivationSerializer,
     ChangePasswordSerializer,
@@ -24,6 +25,7 @@ from apps.users.serializers import (
     ProfileUpdateSerializer,
     TherapistRegistrationSerializer,
     TherapistPatientDeactivateSerializer,
+    TherapistPatientSummarySerializer,
     TwoFactorDisableSerializer,
     TwoFactorEnableSerializer,
     TwoFactorSetupSerializer,
@@ -440,6 +442,24 @@ class TherapistPatientDeactivateView(APIView):
                 "message": "Patient deactivated successfully.",
                 "patient_id": str(patient.pk),
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+class TherapistPatientListView(APIView):
+    permission_classes = [IsTherapistUser]
+
+    @extend_schema(
+        tags=["profile"],
+        summary="Llistar pacients assignats al terapeuta",
+        responses={200: TherapistPatientSummarySerializer(many=True)},
+    )
+    def get(self, request):
+        patients = Patient.objects.filter(
+            therapist_links__therapist=request.user.therapist_profile
+        ).order_by("first_name", "last_name")
+        return Response(
+            TherapistPatientSummarySerializer(patients, many=True).data,
             status=status.HTTP_200_OK,
         )
 

@@ -34,6 +34,11 @@ export function AppHeader() {
         {user ? (
           <nav className="app-header-nav">
             <span className="status-pill" style={{ textDecoration: 'none', backgroundColor: 'transparent' }}>{formatRole(user.role)}</span>
+            {user.role === 'therapist' ? (
+              <Link style={{ textDecoration: 'none' }} className="button-ghost" to="/patients">
+                Pacients
+              </Link>
+            ) : null}
             <Link style={{ textDecoration: 'none' }} className="button-ghost" to="/profile">
               Perfil
             </Link>

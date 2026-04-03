@@ -723,14 +723,16 @@ export function ProfilePage() {
                   {associatedContacts.map((contact) => (
                     <li className="patient-item compact-list-item" key={contact.id}>
                       <div>
-                        <strong>{contact.name}</strong>
+                        <div className="item-heading-row">
+                          <strong>{contact.name}</strong>
+                          {contact.is_default ? (
+                            <span className="status-pill">Contacte per defecte</span>
+                          ) : null}
+                        </div>
                         <p className="muted">{contact.relation}</p>
                         <p className="muted">
                           {[contact.email, contact.phone].filter(Boolean).join(' · ')}
                         </p>
-                        {contact.is_default ? (
-                          <span className="status-pill">Contacte per defecte</span>
-                        ) : null}
                       </div>
 
                       <div className="list-actions">
@@ -821,9 +823,12 @@ export function ProfilePage() {
                   {supportTherapists.map((supportTherapist) => (
                     <li className="patient-item compact-list-item" key={supportTherapist.support_id}>
                       <div>
-                        <strong>
-                          {supportTherapist.first_name} {supportTherapist.last_name}
-                        </strong>
+                        <div className="item-heading-row">
+                          <strong>
+                            {supportTherapist.first_name} {supportTherapist.last_name}
+                          </strong>
+                          <span className="status-pill">Suport actiu</span>
+                        </div>
                         <p className="muted">{supportTherapist.specialty}</p>
                         <p className="muted">{supportTherapist.email}</p>
                       </div>
@@ -988,7 +993,10 @@ export function ProfilePage() {
                 {assignedPatients.map((patient) => (
                   <li className="patient-item" key={patient.id}>
                     <div>
-                      <strong>{patient.first_name} {patient.last_name}</strong>
+                      <div className="item-heading-row">
+                        <strong>{patient.first_name} {patient.last_name}</strong>
+                        <span className="status-pill">Pacient assignat</span>
+                      </div>
                       <p className="muted">{patient.email}</p>
                     </div>
                     <button

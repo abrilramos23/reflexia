@@ -1,5 +1,5 @@
 import { Link, Navigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AppHeader } from '../components/AppHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
@@ -42,7 +42,7 @@ function firstErrorMessage(error) {
 }
 
 export function DashboardPage() {
-  const { user, registerPatient, registerTherapist } = useAuth()
+  const { user, registerTherapist, listTherapistPatients } = useAuth()
   const [therapistForm, setTherapistForm] = useState({
     first_name: '',
     last_name: '',
@@ -50,22 +50,42 @@ export function DashboardPage() {
     license_number: '',
     specialty: '',
   })
-  const [patientForm, setPatientForm] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    birth_date: '',
-  })
   const [therapistMessage, setTherapistMessage] = useState('')
   const [therapistError, setTherapistError] = useState('')
-  const [patientMessage, setPatientMessage] = useState('')
-  const [patientError, setPatientError] = useState('')
   const [isSubmittingTherapist, setIsSubmittingTherapist] = useState(false)
-  const [isSubmittingPatient, setIsSubmittingPatient] = useState(false)
+  const [therapistPatientsCount, setTherapistPatientsCount] = useState(0)
+  const [patientsSummaryError, setPatientsSummaryError] = useState('')
 
   if (!user) {
     return <Navigate to="/login" replace />
   }
+
+  useEffect(() => {
+    let isCancelled = false
+
+    async function loadTherapistPatients() {
+      if (user.role !== 'therapist') {
+        return
+      }
+
+      try {
+        const patients = await listTherapistPatients()
+        if (!isCancelled) {
+          setTherapistPatientsCount(patients.length)
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setPatientsSummaryError(firstErrorMessage(error.response?.data || error))
+        }
+      }
+    }
+
+    loadTherapistPatients()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [user.role])
 
   async function handleTherapistSubmit(event) {
     event.preventDefault()
@@ -91,32 +111,6 @@ export function DashboardPage() {
       setTherapistError(firstErrorMessage(error.response?.data || error))
     } finally {
       setIsSubmittingTherapist(false)
-    }
-  }
-
-  async function handlePatientSubmit(event) {
-    event.preventDefault()
-    setPatientError('')
-    setPatientMessage('')
-    setIsSubmittingPatient(true)
-
-    try {
-      const response = await registerPatient(patientForm)
-      setPatientMessage(
-        response.activation_email_sent
-          ? `Pacient creat i correu d'activació enviat a ${response.email}.`
-          : 'Pacient creat correctament.',
-      )
-      setPatientForm({
-        first_name: '',
-        last_name: '',
-        email: '',
-        birth_date: '',
-      })
-    } catch (error) {
-      setPatientError(firstErrorMessage(error.response?.data || error))
-    } finally {
-      setIsSubmittingPatient(false)
     }
   }
 
@@ -249,95 +243,6 @@ export function DashboardPage() {
               <div className="button-row">
                 <button className="button" type="submit" disabled={isSubmittingTherapist}>
                   {isSubmittingTherapist ? 'Creant terapeuta...' : 'Crear terapeuta'}
-                </button>
-              </div>
-            </form>
-          </section>
-        ) : null}
-
-        {user.role === 'therapist' ? (
-          <section className="screen-card dashboard-panel profile-card--wide">
-            <div className="panel-heading">
-              <p className="eyebrow">Gestió de pacients</p>
-              <h2>Registrar un nou pacient</h2>
-              <p className="muted">
-                En crear el compte, s’envia un correu d’activació perquè el pacient estableixi la seva contrasenya i, al primer accés, accepti el consentiment informat.
-              </p>
-            </div>
-
-            {patientMessage ? <div className="message" style={{ marginBottom: '1rem' }}>{patientMessage}</div> : null}
-            {patientError ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{patientError}</div> : null}
-
-            <form className="form-stack" onSubmit={handlePatientSubmit}>
-              <div className="inline-fields">
-                <div className="field-group">
-                  <label htmlFor="patient-first-name">Nom</label>
-                  <input
-                    id="patient-first-name"
-                    value={patientForm.first_name}
-                    onChange={(event) =>
-                      setPatientForm((currentState) => ({
-                        ...currentState,
-                        first_name: event.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="field-group">
-                  <label htmlFor="patient-last-name">Cognoms</label>
-                  <input
-                    id="patient-last-name"
-                    value={patientForm.last_name}
-                    onChange={(event) =>
-                      setPatientForm((currentState) => ({
-                        ...currentState,
-                        last_name: event.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="inline-fields">
-                <div className="field-group">
-                  <label htmlFor="patient-email">Correu electrònic</label>
-                  <input
-                    id="patient-email"
-                    type="email"
-                    value={patientForm.email}
-                    onChange={(event) =>
-                      setPatientForm((currentState) => ({
-                        ...currentState,
-                        email: event.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="field-group">
-                  <label htmlFor="patient-birth-date">Data de naixement</label>
-                  <input
-                    id="patient-birth-date"
-                    type="date"
-                    value={patientForm.birth_date}
-                    onChange={(event) =>
-                      setPatientForm((currentState) => ({
-                        ...currentState,
-                        birth_date: event.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="button-row">
-                <button className="button-secondary" type="submit" disabled={isSubmittingPatient}>
-                  {isSubmittingPatient ? 'Creant pacient...' : 'Crear pacient'}
                 </button>
               </div>
             </form>
