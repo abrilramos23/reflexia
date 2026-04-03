@@ -50,11 +50,12 @@ class AssociatedContactSerializer(serializers.ModelSerializer):
         contact = AssociatedContact(**validated_data)
         contact.full_clean()
         contact.save()
-        DefaultContact.objects.create(
+        link = DefaultContact.objects.create(
             patient=patient,
             contact=contact,
             is_default=is_default,
         )
+        contact._patient_link = link
         return contact
 
     def update(self, instance, validated_data):
@@ -71,6 +72,7 @@ class AssociatedContactSerializer(serializers.ModelSerializer):
             link = DefaultContact.objects.get(patient=patient, contact=instance)
             link.is_default = is_default
             link.save(update_fields=["is_default"])
+            instance._patient_link = link
 
         return instance
 
