@@ -88,12 +88,14 @@ export function ProfilePage() {
     phone: '',
     is_default: false,
   })
+  const [showContactForm, setShowContactForm] = useState(false)
   const [editingContactId, setEditingContactId] = useState('')
   const [contactMessage, setContactMessage] = useState('')
   const [contactError, setContactError] = useState('')
   const [supportTherapists, setSupportTherapists] = useState([])
   const [availableSupportTherapists, setAvailableSupportTherapists] = useState([])
   const [selectedSupportId, setSelectedSupportId] = useState('')
+  const [showSupportForm, setShowSupportForm] = useState(false)
   const [supportMessage, setSupportMessage] = useState('')
   const [supportError, setSupportError] = useState('')
 
@@ -189,6 +191,7 @@ export function ProfilePage() {
       is_default: false,
     })
     setEditingContactId('')
+    setShowContactForm(false)
   }
 
   async function handleProfileSubmit(event) {
@@ -332,6 +335,7 @@ export function ProfilePage() {
   }
 
   function handleEditContact(contact) {
+    setShowContactForm(true)
     setEditingContactId(contact.id)
     setContactForm({
       name: contact.name,
@@ -407,6 +411,7 @@ export function ProfilePage() {
         currentTherapists.filter((therapist) => therapist.id !== selectedSupportId),
       )
       setSelectedSupportId('')
+      setShowSupportForm(false)
       setSupportMessage('Terapeuta de suport afegit correctament.')
     } catch (error) {
       setSupportError(firstErrorMessage(error.response?.data || error))
@@ -666,7 +671,7 @@ export function ProfilePage() {
           )}
         </section>
 
-        <section className="screen-card dashboard-panel">
+        <section className="screen-card dashboard-panel" style={{ height: 'fit-content' }}>
           <div className="panel-heading">
             <p className="eyebrow">Accions ràpides</p>
             <h2>Seguretat i legal</h2>
@@ -683,103 +688,102 @@ export function ProfilePage() {
           <section className="screen-card profile-card profile-card--wide">
             <div className="panel-heading">
               <p className="eyebrow">Contactes associats</p>
+              {contactMessage ? <div className="message" style={{ marginBottom: '1rem' }}>{contactMessage}</div> : null}
+              {contactError ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{contactError}</div> : null}
               <h3>Gestionar persones de confiança</h3>
             </div>
 
-            {contactMessage ? <div className="message" style={{ marginBottom: '1rem' }}>{contactMessage}</div> : null}
-            {contactError ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{contactError}</div> : null}
-
-            <form className="form-stack" onSubmit={handleContactSubmit}>
-              <div className="inline-fields">
-                <div className="field-group">
-                  <label htmlFor="contact-name">Nom</label>
-                  <input
-                    id="contact-name"
-                    type="text"
-                    value={contactForm.name}
-                    onChange={(event) =>
-                      setContactForm((currentForm) => ({
-                        ...currentForm,
-                        name: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="field-group">
-                  <label htmlFor="contact-relation">Relació</label>
-                  <input
-                    id="contact-relation"
-                    type="text"
-                    value={contactForm.relation}
-                    onChange={(event) =>
-                      setContactForm((currentForm) => ({
-                        ...currentForm,
-                        relation: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="inline-fields">
-                <div className="field-group">
-                  <label htmlFor="contact-email">Correu electrònic</label>
-                  <input
-                    id="contact-email"
-                    type="email"
-                    value={contactForm.email}
-                    onChange={(event) =>
-                      setContactForm((currentForm) => ({
-                        ...currentForm,
-                        email: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="field-group">
-                  <label htmlFor="contact-phone">Telèfon</label>
-                  <input
-                    id="contact-phone"
-                    type="text"
-                    value={contactForm.phone}
-                    onChange={(event) =>
-                      setContactForm((currentForm) => ({
-                        ...currentForm,
-                        phone: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* <label className="checkbox-row" htmlFor="contact-default">
-                <input
-                  id="contact-default"
-                  type="checkbox"
-                  checked={contactForm.is_default}
-                  onChange={(event) =>
-                    setContactForm((currentForm) => ({
-                      ...currentForm,
-                      is_default: event.target.checked,
-                    }))
-                  }
-                />
-                Marcar com a contacte per defecte
-              </label> */}
-
-              <div className="button-row">
-                <button className="button" type="submit">
-                  {editingContactId ? 'Guardar contacte' : 'Afegir contacte'}
+            {!showContactForm ? (
+              <div className="section-toolbar">
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => {
+                    setShowContactForm(true)
+                    setEditingContactId('')
+                  }}
+                >
+                  Afegir contacte
                 </button>
-                {editingContactId ? (
-                  <button className="button-ghost" type="button" onClick={resetContactForm}>
-                    Cancel·lar edició
-                  </button>
-                ) : null}
               </div>
-            </form>
+            ) : null}
+
+            {showContactForm ? (
+              <form className="form-stack collapsible-form-card" onSubmit={handleContactSubmit}>
+                <div className="inline-fields">
+                  <div className="field-group">
+                    <label htmlFor="contact-name">Nom</label>
+                    <input
+                      id="contact-name"
+                      type="text"
+                      value={contactForm.name}
+                      onChange={(event) =>
+                        setContactForm((currentForm) => ({
+                          ...currentForm,
+                          name: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div className="field-group">
+                    <label htmlFor="contact-relation">Relació</label>
+                    <input
+                      id="contact-relation"
+                      type="text"
+                      value={contactForm.relation}
+                      onChange={(event) =>
+                        setContactForm((currentForm) => ({
+                          ...currentForm,
+                          relation: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="inline-fields">
+                  <div className="field-group">
+                    <label htmlFor="contact-email">Correu electrònic</label>
+                    <input
+                      id="contact-email"
+                      type="email"
+                      value={contactForm.email}
+                      onChange={(event) =>
+                        setContactForm((currentForm) => ({
+                          ...currentForm,
+                          email: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div className="field-group">
+                    <label htmlFor="contact-phone">Telèfon</label>
+                    <input
+                      id="contact-phone"
+                      type="text"
+                      value={contactForm.phone}
+                      onChange={(event) =>
+                        setContactForm((currentForm) => ({
+                          ...currentForm,
+                          phone: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="button-row">
+                  <button className="button" type="submit">
+                    {editingContactId ? 'Guardar contacte' : 'Crear contacte'}
+                  </button>
+                  <button className="button-ghost" type="button" onClick={resetContactForm}>
+                    Cancel·lar
+                  </button>
+                </div>
+              </form>
+            ) : null}
 
             <div className="content-card section-stack" style={{ marginTop: '2rem' }}>
               <h3>Llista de contactes</h3>
@@ -789,7 +793,7 @@ export function ProfilePage() {
               ) : (
                 <ul className="patient-list">
                   {associatedContacts.map((contact) => (
-                    <li className="patient-item" key={contact.id}>
+                    <li className="patient-item compact-list-item" key={contact.id}>
                       <div>
                         <strong>{contact.name}</strong>
                         <p className="muted">{contact.relation}</p>
@@ -802,13 +806,13 @@ export function ProfilePage() {
                       </div>
 
                       <div className="list-actions">
-                        <button className="button-ghost" type="button" onClick={() => handleEditContact(contact)}>
+                        <button className="action-chip" type="button" onClick={() => handleEditContact(contact)}>
                           Editar
                         </button>
-                        <button className="button-secondary" type="button" onClick={() => handleToggleDefaultContact(contact)}>
+                        <button className="action-chip action-chip--accent" type="button" onClick={() => handleToggleDefaultContact(contact)}>
                           {contact.is_default ? 'Treure per defecte' : 'Marcar per defecte'}
                         </button>
-                        <button className="button-danger" type="button" onClick={() => handleDeleteContact(contact)}>
+                        <button className="action-chip action-chip--danger" type="button" onClick={() => handleDeleteContact(contact)}>
                           Eliminar
                         </button>
                       </div>
@@ -824,35 +828,60 @@ export function ProfilePage() {
           <section className="screen-card profile-card profile-card--wide">
             <div className="panel-heading">
               <p className="eyebrow">Terapeutes de suport</p>
+              {supportMessage ? <div className="message" style={{ marginBottom: '1rem' }}>{supportMessage}</div> : null}
+              {supportError ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{supportError}</div> : null}
               <h3>Gestionar cobertura d’alertes</h3>
             </div>
 
-            {supportMessage ? <div className="message" style={{ marginBottom: '1rem' }}>{supportMessage}</div> : null}
-            {supportError ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{supportError}</div> : null}
-
-            <form className="form-stack" onSubmit={handleSupportTherapistSubmit}>
-              <div className="field-group">
-                <label htmlFor="support-therapist">Afegir terapeuta de suport</label>
-                <select
-                  id="support-therapist"
-                  value={selectedSupportId}
-                  onChange={(event) => setSelectedSupportId(event.target.value)}
+            {!showSupportForm ? (
+              <div className="section-toolbar">
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => {
+                    setShowSupportForm(true)
+                  }}
                 >
-                  <option value="">Selecciona un terapeuta del sistema</option>
-                  {availableSupportTherapists.map((therapist) => (
-                    <option key={therapist.id} value={therapist.id}>
-                      {therapist.first_name} {therapist.last_name} · {therapist.specialty}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="button-row">
-                <button className="button" type="submit" disabled={!selectedSupportId}>
-                  Afegir terapeuta
+                  Afegir terapeuta de suport
                 </button>
               </div>
-            </form>
+            ) : null}
+
+            {showSupportForm ? (
+              <form className="form-stack collapsible-form-card" onSubmit={handleSupportTherapistSubmit}>
+                <div className="field-group">
+                  <label htmlFor="support-therapist">Selecciona un terapeuta</label>
+                  <select
+                    id="support-therapist"
+                    value={selectedSupportId}
+                    onChange={(event) => setSelectedSupportId(event.target.value)}
+                  >
+                    <option value="">Selecciona un terapeuta del sistema</option>
+                    {availableSupportTherapists.map((therapist) => (
+                      <option key={therapist.id} value={therapist.id}>
+                        {therapist.first_name} {therapist.last_name} · {therapist.specialty}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="button-row">
+                  <button className="button" type="submit" disabled={!selectedSupportId}>
+                    Afegir terapeuta
+                  </button>
+                  <button
+                    className="button-ghost"
+                    type="button"
+                    onClick={() => {
+                      setShowSupportForm(false)
+                      setSelectedSupportId('')
+                    }}
+                  >
+                    Cancel·lar
+                  </button>
+                </div>
+              </form>
+            ) : null}
 
             <div className="content-card section-stack">
               <h3>Llista actual</h3>
@@ -862,7 +891,7 @@ export function ProfilePage() {
               ) : (
                 <ul className="patient-list">
                   {supportTherapists.map((supportTherapist) => (
-                    <li className="patient-item" key={supportTherapist.support_id}>
+                    <li className="patient-item compact-list-item" key={supportTherapist.support_id}>
                       <div>
                         <strong>
                           {supportTherapist.first_name} {supportTherapist.last_name}
@@ -873,7 +902,7 @@ export function ProfilePage() {
 
                       <div className="list-actions">
                         <button
-                          className="button-danger"
+                          className="action-chip action-chip--danger"
                           type="button"
                           onClick={() => handleDeleteSupportTherapist(supportTherapist)}
                         >
