@@ -91,7 +91,7 @@ export function ConsentPage() {
             <h2>Has d’acceptar o rebutjar el consentiment</h2>
           </div>
 
-          {error ? <div className="error-banner">{error}</div> : null}
+          {error ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{error}</div> : null}
 
           <div className="content-card section-stack">
             <h3>Informació essencial</h3>

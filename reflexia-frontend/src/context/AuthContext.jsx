@@ -231,6 +231,46 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function listAssociatedContacts() {
+    const response = await api.get('/contacts/associated/')
+    return response.data
+  }
+
+  async function createAssociatedContact(payload) {
+    const response = await api.post('/contacts/associated/', payload)
+    return response.data
+  }
+
+  async function updateAssociatedContact(contactId, payload) {
+    const response = await api.patch(`/contacts/associated/${contactId}/`, payload)
+    return response.data
+  }
+
+  async function deleteAssociatedContact(contactId) {
+    const response = await api.delete(`/contacts/associated/${contactId}/`)
+    return response.data
+  }
+
+  async function listSupportTherapists() {
+    const response = await api.get('/contacts/support-therapists/')
+    return response.data
+  }
+
+  async function listAvailableSupportTherapists() {
+    const response = await api.get('/contacts/support-therapists/available/')
+    return response.data
+  }
+
+  async function createSupportTherapist(payload) {
+    const response = await api.post('/contacts/support-therapists/', payload)
+    return response.data
+  }
+
+  async function deleteSupportTherapist(supportTherapistId) {
+    const response = await api.delete(`/contacts/support-therapists/${supportTherapistId}/`)
+    return response.data
+  }
+
   async function registerTherapist(payload) {
     const response = await api.post('/auth/register/therapist/', payload)
     return response.data
@@ -305,6 +345,14 @@ export function AuthProvider({ children }) {
     rejectConsent,
     updateProfile,
     changePassword,
+    listAssociatedContacts,
+    createAssociatedContact,
+    updateAssociatedContact,
+    deleteAssociatedContact,
+    listSupportTherapists,
+    listAvailableSupportTherapists,
+    createSupportTherapist,
+    deleteSupportTherapist,
     registerTherapist,
     registerPatient,
     setupTwoFactor,

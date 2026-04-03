@@ -80,8 +80,8 @@ export function ActivateAccountPage() {
             <p className="muted">Escull una contrasenya segura per començar.</p>
           </div>
 
-          {message ? <div className="message">{message}</div> : null}
-          {error ? <div className="error-banner">{error}</div> : null}
+          {message ? <div className="message" style={{ marginBottom: '1rem' }}>{message}</div> : null}
+          {error ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{error}</div> : null}
 
           <form className="form-stack" onSubmit={handleSubmit}>
             <div className="field-group">

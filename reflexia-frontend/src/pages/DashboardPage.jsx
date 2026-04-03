@@ -162,8 +162,8 @@ export function DashboardPage() {
               </p>
             </div>
 
-            {therapistMessage ? <div className="message">{therapistMessage}</div> : null}
-            {therapistError ? <div className="error-banner">{therapistError}</div> : null}
+            {therapistMessage ? <div className="message" style={{ marginBottom: '1rem' }}>{therapistMessage}</div> : null}
+            {therapistError ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{therapistError}</div> : null}
 
             <form className="form-stack" onSubmit={handleTherapistSubmit}>
               <div className="inline-fields">
@@ -267,8 +267,8 @@ export function DashboardPage() {
               </p>
             </div>
 
-            {patientMessage ? <div className="message">{patientMessage}</div> : null}
-            {patientError ? <div className="error-banner">{patientError}</div> : null}
+            {patientMessage ? <div className="message" style={{ marginBottom: '1rem' }}>{patientMessage}</div> : null}
+            {patientError ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{patientError}</div> : null}
 
             <form className="form-stack" onSubmit={handlePatientSubmit}>
               <div className="inline-fields">
