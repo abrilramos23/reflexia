@@ -13,6 +13,7 @@ from apps.contacts.serializers import (
     SupportTherapistCreateSerializer,
     SupportTherapistListSerializer,
 )
+from apps.users.models import Therapist
 from apps.users.permissions import IsTherapistUser
 
 
