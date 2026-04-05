@@ -163,6 +163,47 @@ class PatientRegistrationTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class TherapistPatientManagementTests(APITestCase):
+    def setUp(self):
+        self.therapist = Therapist.objects.create_user(
+            email="therapist@example.com",
+            password="StrongPass123!",
+            first_name="Marta",
+            last_name="Lopez",
+            license_number="16385",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        self.patient = Patient.objects.create_user(
+            email="patient@example.com",
+            password="StrongPass123!",
+            first_name="Paula",
+            last_name="Sanchez",
+            birth_date="2001-01-10",
+            is_active=True,
+        )
+        self.other_patient = Patient.objects.create_user(
+            email="other@example.com",
+            password="StrongPass123!",
+            first_name="Joan",
+            last_name="Serra",
+            birth_date="2000-03-15",
+            is_active=True,
+        )
+        TherapistPatient.objects.create(therapist=self.therapist, patient=self.patient)
+        self.url = "/api/auth/patients/"
+
+    def test_therapist_can_list_assigned_patients(self):
+        self.client.force_authenticate(user=self.therapist)
+
+        response = self.client.get(self.url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], str(self.patient.pk))
+        self.assertEqual(response.data[0]["email"], self.patient.email)
         self.assertIn("email", response.data)
         self.assertEqual(Patient.objects.count(), 0)
 
