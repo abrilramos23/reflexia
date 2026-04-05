@@ -193,24 +193,25 @@ class TherapistPatientManagementTests(APITestCase):
             is_active=True,
         )
         TherapistPatient.objects.create(therapist=self.therapist, patient=self.patient)
-        self.url = "/api/auth/patients/"
+        self.list_url = "/api/auth/patients/"
+        self.register_url = "/api/auth/register/patient/"
 
     def test_therapist_can_list_assigned_patients(self):
         self.client.force_authenticate(user=self.therapist)
 
-        response = self.client.get(self.url, format="json")
+        response = self.client.get(self.list_url, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["id"], str(self.patient.pk))
         self.assertEqual(response.data[0]["email"], self.patient.email)
-        self.assertIn("email", response.data)
-        self.assertEqual(Patient.objects.count(), 0)
+        self.assertIn("email", response.data[0])
+        self.assertEqual(Patient.objects.count(), 2)
 
     def test_register_patient_requires_consent_date_when_consent_accepted(self):
         self.client.force_authenticate(user=self.therapist)
         response = self.client.post(
-            self.url,
+            self.register_url,
             {
                 "first_name": "Pablo",
                 "last_name": "Martin",
@@ -223,7 +224,7 @@ class TherapistPatientManagementTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("consent_date", response.data)
-        self.assertEqual(Patient.objects.count(), 0)
+        self.assertEqual(Patient.objects.count(), 2)
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
