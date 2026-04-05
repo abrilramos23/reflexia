@@ -2,20 +2,12 @@ import { Link, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { AppHeader } from '../components/AppHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { consentDocumentUrl } from '../lib/api.js'
 
 function formatRole(role) {
-  if (role === 'therapist') {
-    return 'Terapeuta'
-  }
-
-  if (role === 'patient') {
-    return 'Pacient'
-  }
-
-  if (role === 'admin') {
-    return 'Administrador'
-  }
-
+  if (role === 'therapist') return 'Terapeuta'
+  if (role === 'patient') return 'Pacient'
+  if (role === 'admin') return 'Administrador'
   return 'Usuari'
 }
 
@@ -42,7 +34,13 @@ function firstErrorMessage(error) {
 }
 
 export function DashboardPage() {
-  const { user, registerTherapist, listTherapistPatients } = useAuth()
+  const {
+    user,
+    registerTherapist,
+    listTherapistPatients,
+    listSupportTherapists,
+    listAssociatedContacts,
+  } = useAuth()
   const [therapistForm, setTherapistForm] = useState({
     first_name: '',
     last_name: '',
@@ -54,7 +52,12 @@ export function DashboardPage() {
   const [therapistError, setTherapistError] = useState('')
   const [isSubmittingTherapist, setIsSubmittingTherapist] = useState(false)
   const [therapistPatientsCount, setTherapistPatientsCount] = useState(0)
-  const [patientsSummaryError, setPatientsSummaryError] = useState('')
+  const [activeTherapistPatientsCount, setActiveTherapistPatientsCount] = useState(0)
+  const [pendingConsentPatientsCount, setPendingConsentPatientsCount] = useState(0)
+  const [supportTherapistsCount, setSupportTherapistsCount] = useState(0)
+  const [patientContactsCount, setPatientContactsCount] = useState(0)
+  const [defaultContactsCount, setDefaultContactsCount] = useState(0)
+  const [dashboardError, setDashboardError] = useState('')
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -63,24 +66,48 @@ export function DashboardPage() {
   useEffect(() => {
     let isCancelled = false
 
-    async function loadTherapistPatients() {
-      if (user.role !== 'therapist') {
-        return
-      }
+    async function loadDashboardData() {
+      setDashboardError('')
 
       try {
-        const patients = await listTherapistPatients()
-        if (!isCancelled) {
-          setTherapistPatientsCount(patients.length)
+        if (user.role === 'therapist') {
+          const [patients, supportTherapists] = await Promise.all([
+            listTherapistPatients(),
+            listSupportTherapists(),
+          ])
+
+          if (!isCancelled) {
+            setTherapistPatientsCount(patients.length)
+            setActiveTherapistPatientsCount(
+              patients.filter((patient) => patient.is_active).length,
+            )
+            setPendingConsentPatientsCount(
+              patients.filter(
+                (patient) => patient.is_active && patient.consent_accepted === false,
+              ).length,
+            )
+            setSupportTherapistsCount(supportTherapists.length)
+          }
+        }
+
+        if (user.role === 'patient') {
+          const contacts = await listAssociatedContacts()
+
+          if (!isCancelled) {
+            setPatientContactsCount(contacts.length)
+            setDefaultContactsCount(
+              contacts.filter((contact) => contact.is_default).length,
+            )
+          }
         }
       } catch (error) {
         if (!isCancelled) {
-          setPatientsSummaryError(firstErrorMessage(error.response?.data || error))
+          setDashboardError(firstErrorMessage(error.response?.data || error))
         }
       }
     }
 
-    loadTherapistPatients()
+    loadDashboardData()
 
     return () => {
       isCancelled = true
@@ -122,12 +149,23 @@ export function DashboardPage() {
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
             <p className="eyebrow">Tauler inicial</p>
-            <h1 className="section-title">Compte actiu i llest per continuar.</h1>
+            <h1 className="section-title">
+              {user.role === 'therapist'
+                ? 'Visió general de la teva activitat clínica.'
+                : user.role === 'patient'
+                  ? 'Benvingut al teu espai personal de Reflexia.'
+                  : 'Compte actiu i llest per continuar.'}
+            </h1>
             <p className="muted">
-              Aquesta és una primera base funcional del frontend del mòdul users. Des d’aquí ja podem provar els
-              fluxos d’autenticació i gestió de perfil.
+              {user.role === 'therapist'
+                ? 'Consulta l’estat dels teus pacients, revisa la cobertura de suport i accedeix ràpidament a la gestió clínica.'
+                : user.role === 'patient'
+                  ? 'Des d’aquí pots revisar l’estat del teu compte, mantenir actualitzats els teus contactes i reforçar la seguretat.'
+                  : 'Administra les altes de terapeutes i mantén l’accés a la plataforma sota control.'}
             </p>
           </div>
+
+          {dashboardError ? <div className="error-banner">{dashboardError}</div> : null}
 
           <div className="stat-list">
             <div className="stat-card">
@@ -140,10 +178,130 @@ export function DashboardPage() {
             </div>
             <div className="stat-card">
               <span>Consentiment</span>
-              <strong>{user.role === 'patient' ? (user.consent_accepted ? 'Acceptat' : 'Pendent') : 'No aplica'}</strong>
+              <strong>
+                {user.role === 'patient'
+                  ? user.consent_accepted
+                    ? 'Acceptat'
+                    : 'Pendent'
+                  : 'No aplica'}
+              </strong>
             </div>
           </div>
         </section>
+
+        {user.role === 'patient' ? (
+          <>
+            <section className="screen-card dashboard-panel">
+              <div className="panel-heading">
+                <p className="eyebrow">Resum personal</p>
+                <h2>Contactes i seguretat</h2>
+              </div>
+
+              <div className="stat-list">
+                <div className="stat-card">
+                  <span>Contactes associats</span>
+                  <strong>{patientContactsCount}</strong>
+                </div>
+                <div className="stat-card">
+                  <span>Per defecte</span>
+                  <strong>{defaultContactsCount}</strong>
+                </div>
+                <div className="stat-card">
+                  <span>Protecció</span>
+                  <strong>{user.two_factor_enabled ? '2FA actiu' : '2FA pendent'}</strong>
+                </div>
+              </div>
+            </section>
+
+            <section className="screen-card dashboard-panel">
+              <div className="panel-heading">
+                <p className="eyebrow">Accions principals</p>
+                <h2>Què pots fer ara</h2>
+              </div>
+
+              <div className="button-row">
+                <Link className="button-secondary" style={{ textDecoration: 'none' }} to="/profile">
+                  Gestionar perfil i contactes
+                </Link>
+                <a
+                  className="button-ghost"
+                  style={{ textDecoration: 'none' }}
+                  href={consentDocumentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Veure consentiment PDF
+                </a>
+              </div>
+
+              <div className="content-card section-stack">
+                <h3>Estat actual</h3>
+                <p className="muted">
+                  {user.consent_accepted
+                    ? 'El teu compte està preparat per continuar amb normalitat.'
+                    : 'Tens accions pendents al teu compte. Revisa el consentiment i la configuració de seguretat.'}
+                </p>
+              </div>
+            </section>
+          </>
+        ) : null}
+
+        {user.role === 'therapist' ? (
+          <>
+            <section className="screen-card dashboard-panel">
+              <div className="panel-heading">
+                <p className="eyebrow">Resum assistencial</p>
+                <h2>Pacients i consentiments</h2>
+              </div>
+
+              <div className="stat-list">
+                <div className="stat-card">
+                  <span>Pacients assignats</span>
+                  <strong>{therapistPatientsCount}</strong>
+                </div>
+                <div className="stat-card">
+                  <span>Pacients actius</span>
+                  <strong>{activeTherapistPatientsCount}</strong>
+                </div>
+                <div className="stat-card">
+                  <span>Consentiments pendents</span>
+                  <strong>{pendingConsentPatientsCount}</strong>
+                </div>
+              </div>
+            </section>
+
+            <section className="screen-card dashboard-panel">
+              <div className="panel-heading">
+                <p className="eyebrow">Cobertura clínica</p>
+                <h2>Suport i accions ràpides</h2>
+              </div>
+
+              <div className="stat-list">
+                <div className="stat-card">
+                  <span>Terapeutes de suport</span>
+                  <strong>{supportTherapistsCount}</strong>
+                </div>
+                <div className="stat-card">
+                  <span>Espai principal</span>
+                  <strong>Gestió clínica</strong>
+                </div>
+                <div className="stat-card">
+                  <span>Acció clau</span>
+                  <strong>Alta i seguiment</strong>
+                </div>
+              </div>
+
+              <div className="button-row">
+                <Link className="button-secondary" style={{ textDecoration: 'none' }} to="/patients">
+                  Obrir gestió de pacients
+                </Link>
+                <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/profile">
+                  Gestionar suport i perfil
+                </Link>
+              </div>
+            </section>
+          </>
+        ) : null}
 
         {user.role === 'admin' ? (
           <section className="screen-card dashboard-panel profile-card--wide">
@@ -151,13 +309,12 @@ export function DashboardPage() {
               <p className="eyebrow">Gestió de terapeutes</p>
               <h2>Crear terapeuta i enviar activació</h2>
               <p className="muted">
-                L’admin crea el compte amb les dades bàsiques i el sistema envia un correu perquè el terapeuta
-                defineixi la seva contrasenya i activi l’accés.
+                L’admin crea el compte amb les dades bàsiques i el sistema envia un correu perquè el terapeuta defineixi la seva contrasenya i activi l’accés.
               </p>
             </div>
 
-            {therapistMessage ? <div className="message" style={{ marginBottom: '1rem' }}>{therapistMessage}</div> : null}
-            {therapistError ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{therapistError}</div> : null}
+            {therapistMessage ? <div className="message">{therapistMessage}</div> : null}
+            {therapistError ? <div className="error-banner">{therapistError}</div> : null}
 
             <form className="form-stack" onSubmit={handleTherapistSubmit}>
               <div className="inline-fields">
@@ -248,7 +405,6 @@ export function DashboardPage() {
             </form>
           </section>
         ) : null}
-
       </div>
     </div>
   )
