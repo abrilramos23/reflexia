@@ -539,6 +539,28 @@
   font-size: 0.92rem;
 }
 
+.dashboard-timeline {
+  display: grid;
+  gap: 14px;
+}
+
+.dashboard-timeline-step {
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(61, 102, 89, 0.12);
+}
+
+.dashboard-timeline-step strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+
+.dashboard-timeline-step p {
+  margin: 0;
+}
+
 .dashboard-status-pill--active {
   background: rgba(79, 155, 122, 0.14);
   color: #2e6c55;
