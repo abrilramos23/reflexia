@@ -475,6 +475,85 @@
   font-size: 1.18rem;
 }
 
+.dashboard-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.dashboard-metric-card {
+  padding: 18px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(241, 249, 244, 0.92) 100%);
+  border: 1px solid rgba(61, 102, 89, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.dashboard-metric-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.dashboard-metric-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.dashboard-metric-card p {
+  margin: 10px 0 0;
+  font-size: 0.93rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.dashboard-metric-card--alert {
+  background: linear-gradient(180deg, rgba(255, 248, 244, 0.96) 0%, rgba(255, 242, 233, 0.92) 100%);
+}
+
+.dashboard-metric-card--active {
+  background: linear-gradient(180deg, rgba(243, 252, 246, 0.96) 0%, rgba(233, 246, 237, 0.94) 100%);
+}
+
+.dashboard-metric-card--pending {
+  background: linear-gradient(180deg, rgba(251, 249, 239, 0.96) 0%, rgba(245, 240, 220, 0.94) 100%);
+}
+
+.dashboard-activity-list {
+  gap: 12px;
+}
+
+.dashboard-activity-item {
+  align-items: flex-start;
+}
+
+.dashboard-activity-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.dashboard-activity-meta {
+  font-size: 0.92rem;
+}
+
+.dashboard-status-pill--active {
+  background: rgba(79, 155, 122, 0.14);
+  color: #2e6c55;
+}
+
+.dashboard-status-pill--pending {
+  background: rgba(180, 154, 72, 0.14);
+  color: #7f6721;
+}
+
+.dashboard-status-pill--muted {
+  background: rgba(109, 127, 119, 0.13);
+  color: #53675f;
+}
+
 .qr-link {
   word-break: break-all;
 }
@@ -565,6 +644,7 @@
   .screen-grid,
   .dashboard-grid,
   .profile-grid,
+  .dashboard-metrics-grid,
   .stat-list,
   .inline-fields {
     grid-template-columns: 1fr;
