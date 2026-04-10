@@ -1,0 +1,18 @@
+$kind: http-request
+description: >-
+  Reject the informed consent. The patient account is deactivated and the
+  refresh token is blacklisted.
+
+
+  **Auth:** JWT Bearer (IsAuthenticated + patient)
+url: "{{base_url}}/api/auth/consent/reject/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "refresh": "{{refresh_token}}"
+    }
+order: 9000

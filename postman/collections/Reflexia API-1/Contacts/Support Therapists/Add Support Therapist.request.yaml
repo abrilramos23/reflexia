@@ -1,0 +1,19 @@
+$kind: http-request
+description: >-
+  Add another therapist as a support therapist. The `support_id` must be a valid
+  therapist UUID, cannot be the authenticated therapist's own ID, and cannot
+  already be assigned.
+
+
+  **Auth:** JWT Bearer (IsTherapistUser)
+url: "{{base_url}}/api/contacts/support-therapists/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "support_id": "11111111-1111-1111-1111-111111111111"
+    }
+order: 2000

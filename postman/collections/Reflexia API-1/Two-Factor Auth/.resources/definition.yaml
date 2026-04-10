@@ -1,0 +1,3 @@
+$kind: collection
+description: Two-factor authentication (TOTP) setup, enable, verify at login, and disable.
+order: 3000

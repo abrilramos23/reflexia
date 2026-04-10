@@ -1,0 +1,44 @@
+$kind: http-request
+description: >-
+  Authenticate a user. Returns `access` and `refresh` JWT tokens, or
+  `two_factor_required` / `consent_required` status. A test script auto-saves
+  the tokens to collection variables.
+
+
+  **Auth:** None (AllowAny)
+
+
+  **login_status values:**
+
+  - `authenticated` — tokens returned
+
+  - `two_factor_required` — must call `/api/auth/2fa/verify/`
+
+  - `consent_required` — patient must accept consent before using the app
+url: "{{base_url}}/api/auth/login/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "user@example.com",
+      "password": "StrongPass123!"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const json = pm.response.json();
+        if (json.access) {
+          pm.collectionVariables.set('access_token', json.access);
+        }
+        if (json.refresh) {
+          pm.collectionVariables.set('refresh_token', json.refresh);
+        }
+      }
+    language: text/javascript
+order: 4000

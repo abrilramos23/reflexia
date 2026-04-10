@@ -1,0 +1,3 @@
+$kind: collection
+description: Endpoints for therapists to manage their support therapist network.
+order: 2000

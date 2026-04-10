@@ -1,0 +1,35 @@
+$kind: http-request
+description: >-
+  Complete a 2FA-protected login by verifying credentials + TOTP code. Returns
+  JWT tokens on success. A test script auto-saves the tokens.
+
+
+  **Auth:** None (AllowAny)
+url: "{{base_url}}/api/auth/2fa/verify/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "user@example.com",
+      "password": "StrongPass123!",
+      "code": "123456"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const json = pm.response.json();
+        if (json.access) {
+          pm.collectionVariables.set('access_token', json.access);
+        }
+        if (json.refresh) {
+          pm.collectionVariables.set('refresh_token', json.refresh);
+        }
+      }
+    language: text/javascript
+order: 3000

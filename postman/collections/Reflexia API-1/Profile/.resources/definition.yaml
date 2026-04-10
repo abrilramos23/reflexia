@@ -1,0 +1,4 @@
+$kind: collection
+description: "Authenticated user profile management: view, update, change
+  password, delete account, and manage the therapist's patient list."
+order: 2000

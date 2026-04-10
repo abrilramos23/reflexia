@@ -1,0 +1,18 @@
+$kind: http-request
+description: >-
+  Confirm and activate 2FA by providing a valid TOTP code from the authenticator
+  app. Must be called after `/setup`.
+
+
+  **Auth:** JWT Bearer (IsAuthenticated)
+url: "{{base_url}}/api/auth/2fa/enable/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "code": "123456"
+    }
+order: 2000

@@ -1,0 +1,4 @@
+$kind: collection
+description: Patient's associated (emergency) contacts and therapist's support
+  therapist network management.
+order: 4000

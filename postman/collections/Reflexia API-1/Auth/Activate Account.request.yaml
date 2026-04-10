@@ -1,0 +1,23 @@
+$kind: http-request
+description: >-
+  Activate a user account using the uid and token from the activation email
+  link.
+
+
+  **Auth:** None (AllowAny)
+url: "{{base_url}}/api/auth/activate/account/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "uid": "<base64-encoded-user-id>",
+      "token": "<activation-token>",
+      "password": "StrongPass123!",
+      "password_confirm": "StrongPass123!"
+    }
+auth:
+  type: noauth
+order: 3000

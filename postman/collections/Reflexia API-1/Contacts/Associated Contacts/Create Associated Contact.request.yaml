@@ -1,0 +1,22 @@
+$kind: http-request
+description: >-
+  Create a new associated contact for the authenticated patient. At least one of
+  `email` or `phone` is required.
+
+
+  **Auth:** JWT Bearer (IsAuthenticated + patient)
+url: "{{base_url}}/api/contacts/associated/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Maria Perez",
+      "relation": "Germana",
+      "email": "maria@example.com",
+      "phone": "",
+      "is_default": true
+    }
+order: 2000

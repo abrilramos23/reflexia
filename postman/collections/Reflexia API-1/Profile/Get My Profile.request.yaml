@@ -1,0 +1,10 @@
+$kind: http-request
+description: >-
+  Get the authenticated user's profile summary (id, name, email, role, 2FA
+  status, consent status).
+
+
+  **Auth:** JWT Bearer (IsAuthenticated)
+url: "{{base_url}}/api/auth/me/"
+method: GET
+order: 1000

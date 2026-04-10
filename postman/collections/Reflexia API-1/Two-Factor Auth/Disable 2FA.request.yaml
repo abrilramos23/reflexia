@@ -1,0 +1,19 @@
+$kind: http-request
+description: >-
+  Disable 2FA for the authenticated user. Requires current password and a valid
+  TOTP code.
+
+
+  **Auth:** JWT Bearer (IsAuthenticated)
+url: "{{base_url}}/api/auth/2fa/disable/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "password": "StrongPass123!",
+      "code": "123456"
+    }
+order: 4000

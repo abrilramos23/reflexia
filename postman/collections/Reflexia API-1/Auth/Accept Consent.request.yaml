@@ -1,0 +1,13 @@
+$kind: http-request
+description: |-
+  Accept the informed consent. Only callable by a patient user.
+
+  **Auth:** JWT Bearer (IsAuthenticated + patient)
+url: "{{base_url}}/api/auth/consent/accept/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: "{}"
+order: 8000

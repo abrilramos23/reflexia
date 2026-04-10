@@ -1,0 +1,4 @@
+$kind: collection
+description: Account registration, login, logout, activation, password
+  management, and consent flows.
+order: 1000

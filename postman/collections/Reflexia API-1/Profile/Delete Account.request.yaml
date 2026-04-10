@@ -1,0 +1,19 @@
+$kind: http-request
+description: >-
+  Permanently delete the authenticated user's account. Therapists with active
+  assigned patients will receive a 400 error listing the patients.
+
+
+  **Auth:** JWT Bearer (IsAuthenticated)
+url: "{{base_url}}/api/auth/delete-account/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "password": "StrongPass123!",
+      "refresh": "{{refresh_token}}"
+    }
+order: 4000

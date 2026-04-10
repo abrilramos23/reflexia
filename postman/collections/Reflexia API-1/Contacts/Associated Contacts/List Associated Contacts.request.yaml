@@ -1,0 +1,8 @@
+$kind: http-request
+description: |-
+  List all associated (emergency) contacts for the authenticated patient.
+
+  **Auth:** JWT Bearer (IsAuthenticated + patient)
+url: "{{base_url}}/api/contacts/associated/"
+method: GET
+order: 1000

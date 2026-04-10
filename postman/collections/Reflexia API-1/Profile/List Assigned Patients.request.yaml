@@ -1,0 +1,8 @@
+$kind: http-request
+description: |-
+  List all patients assigned to the authenticated therapist.
+
+  **Auth:** JWT Bearer (IsTherapistUser)
+url: "{{base_url}}/api/auth/patients/"
+method: GET
+order: 5000

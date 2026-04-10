@@ -1,0 +1,16 @@
+$kind: http-request
+description: >-
+  Initiate 2FA setup. Returns a TOTP `secret` and an `otpauth_url` to scan with
+  an authenticator app (e.g., Google Authenticator). Follow this with the
+  `/enable` call.
+
+
+  **Auth:** JWT Bearer (IsAuthenticated)
+url: "{{base_url}}/api/auth/2fa/setup/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: "{}"
+order: 1000

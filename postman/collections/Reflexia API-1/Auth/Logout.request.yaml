@@ -1,0 +1,16 @@
+$kind: http-request
+description: |-
+  Blacklist the provided refresh token to log the user out.
+
+  **Auth:** JWT Bearer (IsAuthenticated)
+url: "{{base_url}}/api/auth/logout/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "refresh": "{{refresh_token}}"
+    }
+order: 5000

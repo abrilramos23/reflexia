@@ -1,0 +1,19 @@
+$kind: http-request
+description: >-
+  Update the authenticated user's profile. Patients can only update `email`.
+  Therapists can update `email` and `specialty`.
+
+
+  **Auth:** JWT Bearer (IsAuthenticated)
+url: "{{base_url}}/api/auth/me/"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "new_email@example.com",
+      "specialty": "Neuropsychology"
+    }
+order: 2000

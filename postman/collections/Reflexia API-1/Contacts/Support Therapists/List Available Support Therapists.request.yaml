@@ -1,0 +1,10 @@
+$kind: http-request
+description: >-
+  List all therapists that can still be added as support (i.e., not yet linked
+  and not the authenticated therapist themselves).
+
+
+  **Auth:** JWT Bearer (IsTherapistUser)
+url: "{{base_url}}/api/contacts/support-therapists/available/"
+method: GET
+order: 3000

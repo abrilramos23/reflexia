@@ -1,0 +1,3 @@
+$kind: collection
+description: Endpoints for patients to manage their associated/emergency contacts.
+order: 1000

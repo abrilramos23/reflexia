@@ -1,0 +1,24 @@
+$kind: http-request
+description: >-
+  Register a new therapist. Requires admin credentials (HTTP Basic). Sends an
+  activation email with a link.
+
+
+  **Auth:** Admin user (IsAdminUser)
+url: "{{base_url}}/api/auth/register/therapist/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "first_name": "Marta",
+      "last_name": "Lopez",
+      "email": "therapist@example.com",
+      "license_number": "21039",
+      "specialty": "Clinical Psychology"
+    }
+auth:
+  type: noauth
+order: 1000

@@ -1,0 +1,22 @@
+$kind: http-request
+description: >-
+  Register a new patient linked to the authenticated therapist. Sends an
+  activation email.
+
+
+  **Auth:** Therapist JWT (IsTherapistUser)
+url: "{{base_url}}/api/auth/register/patient/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "first_name": "Paula",
+      "last_name": "Sanchez",
+      "email": "patient@example.com",
+      "birth_date": "2001-01-10",
+      "consent_accepted": false
+    }
+order: 2000

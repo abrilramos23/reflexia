@@ -1,0 +1,16 @@
+$kind: http-request
+description: |-
+  Deactivate (discharge) a patient assigned to the authenticated therapist.
+
+  **Auth:** JWT Bearer (IsTherapistUser)
+url: "{{base_url}}/api/auth/patients/deactivate/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "patient_id": "11111111-1111-1111-1111-111111111111"
+    }
+order: 6000

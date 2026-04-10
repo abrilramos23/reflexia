@@ -1,0 +1,18 @@
+$kind: collection
+name: Reflexia API
+description: >-
+  Reflexia REST API collection. All authenticated endpoints require a JWT Bearer
+  token from the `access` field returned on login.
+
+
+  Base URL: `{{base_url}}`
+variables:
+  base_url: http://localhost:8000
+  access_token: ""
+  refresh_token: ""
+auth:
+  - id: 4aaa659c-850b-4b16-ba1b-eac2afcc8f30
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{access_token}}"
