@@ -6,6 +6,8 @@ import { useAuth } from './context/AuthContext.jsx'
 import { ActivateAccountPage } from './pages/ActivateAccountPage.jsx'
 import { ConsentPage } from './pages/ConsentPage.jsx'
 import { DashboardPage } from './pages/DashboardPage.jsx'
+import { EntryDetailPage } from './pages/EntryDetailPage.jsx'
+import { EntryEditorPage } from './pages/EntryEditorPage.jsx'
 import { EntriesPage } from './pages/EntriesPage.jsx'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.jsx'
 import { LoginPage } from './pages/LoginPage.jsx'
@@ -75,6 +77,30 @@ function App() {
         element={
           <ProtectedRoute>
             <EntriesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/entries/new"
+        element={
+          <ProtectedRoute>
+            <EntryEditorPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/entries/:entryId"
+        element={
+          <ProtectedRoute>
+            <EntryDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/entries/:entryId/edit"
+        element={
+          <ProtectedRoute>
+            <EntryEditorPage />
           </ProtectedRoute>
         }
       />

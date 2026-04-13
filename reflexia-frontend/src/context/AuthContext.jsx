@@ -291,6 +291,16 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function listEntries() {
+    const response = await api.get('/entries/')
+    return response.data
+  }
+
+  async function getEntry(entryId) {
+    const response = await api.get(`/entries/${entryId}/`)
+    return response.data
+  }
+
   async function createEntryDraft(payload) {
     const response = await api.post('/entries/', payload)
     return response.data
@@ -303,6 +313,11 @@ export function AuthProvider({ children }) {
 
   async function analyzeEntry(entryId, payload = {}) {
     const response = await api.post(`/entries/${entryId}/analyze/`, payload)
+    return response.data
+  }
+
+  async function deleteEntry(entryId) {
+    const response = await api.delete(`/entries/${entryId}/`)
     return response.data
   }
 
@@ -382,9 +397,12 @@ export function AuthProvider({ children }) {
     registerPatient,
     listTherapistPatients,
     getEntriesEditorContext,
+    listEntries,
+    getEntry,
     createEntryDraft,
     updateEntryDraft,
     analyzeEntry,
+    deleteEntry,
     setupTwoFactor,
     enableTwoFactor,
     disableTwoFactor,

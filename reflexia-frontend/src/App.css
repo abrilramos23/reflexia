@@ -580,6 +580,15 @@
   min-height: 640px;
 }
 
+.entries-list-card {
+  margin-top: 1rem;
+}
+
+.entries-list-copy {
+  display: grid;
+  gap: 6px;
+}
+
 .entries-controls-grid {
   display: grid;
   grid-template-columns: minmax(240px, 360px) minmax(0, 1fr);
