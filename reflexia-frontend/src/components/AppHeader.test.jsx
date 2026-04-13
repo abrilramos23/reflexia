@@ -23,6 +23,7 @@ describe('AppHeader Component', () => {
 
     expect(screen.getByText('Reflexia')).toBeInTheDocument();
     expect(screen.getByText('Pacient')).toBeInTheDocument();
+    expect(screen.getByText('Entrades')).toBeInTheDocument();
     expect(screen.queryByText('Pacients')).not.toBeInTheDocument();
   });
 
@@ -43,4 +44,3 @@ describe('AppHeader Component', () => {
     expect(screen.getByText('Pacients')).toBeInTheDocument();
   });
 });
-

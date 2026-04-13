@@ -576,6 +576,42 @@
   color: #53675f;
 }
 
+.entries-editor-shell {
+  min-height: 640px;
+}
+
+.entries-controls-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 360px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: end;
+}
+
+.entries-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.entries-textarea {
+  min-height: 360px;
+  resize: vertical;
+  line-height: 1.65;
+}
+
+.entries-note-card {
+  background: linear-gradient(180deg, rgba(248, 251, 245, 0.96) 0%, rgba(240, 247, 237, 0.94) 100%);
+  border: 1px solid rgba(110, 169, 109, 0.18);
+}
+
+.entries-question-card,
+.entries-analysis-card,
+.entries-summary-card {
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(61, 102, 89, 0.12);
+}
+
 .qr-link {
   word-break: break-all;
 }
@@ -666,6 +702,7 @@
   .screen-grid,
   .dashboard-grid,
   .profile-grid,
+  .entries-controls-grid,
   .dashboard-metrics-grid,
   .stat-list,
   .inline-fields {
@@ -684,7 +721,8 @@
   .list-actions,
   .app-header,
   .app-header-nav,
-  .section-toggle {
+  .section-toggle,
+  .entries-toolbar {
     flex-direction: column;
     align-items: flex-start;
   }

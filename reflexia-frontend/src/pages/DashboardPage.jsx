@@ -233,9 +233,9 @@ export function DashboardPage() {
                   Quan el teu terapeuta publiqui una nova pregunta de seguiment, la veuràs aquí per poder-la respondre.
                 </p>
                 <div className="button-row">
-                  <button className="button-secondary" type="button" disabled style={{ marginBlockStart: '1rem' }}>
-                    Respondre pregunta
-                  </button>
+                  <Link className="button-secondary" style={{ marginBlockStart: '1rem', textDecoration: 'none' }} to="/entries">
+                    Obrir editor
+                  </Link>
                 </div>
               </div>
             </section>
@@ -283,9 +283,9 @@ export function DashboardPage() {
                   Et recomanem començar amb una primera entrada per tal que el sistema pugui començar a construir el teu context emocional.
                 </p>
                 <div className="button-row" style={{ marginBlockStart: '1rem' }}>
-                  <button className="button" type="button" disabled>
+                  <Link className="button" style={{ textDecoration: 'none' }} to="/entries">
                     Escriure
-                  </button>
+                  </Link>
                   <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/profile">
                     Gestionar perfil i contactes
                   </Link>

@@ -6,6 +6,7 @@ import { useAuth } from './context/AuthContext.jsx'
 import { ActivateAccountPage } from './pages/ActivateAccountPage.jsx'
 import { ConsentPage } from './pages/ConsentPage.jsx'
 import { DashboardPage } from './pages/DashboardPage.jsx'
+import { EntriesPage } from './pages/EntriesPage.jsx'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.jsx'
 import { LoginPage } from './pages/LoginPage.jsx'
 import { PatientsPage } from './pages/PatientsPage.jsx'
@@ -66,6 +67,14 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/entries"
+        element={
+          <ProtectedRoute>
+            <EntriesPage />
           </ProtectedRoute>
         }
       />

@@ -39,6 +39,11 @@ export function AppHeader() {
                 Pacients
               </Link>
             ) : null}
+            {user.role === 'patient' ? (
+              <Link style={{ textDecoration: 'none' }} className="button-ghost" to="/entries">
+                Entrades
+              </Link>
+            ) : null}
             <Link style={{ textDecoration: 'none' }} className="button-ghost" to="/profile">
               Perfil
             </Link>
