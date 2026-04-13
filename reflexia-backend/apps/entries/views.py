@@ -6,7 +6,6 @@ from rest_framework.views import APIView
 
 from apps.entries.models import JournalEntry, TherapistQuestion
 from apps.entries.serializers import (
-    JournalEntryAnalyzeSerializer,
     JournalEntryDraftSerializer,
     JournalEntrySerializer,
     TherapistQuestionSerializer,
@@ -31,7 +30,7 @@ class PatientEntriesMixin:
 
     def get_entry(self, *, patient, entry_id):
         return (
-            JournalEntry.objects.select_related("therapist_question", "analysis")
+            JournalEntry.objects.select_related("therapist_question")
             .filter(pk=entry_id, patient=patient)
             .first()
         )
@@ -85,7 +84,7 @@ class JournalEntryListCreateView(PatientEntriesMixin, APIView):
 
         entries = (
             JournalEntry.objects.filter(patient=patient)
-            .select_related("therapist_question", "analysis")
+            .select_related("therapist_question")
             .order_by("-updated_at")
         )
         return Response(JournalEntrySerializer(entries, many=True).data, status=status.HTTP_200_OK)
@@ -198,49 +197,6 @@ class JournalEntryDetailView(PatientEntriesMixin, APIView):
             {
                 "message": "Entrada eliminada i anonimitzada correctament.",
                 "entry": JournalEntrySerializer(entry).data,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class JournalEntryAnalyzeView(PatientEntriesMixin, APIView):
-    @extend_schema(
-        tags=["entries"],
-        summary="Guardar i analitzar una entrada",
-        request=JournalEntryAnalyzeSerializer,
-        responses={
-            200: inline_serializer(
-                name="JournalEntryAnalyzeResponse",
-                fields={
-                    "message": serializers.CharField(),
-                    "entry": JournalEntrySerializer(),
-                },
-            ),
-            400: OpenApiResponse(description="L’entrada no pot estar buida o l’entrada està eliminada."),
-            403: OpenApiResponse(description="Només els pacients poden gestionar entrades."),
-            404: OpenApiResponse(description="Entrada no trobada."),
-        },
-    )
-    def post(self, request, entry_id):
-        patient, error_response = self.ensure_patient(request)
-        if error_response is not None:
-            return error_response
-
-        entry = self.get_entry(patient=patient, entry_id=entry_id)
-        if entry is None:
-            return Response({"detail": "Entry not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = JournalEntryAnalyzeSerializer(
-            data=request.data,
-            context={"entry": entry, "patient": patient},
-        )
-        serializer.is_valid(raise_exception=True)
-        analyzed_entry, _ = serializer.save()
-
-        return Response(
-            {
-                "message": "Entrada guardada i anàlisi emocional regenerada correctament.",
-                "entry": JournalEntrySerializer(analyzed_entry).data,
             },
             status=status.HTTP_200_OK,
         )

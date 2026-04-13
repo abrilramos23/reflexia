@@ -33,10 +33,8 @@ class TherapistQuestion(models.Model):
 
 class JournalEntry(models.Model):
     STATUS_DRAFT = "draft"
-    STATUS_ANALYZED = "analyzed"
     STATUS_CHOICES = (
         (STATUS_DRAFT, "Draft"),
-        (STATUS_ANALYZED, "Analyzed"),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -56,7 +54,6 @@ class JournalEntry(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    last_analyzed_at = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -66,26 +63,3 @@ class JournalEntry(models.Model):
 
     def __str__(self):
         return f"{self.patient.email} - {self.created_at.isoformat()}"
-
-
-class EmotionalAnalysis(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    entry = models.OneToOneField(
-        JournalEntry,
-        on_delete=models.CASCADE,
-        related_name="analysis",
-    )
-    anonymized_content = models.TextField()
-    summary = models.TextField()
-    primary_emotion = models.CharField(max_length=50)
-    tone = models.CharField(max_length=50)
-    disclaimer = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "emotional analysis"
-        verbose_name_plural = "emotional analyses"
-
-    def __str__(self):
-        return f"Analysis for {self.entry_id}"

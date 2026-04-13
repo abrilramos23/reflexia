@@ -2,7 +2,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.entries.models import EmotionalAnalysis, JournalEntry, TherapistQuestion
+from apps.entries.models import JournalEntry, TherapistQuestion
 from apps.users.models import Patient, Therapist, TherapistPatient
 
 
@@ -76,31 +76,6 @@ class JournalEntryEditorTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("content", response.data)
 
-    def test_save_and_analyze_generates_anonymized_analysis(self):
-        self.client.force_authenticate(user=self.patient)
-        entry = JournalEntry.objects.create(
-            patient=self.patient,
-            therapist_question=self.active_question,
-            content="Em sento molt nerviosa i he escrit a patient@example.com després de parlar amb Marta Lopez.",
-        )
-
-        response = self.client.post(
-            f"/api/entries/{entry.pk}/analyze/",
-            {},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        entry.refresh_from_db()
-        self.assertEqual(entry.status, JournalEntry.STATUS_ANALYZED)
-        self.assertIsNotNone(entry.last_analyzed_at)
-        analysis = EmotionalAnalysis.objects.get(entry=entry)
-        self.assertNotIn("patient@example.com", analysis.anonymized_content)
-        self.assertNotIn("Marta Lopez", analysis.anonymized_content)
-        self.assertIn("[email]", analysis.anonymized_content)
-        self.assertIn("[anonimitzat]", analysis.anonymized_content)
-        self.assertEqual(response.data["entry"]["analysis"]["disclaimer"], analysis.disclaimer)
-
     def test_editing_deleted_entry_is_rejected(self):
         self.client.force_authenticate(user=self.patient)
         entry = JournalEntry.objects.create(
@@ -118,7 +93,7 @@ class JournalEntryEditorTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("detail", response.data)
 
-    def test_patient_can_update_existing_entry_and_regenerate_analysis(self):
+    def test_patient_can_update_existing_entry(self):
         self.client.force_authenticate(user=self.patient)
         entry = JournalEntry.objects.create(
             patient=self.patient,
@@ -134,17 +109,6 @@ class JournalEntryEditorTests(APITestCase):
 
         self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
         self.assertEqual(patch_response.data["status"], JournalEntry.STATUS_DRAFT)
-
-        analyze_response = self.client.post(
-            f"/api/entries/{entry.pk}/analyze/",
-            {"content": "Em sento cansada però amb una mica més d’esperança."},
-            format="json",
-        )
-
-        self.assertEqual(analyze_response.status_code, status.HTTP_200_OK)
-        entry.refresh_from_db()
-        self.assertEqual(entry.status, JournalEntry.STATUS_ANALYZED)
-        self.assertEqual(entry.analysis.primary_emotion, "esperanca")
 
     def test_patient_cannot_access_someone_elses_entry(self):
         entry = JournalEntry.objects.create(patient=self.other_patient, content="Privada")
@@ -171,15 +135,6 @@ class JournalEntryEditorTests(APITestCase):
             patient=self.patient,
             therapist_question=self.active_question,
             content="<p>Text privat</p>",
-            status=JournalEntry.STATUS_ANALYZED,
-        )
-        EmotionalAnalysis.objects.create(
-            entry=entry,
-            anonymized_content="Text privat",
-            summary="Resum",
-            primary_emotion="calma",
-            tone="mixt",
-            disclaimer="Avís",
         )
 
         response = self.client.delete(f"/api/entries/{entry.pk}/", format="json")
@@ -189,4 +144,3 @@ class JournalEntryEditorTests(APITestCase):
         self.assertTrue(entry.deleted_at is not None)
         self.assertEqual(entry.content, "Aquesta entrada ha estat eliminada i anonimitzada.")
         self.assertIsNone(entry.therapist_question)
-        self.assertFalse(EmotionalAnalysis.objects.filter(entry=entry).exists())
