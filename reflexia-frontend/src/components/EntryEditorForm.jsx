@@ -6,28 +6,7 @@ import {
   normalizeStoredContentToHtml,
   sanitizeEntryHtml,
 } from '../lib/entries.js'
-
-const toolbarButtons = [
-  { command: 'bold', label: 'B', title: 'Negreta' },
-  { command: 'italic', label: 'I', title: 'Cursiva' },
-  { command: 'underline', label: 'U', title: 'Subratllat' },
-  { command: 'insertUnorderedList', label: '•', title: 'Llista' },
-]
-
-function insertPlainText(text) {
-  if (document.queryCommandSupported?.('insertText')) {
-    document.execCommand('insertText', false, text)
-    return
-  }
-
-  const selection = window.getSelection()
-  if (!selection || selection.rangeCount === 0) {
-    return
-  }
-
-  selection.deleteFromDocument()
-  selection.getRangeAt(0).insertNode(document.createTextNode(text))
-}
+import { Editor } from 'primereact/editor'
 
 export function EntryEditorForm({
   entry,
@@ -57,40 +36,21 @@ export function EntryEditorForm({
     [contentHtml],
   )
 
-  function syncEditorContent(nextHtml) {
-    const sanitizedContent = sanitizeEntryHtml(nextHtml)
-    setContentHtml(sanitizedContent)
+  const renderHeader = () => {
+    return (
+        <span className="ql-formats">
+            <button className="ql-bold" aria-label="Bold"></button>
+            <button className="ql-italic" aria-label="Italic"></button>
+            <button className="ql-underline" aria-label="Underline"></button>
+        </span>
+    );
+  };
 
-    if (editorRef.current && editorRef.current.innerHTML !== sanitizedContent) {
-      editorRef.current.innerHTML = sanitizedContent
-    }
-  }
-
-  function handleEditorInput(event) {
-    syncEditorContent(event.currentTarget.innerHTML)
-  }
-
-  function handlePaste(event) {
-    event.preventDefault()
-    const pastedText = event.clipboardData.getData('text/plain')
-    insertPlainText(pastedText)
-    syncEditorContent(editorRef.current?.innerHTML || '')
-  }
-
-  function applyToolbarCommand(command) {
-    if (isDeletedEntry) {
-      return
-    }
-
-    editorRef.current?.focus()
-    document.execCommand(command, false)
-    syncEditorContent(editorRef.current?.innerHTML || '')
-  }
+  const header = renderHeader();
 
   return (
     <section className="screen-card dashboard-panel profile-card--wide entries-editor-shell">
       <div className="panel-heading">
-        <p className="eyebrow">{entry ? 'Editar entrada' : 'Nova entrada'}</p>
         <h1 className="section-title">{entry ? 'Actualitza el contingut de l’entrada' : 'Escriu una nova entrada'}</h1>
         <p className="muted">
           {entry
@@ -118,17 +78,6 @@ export function EntryEditorForm({
           </p>
         )}
       </div>
-
-      <div className="content-card section-stack entries-note-card">
-        <div className="item-heading-row" style={{ marginBottom: 0 }}>
-          <h3>Avís clínic</h3>
-          <span className="status-pill">Orientatiu</span>
-        </div>
-        <p className="muted">
-          L’anàlisi emocional és orientativa, es genera automàticament i serà revisada pel teu terapeuta.
-        </p>
-      </div>
-
       <div className="entries-toolbar">
         <span className="status-pill">
           {isAnalyzing
@@ -145,30 +94,13 @@ export function EntryEditorForm({
         {isDeletedEntry ? <span className="status-pill">Només lectura</span> : null}
       </div>
 
-      <div className="content-card section-stack">
-        <div className="entries-toolbar" role="toolbar" aria-label="Format del text">
-          {toolbarButtons.map((button) => (
-            <button
-              key={button.command}
-              className="action-chip"
-              type="button"
-              title={button.title}
-              disabled={isDeletedEntry}
-              onClick={() => applyToolbarCommand(button.command)}
-            >
-              {button.label}
-            </button>
-          ))}
-        </div>
-
-        <div
-          ref={editorRef}
-          className={`entries-rich-editor${isDeletedEntry ? ' entries-rich-editor--disabled' : ''}`}
-          contentEditable={!isDeletedEntry}
-          suppressContentEditableWarning
-          onInput={handleEditorInput}
-          onPaste={handlePaste}
-          dangerouslySetInnerHTML={{ __html: normalizeStoredContentToHtml(entry?.content || '') }}
+      <div className="content-card section-stack" style={{padding: 0}}>
+        <Editor
+          value={contentHtml}
+          onTextChange={(e) => setContentHtml(e.htmlValue || '')}
+          style={{ height: '360px' }}
+          readOnly={isDeletedEntry}
+          headerTemplate={header}
         />
 
         <p className="muted entries-editor-hint">
@@ -191,7 +123,7 @@ export function EntryEditorForm({
           className="button"
           type="button"
           disabled={isDeletedEntry || isSavingDraft || isAnalyzing || !plainTextContent.trim()}
-          onClick={() => onAnalyze(contentHtml)}
+          onClick={null}
         >
           {isAnalyzing ? 'Guardant i analitzant...' : 'Guardar i analitzar'}
         </button>
@@ -209,6 +141,14 @@ export function EntryEditorForm({
           </p>
         </div>
       ) : null}
+      <div className="content-card section-stack entries-note-card">
+        <div className="item-heading-row" style={{ marginBottom: 0 }}>
+          <h3>Avís clínic</h3>
+        </div>
+        <p className="muted">
+          L’anàlisi emocional és orientativa, es genera automàticament i serà revisada pel teu terapeuta.
+        </p>
+      </div>
     </section>
   )
 }

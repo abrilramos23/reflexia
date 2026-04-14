@@ -183,16 +183,9 @@ export function DashboardPage() {
               {user.role === 'therapist'
                 ? 'Visió general de la teva activitat clínica.'
                 : user.role === 'patient'
-                  ? 'Benvingut al teu espai personal de Reflexia.'
+                  ? 'El teu espai personal de Reflexia.'
                   : 'Compte actiu i llest per continuar.'}
             </h1>
-            <p className="muted">
-              {user.role === 'therapist'
-                ? 'Consulta l’estat dels teus pacients i accedeix ràpidament a la gestió clínica.'
-                : user.role === 'patient'
-                  ? 'Des d’aquí pots revisar l’estat del teu compte.'
-                  : 'Administra les altes de terapeutes i mantén l’accés a la plataforma sota control.'}
-            </p>
           </div>
 
           {dashboardError ? <div className="error-banner">{dashboardError}</div> : null}
@@ -223,8 +216,7 @@ export function DashboardPage() {
           <>
             <section className="screen-card dashboard-panel profile-card--wide">
               <div className="panel-heading">
-                <p className="eyebrow">Pregunta activa</p>
-                <h2>Seguiment pendent del terapeuta</h2>
+                <p className="eyebrow" style={{ marginBlockEnd: '0' }}>Pregunta activa</p>
               </div>
 
               <div className="content-card section-stack">
