@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { AppHeader } from '../components/AppHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { consentDocumentUrl } from '../lib/api.js'
 
@@ -67,7 +66,6 @@ export function ConsentPage() {
 
   return (
     <div className="screen-shell">
-      <AppHeader />
       <div className="screen-grid">
         <aside className="screen-card hero-panel">
           <div className="hero-copy">

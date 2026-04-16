@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { AppHeader } from '../components/AppHeader.jsx'
 import { EntryEditorForm } from '../components/EntryEditorForm.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { firstErrorMessage } from '../lib/entries.js'
@@ -126,8 +125,6 @@ export function EntryEditorPage() {
 
   return (
     <div className="screen-shell">
-      <AppHeader />
-
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="button-row">

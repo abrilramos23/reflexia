@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { AppHeader } from '../components/AppHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
 function firstErrorMessage(error) {
@@ -142,8 +141,6 @@ export function PatientsPage() {
 
   return (
     <div className="screen-shell">
-      <AppHeader />
-
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">

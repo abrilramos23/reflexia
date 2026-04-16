@@ -834,3 +834,147 @@
   border: none;
   cursor: not-allowed;
 }
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.app-content {
+  flex: 1;
+  padding: 0 0 2rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  padding: 20px 16px;
+  overflow-y: auto;
+
+  background: rgba(251, 255, 252, 0.78);
+  backdrop-filter: blur(14px);
+
+  border-right: 1px solid rgba(61, 102, 89, 0.12);
+  box-shadow: 8px 0 30px rgba(43, 88, 71, 0.08);
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+  width: 80px;
+}
+
+.sidebar-toggle {
+  appearance: none;
+  border: none;
+  background: rgba(79, 155, 122, 0.12);
+
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+
+  display: grid;
+  place-items: center;
+
+  cursor: pointer;
+  color: var(--brand-deep);
+
+  transition: all 0.2s ease;
+}
+
+.sidebar-toggle:hover {
+  background: rgba(79, 155, 122, 0.2);
+  transform: translateY(-1px);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 10px 14px;
+  border-radius: 16px;
+
+  text-decoration: none;
+  color: var(--ink);
+  font-weight: 600;
+
+  background: transparent;
+  border: 1px solid transparent;
+
+  transition: all 0.18s ease;
+}
+
+.sidebar-link:hover {
+  background: rgba(79, 155, 122, 0.12);
+  border-color: rgba(61, 102, 89, 0.14);
+}
+
+.sidebar-link.active {
+  background: linear-gradient(
+    135deg,
+    rgba(79, 155, 122, 0.18),
+    rgba(47, 110, 88, 0.18)
+  );
+  color: var(--brand-deep);
+
+  border: 1px solid rgba(79, 155, 122, 0.22);
+  box-shadow: 0 6px 16px rgba(43, 88, 71, 0.08);
+}
+
+.sidebar-link svg {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .sidebar-link span {
+  display: none;
+}
+
+.sidebar-link.logout {
+  margin-top: auto;
+  color: #7b2626;
+}
+
+.sidebar-link.logout:hover {
+  background: rgba(160, 57, 57, 0.12);
+  border-color: rgba(160, 57, 57, 0.18);
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main .screen-shell,
+.app-body .screen-shell {
+  width: 100%;
+}

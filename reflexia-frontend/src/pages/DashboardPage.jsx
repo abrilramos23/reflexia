@@ -1,6 +1,5 @@
 import { Link, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { AppHeader } from '../components/AppHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { consentDocumentUrl } from '../lib/api.js'
 
@@ -173,8 +172,6 @@ export function DashboardPage() {
 
   return (
     <div className="screen-shell">
-      <AppHeader />
-
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">

@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
-import { ProtectedRoute } from './components/ProtectedRoute.jsx'
 import { PublicRoute } from './components/PublicRoute.jsx'
 import { useAuth } from './context/AuthContext.jsx'
 import { ActivateAccountPage } from './pages/ActivateAccountPage.jsx'
@@ -15,6 +14,7 @@ import { PatientsPage } from './pages/PatientsPage.jsx'
 import { ProfilePage } from './pages/ProfilePage.jsx'
 import { ResetPasswordPage } from './pages/ResetPasswordPage.jsx'
 import { TwoFactorPage } from './pages/TwoFactorPage.jsx'
+import { ProtectedLayout } from './components/ProtectedLayout.jsx'
 
 function LoadingScreen() {
   return (
@@ -59,65 +59,65 @@ function App() {
       <Route
         path="/consent"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <ConsentPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         }
       />
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <DashboardPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         }
       />
       <Route
         path="/entries"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <EntriesPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         }
       />
       <Route
         path="/entries/new"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <EntryEditorPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         }
       />
       <Route
         path="/entries/:entryId"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <EntryDetailPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         }
       />
       <Route
         path="/entries/:entryId/edit"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <EntryEditorPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         }
       />
       <Route
         path="/profile"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <ProfilePage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         }
       />
       <Route
         path="/patients"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <PatientsPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         }
       />
       <Route path="/" element={<Navigate to="/login" replace />} />
