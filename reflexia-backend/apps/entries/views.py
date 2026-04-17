@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
@@ -11,6 +12,8 @@ from apps.entries.serializers import (
     TherapistQuestionSerializer,
 )
 from apps.entries.services import soft_delete_entry
+from apps.users.models import Patient
+from apps.users.permissions import IsTherapistUser
 
 
 class PatientEntriesMixin:
@@ -200,3 +203,78 @@ class JournalEntryDetailView(PatientEntriesMixin, APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+class TherapistPatientMixin:
+    permission_classes = [IsTherapistUser]
+
+    def get_patient(self, request, patient_id):
+        therapist = request.user.therapist_profile
+        return get_object_or_404(
+            Patient,
+            pk=patient_id,
+            therapist_links__therapist=therapist
+        )
+
+
+class TherapistPatientEntriesView(TherapistPatientMixin, APIView):
+    @extend_schema(
+        tags=["therapist-patients"],
+        summary="Llistar entrades d'un pacient (Terapeuta)",
+        responses={
+            200: JournalEntrySerializer(many=True),
+            403: OpenApiResponse(description="Només els terapeutes poden accedir a aquesta informació."),
+            404: OpenApiResponse(description="Pacient no trobat o no assignat."),
+        },
+    )
+    def get(self, request, patient_id):
+        patient = self.get_patient(request, patient_id)
+        entries = JournalEntry.objects.filter(patient=patient).select_related("therapist_question").order_by("-updated_at")
+        return Response(JournalEntrySerializer(entries, many=True).data, status=status.HTTP_200_OK)
+
+
+class TherapistPatientEntryDetailView(TherapistPatientMixin, APIView):
+    @extend_schema(
+        tags=["therapist-patients"],
+        summary="Obtenir detall d'una entrada d'un pacient (Terapeuta)",
+        responses={
+            200: JournalEntrySerializer,
+            403: OpenApiResponse(description="Només els terapeutes poden accedir a aquesta informació."),
+            404: OpenApiResponse(description="Entrada o pacient no trobats."),
+        },
+    )
+    def get(self, request, patient_id, entry_id):
+        patient = self.get_patient(request, patient_id)
+        entry = get_object_or_404(JournalEntry, pk=entry_id, patient=patient)
+        return Response(JournalEntrySerializer(entry).data, status=status.HTTP_200_OK)
+
+
+class TherapistPatientQuestionsView(TherapistPatientMixin, APIView):
+    @extend_schema(
+        tags=["therapist-patients"],
+        summary="Llistar preguntes d'un pacient (Terapeuta)",
+        responses={
+            200: TherapistQuestionSerializer(many=True),
+            403: OpenApiResponse(description="Només els terapeutes poden accedir a aquesta informació."),
+            404: OpenApiResponse(description="Pacient no trobat o no assignat."),
+        },
+    )
+    def get(self, request, patient_id):
+        patient = self.get_patient(request, patient_id)
+        questions = TherapistQuestion.objects.filter(patient=patient).order_by("-created_at")
+        return Response(TherapistQuestionSerializer(questions, many=True).data, status=status.HTTP_200_OK)
+
+
+class TherapistPatientQuestionDetailView(TherapistPatientMixin, APIView):
+    @extend_schema(
+        tags=["therapist-patients"],
+        summary="Obtenir detall d'una pregunta d'un pacient (Terapeuta)",
+        responses={
+            200: TherapistQuestionSerializer,
+            403: OpenApiResponse(description="Només els terapeutes poden accedir a aquesta informació."),
+            404: OpenApiResponse(description="Pregunta o pacient no trobats."),
+        },
+    )
+    def get(self, request, patient_id, question_id):
+        patient = self.get_patient(request, patient_id)
+        question = get_object_or_404(TherapistQuestion, pk=question_id, patient=patient)
+        return Response(TherapistQuestionSerializer(question).data, status=status.HTTP_200_OK)

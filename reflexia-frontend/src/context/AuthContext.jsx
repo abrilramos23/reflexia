@@ -286,6 +286,11 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function getPatient(patientId) {
+    const response = await api.get(`/auth/patients/${patientId}/`)
+    return response.data
+  }
+
   async function getEntriesEditorContext() {
     const response = await api.get('/entries/editor/')
     return response.data
@@ -372,6 +377,26 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function listPatientEntries(patientId) {
+    const response = await api.get(`/auth/patients/${patientId}/entries/`)
+    return response.data
+  }
+
+  async function getPatientEntry(patientId, entryId) {
+    const response = await api.get(`/auth/patients/${patientId}/entries/${entryId}/`)
+    return response.data
+  }
+
+  async function listPatientQuestions(patientId) {
+    const response = await api.get(`/auth/patients/${patientId}/questions/`)
+    return response.data
+  }
+
+  async function getPatientQuestion(patientId, questionId) {
+    const response = await api.get(`/auth/patients/${patientId}/questions/${questionId}/`)
+    return response.data
+  }
+
   const value = {
     user,
     pendingTwoFactor,
@@ -396,6 +421,7 @@ export function AuthProvider({ children }) {
     registerTherapist,
     registerPatient,
     listTherapistPatients,
+    getPatient,
     getEntriesEditorContext,
     listEntries,
     getEntry,
@@ -408,6 +434,10 @@ export function AuthProvider({ children }) {
     disableTwoFactor,
     deleteAccount,
     deactivatePatient,
+    listPatientEntries,
+    getPatientEntry,
+    listPatientQuestions,
+    getPatientQuestion,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

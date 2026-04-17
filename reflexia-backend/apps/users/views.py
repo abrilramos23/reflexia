@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from django.shortcuts import get_object_or_404
 from django.http import FileResponse, Http404
 from rest_framework import status
 from django.conf import settings
@@ -460,6 +460,26 @@ class TherapistPatientListView(APIView):
         ).order_by("first_name", "last_name")
         return Response(
             TherapistPatientSummarySerializer(patients, many=True).data,
+            status=status.HTTP_200_OK,
+        )
+
+
+class TherapistPatientDetailView(APIView):
+    permission_classes = [IsTherapistUser]
+
+    @extend_schema(
+        tags=["profile"],
+        summary="Obtenir detall d'un pacient assignat al terapeuta",
+        responses={200: TherapistPatientSummarySerializer},
+    )
+    def get(self, request, patient_id):
+        patient = get_object_or_404(
+            Patient,
+            pk=patient_id,
+            therapist_links__therapist=request.user.therapist_profile
+        )
+        return Response(
+            TherapistPatientSummarySerializer(patient).data,
             status=status.HTTP_200_OK,
         )
 

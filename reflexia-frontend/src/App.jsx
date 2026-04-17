@@ -15,6 +15,9 @@ import { ProfilePage } from './pages/ProfilePage.jsx'
 import { ResetPasswordPage } from './pages/ResetPasswordPage.jsx'
 import { TwoFactorPage } from './pages/TwoFactorPage.jsx'
 import { ProtectedLayout } from './components/ProtectedLayout.jsx'
+import { PatientDetailPage } from './pages/PatientDetailPage.jsx'
+import { TherapistEntryDetailPage } from './pages/TherapistEntryDetailPage.jsx'
+import { TherapistQuestionDetailPage } from './pages/TherapistQuestionDetailPage.jsx'
 
 function LoadingScreen() {
   return (
@@ -117,6 +120,30 @@ function App() {
         element={
           <ProtectedLayout>
             <PatientsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/patients/:patientId"
+        element={
+          <ProtectedLayout>
+            <PatientDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/patients/:patientId/entries/:entryId"
+        element={
+          <ProtectedLayout>
+            <TherapistEntryDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/patients/:patientId/questions/:questionId"
+        element={
+          <ProtectedLayout>
+            <TherapistQuestionDetailPage />
           </ProtectedLayout>
         }
       />

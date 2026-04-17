@@ -332,64 +332,9 @@ export function DashboardPage() {
 
               <div className="button-row">
                 <Link className="button" style={{ textDecoration: 'none' }} to="/patients">
-                  Gestionar pacients
-                </Link>
-                <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/profile">
-                  Obrir perfil
+                  Veure pacients
                 </Link>
               </div>
-            </section>
-
-            <section className="screen-card dashboard-panel profile-card--wide">
-              <div className="panel-heading">
-                <p className="eyebrow">Activitat recent</p>
-                <h2>Moviment dels teus pacients assignats</h2>
-                <p className="muted">
-                  Mentre no tinguem el feed complet d’entrades i alertes, aquest bloc resumeix l’estat més recent dels teus pacients segons l’alta, l’activació i el consentiment.
-                </p>
-              </div>
-
-              {therapistPatients.length === 0 ? (
-                <div className="content-card section-stack">
-                  <h3>Encara no hi ha activitat disponible</h3>
-                  <p className="muted">
-                    Quan registris els primers pacients, aquí veuràs els seus canvis d’estat i el seguiment recent.
-                  </p>
-                  <div className="button-row">
-                    <Link className="button-secondary" style={{ textDecoration: 'none' }} to="/patients">
-                      Registrar primer pacient
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <ul className="patient-list dashboard-activity-list">
-                  {therapistPatients.slice(0, 6).map((patient) => {
-                    const activity = buildTherapistActivityItem(patient)
-
-                    return (
-                      <li className="patient-item compact-list-item dashboard-activity-item" key={patient.id}>
-                        <div className="dashboard-activity-copy">
-                          <div className="item-heading-row">
-                            <strong>{patient.first_name} {patient.last_name}</strong>
-                            <span className={`status-pill dashboard-status-pill dashboard-status-pill--${activity.tone}`}>
-                              {activity.label}
-                            </span>
-                          </div>
-                          <p className="muted dashboard-activity-meta">
-                            {patient.email} · Alta: {formatShortDate(patient.registration_date)}
-                          </p>
-                          <p className="muted">{activity.description}</p>
-                        </div>
-                        <div className="list-actions">
-                          <Link className="action-chip action-chip--accent" style={{ textDecoration: 'none' }} to="/patients">
-                            Veure pacient
-                          </Link>
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
             </section>
           </>
         ) : null}
