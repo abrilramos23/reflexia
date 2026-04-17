@@ -2,11 +2,14 @@ import { Link, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { consentDocumentUrl } from '../lib/api.js'
+import { PlatformAdminDashboard } from './PlatformAdminDashboard.jsx'
+import { ClinicAdminDashboard } from './ClinicAdminDashboard.jsx'
 
 function formatRole(role) {
   if (role === 'therapist') return 'Terapeuta'
   if (role === 'patient') return 'Pacient'
-  if (role === 'admin') return 'Administrador'
+  if (role === 'platform_admin') return 'Admin Plataforma'
+  if (role === 'clinic_admin') return 'Admin Clínica'
   return 'Usuari'
 }
 
@@ -168,6 +171,14 @@ export function DashboardPage() {
     } finally {
       setIsSubmittingInvite(false)
     }
+  }
+
+  if (user.role === 'platform_admin') {
+    return <PlatformAdminDashboard />
+  }
+
+  if (user.role === 'clinic_admin') {
+    return <ClinicAdminDashboard />
   }
 
   return (
@@ -339,138 +350,7 @@ export function DashboardPage() {
           </>
         ) : null}
 
-        {user.role === 'admin' ? (
-          <>
-            <section className="screen-card dashboard-panel profile-card--wide">
-              <div className="panel-heading">
-                <p className="eyebrow">Nova alta</p>
-                <h2>Registrar un terapeuta nou</h2>
-                <p className="muted">
-                  Introdueix les dades bàsiques del professional. Si tot és correcte, el sistema enviarà un correu perquè pugui activar el compte i establir la seva contrasenya.
-                </p>
-              </div>
 
-              {inviteMessage ? <div className="message">{inviteMessage}</div> : null}
-              {inviteError ? <div className="error-banner">{inviteError}</div> : null}
-
-              <form className="form-stack" onSubmit={handleTherapistInviteSubmit}>
-                <div className="inline-fields">
-                  <div className="field-group">
-                    <label htmlFor="therapist-first-name">Nom</label>
-                    <input
-                      id="therapist-first-name"
-                      value={therapistInviteForm.first_name}
-                      onChange={(event) =>
-                        setTherapistInviteForm((currentState) => ({
-                          ...currentState,
-                          first_name: event.target.value,
-                        }))
-                      }
-                      required
-                    />
-                  </div>
-
-                  <div className="field-group">
-                    <label htmlFor="therapist-last-name">Cognoms</label>
-                    <input
-                      id="therapist-last-name"
-                      value={therapistInviteForm.last_name}
-                      onChange={(event) =>
-                        setTherapistInviteForm((currentState) => ({
-                          ...currentState,
-                          last_name: event.target.value,
-                        }))
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="inline-fields">
-                  <div className="field-group">
-                    <label htmlFor="therapist-email">Correu electrònic</label>
-                    <input
-                      id="therapist-email"
-                      type="email"
-                      value={therapistInviteForm.email}
-                      onChange={(event) =>
-                        setTherapistInviteForm((currentState) => ({
-                          ...currentState,
-                          email: event.target.value,
-                        }))
-                      }
-                      required
-                    />
-                  </div>
-
-                  <div className="field-group">
-                    <label htmlFor="therapist-license-number">Número de col·legiació</label>
-                    <input
-                      id="therapist-license-number"
-                      value={therapistInviteForm.license_number}
-                      onChange={(event) =>
-                        setTherapistInviteForm((currentState) => ({
-                          ...currentState,
-                          license_number: event.target.value,
-                        }))
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="field-group">
-                  <label htmlFor="therapist-specialty">Especialitat</label>
-                  <input
-                    id="therapist-specialty"
-                    value={therapistInviteForm.specialty}
-                    onChange={(event) =>
-                      setTherapistInviteForm((currentState) => ({
-                        ...currentState,
-                        specialty: event.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="button-row">
-                  <button className="button-secondary" type="submit" disabled={isSubmittingInvite}>
-                    {isSubmittingInvite ? 'Enviant invitació...' : 'Crear i enviar invitació'}
-                  </button>
-                </div>
-              </form>
-            </section>
-
-            <section className="screen-card dashboard-panel profile-card--wide">
-              <div className="panel-heading">
-                <p className="eyebrow">Procés d’accés</p>
-                <h2>Com funciona el flux d’incorporació</h2>
-              </div>
-
-              <div className="dashboard-timeline">
-                <div className="dashboard-timeline-step">
-                  <strong>1. Alta administrativa</strong>
-                  <p className="muted">
-                    L’admin introdueix nom, cognoms, correu, número de col·legiació i especialitat del terapeuta.
-                  </p>
-                </div>
-                <div className="dashboard-timeline-step">
-                  <strong>2. Validació i correu</strong>
-                  <p className="muted">
-                    El sistema valida el correu i la col·legiació i envia un enllaç d’activació al professional.
-                  </p>
-                </div>
-                <div className="dashboard-timeline-step">
-                  <strong>3. Activació segura</strong>
-                  <p className="muted">
-                    El terapeuta estableix la seva contrasenya i activa el compte sense que l’admin l’hagi de gestionar manualment.
-                  </p>
-                </div>
-              </div>
-            </section>
-          </>
-        ) : null}
       </div>
     </div>
   )

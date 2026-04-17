@@ -8,23 +8,47 @@ from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.users.models import Patient, ProfessionalDirectoryEntry, Therapist, User
+from apps.users.models import (
+    Organisation,
+    Patient,
+    ProfessionalDirectoryEntry,
+    Therapist,
+    User,
+)
 from apps.users.services import (
     activate_user_account,
     build_password_reset_url,
     change_user_password,
     deactivate_patient_by_therapist,
     delete_user_account,
+    register_clinic_admin,
     register_patient,
     register_therapist,
+    create_organisation,
     reset_user_password,
     send_password_reset_email,
     update_user_profile,
 )
 
 
+class OrganisationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organisation
+        fields = ("id", "name", "type", "plan", "is_active")
+
+
+class OrganisationCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organisation
+        fields = ("id", "name", "type", "plan")
+
+    def create(self, validated_data):
+        return create_organisation(**validated_data)
+
+
 class UserSummarySerializer(serializers.ModelSerializer):
-    role = serializers.SerializerMethodField()
+    role_label = serializers.CharField(source="get_role_display", read_only=True)
+    organisation = OrganisationSerializer(read_only=True)
     consent_accepted = serializers.SerializerMethodField()
     specialty = serializers.SerializerMethodField()
 
@@ -35,21 +59,14 @@ class UserSummarySerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "email",
+            "role",
+            "role_label",
+            "organisation",
             "two_factor_enabled",
             "is_active",
             "consent_accepted",
             "specialty",
-            "role",
         )
-
-    def get_role(self, obj):
-        if hasattr(obj, "therapist_profile"):
-            return "therapist"
-        if hasattr(obj, "patient_profile"):
-            return "patient"
-        if obj.is_staff:
-            return "admin"
-        return "user"
 
     def get_consent_accepted(self, obj):
         if hasattr(obj, "patient_profile"):
@@ -63,6 +80,8 @@ class UserSummarySerializer(serializers.ModelSerializer):
 
 
 class TherapistRegistrationSerializer(serializers.ModelSerializer):
+    organisation_id = serializers.UUIDField(required=False, write_only=True)
+
     class Meta:
         model = Therapist
         fields = (
@@ -72,6 +91,7 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
             "email",
             "license_number",
             "specialty",
+            "organisation_id",
             "registration_date",
             "two_factor_enabled",
         )
@@ -92,9 +112,51 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
         return normalized_value
 
     def create(self, validated_data):
-        therapist, activation_url = register_therapist(**validated_data)
+        organisation_id = validated_data.pop("organisation_id", None)
+        organisation = self.context.get("organisation")
+        
+        # If PlatformAdmin provided an organisation_id, use it
+        if organisation_id:
+            try:
+                organisation = Organisation.objects.get(pk=organisation_id)
+            except Organisation.DoesNotExist:
+                raise serializers.ValidationError({"organisation_id": "Organisation not found."})
+
+        therapist, activation_url = register_therapist(organisation=organisation, **validated_data)
         self.context["activation_url"] = activation_url
         return therapist
+
+
+class ClinicAdminRegistrationSerializer(serializers.ModelSerializer):
+    organisation_id = serializers.UUIDField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "organisation_id",
+            "registration_date",
+        )
+        read_only_fields = ("id", "registration_date")
+
+    def validate_email(self, value):
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def create(self, validated_data):
+        organisation_id = validated_data.pop("organisation_id")
+        try:
+            organisation = Organisation.objects.get(pk=organisation_id)
+        except Organisation.DoesNotExist:
+            raise serializers.ValidationError({"organisation_id": "Organisation not found."})
+
+        user, activation_url = register_clinic_admin(organisation=organisation, **validated_data)
+        self.context["activation_url"] = activation_url
+        return user
 
 
 class PatientRegistrationSerializer(serializers.ModelSerializer):

@@ -18,6 +18,9 @@ import { ProtectedLayout } from './components/ProtectedLayout.jsx'
 import { PatientDetailPage } from './pages/PatientDetailPage.jsx'
 import { TherapistEntryDetailPage } from './pages/TherapistEntryDetailPage.jsx'
 import { TherapistQuestionDetailPage } from './pages/TherapistQuestionDetailPage.jsx'
+import { PlatformOrganisationsPage } from './pages/PlatformOrganisationsPage.jsx'
+import { PlatformClinicAdminsPage } from './pages/PlatformClinicAdminsPage.jsx'
+import { PlatformTherapistsPage } from './pages/PlatformTherapistsPage.jsx'
 
 function LoadingScreen() {
   return (
@@ -144,6 +147,32 @@ function App() {
         element={
           <ProtectedLayout>
             <TherapistQuestionDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      
+      {/* Platform Admin Routes */}
+      <Route
+        path="/admin/organisations"
+        element={
+          <ProtectedLayout>
+            <PlatformOrganisationsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/admin/clinic-admins"
+        element={
+          <ProtectedLayout>
+            <PlatformClinicAdminsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/admin/therapists"
+        element={
+          <ProtectedLayout>
+            <PlatformTherapistsPage />
           </ProtectedLayout>
         }
       />

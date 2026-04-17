@@ -377,6 +377,41 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function getPlatformStats() {
+    const response = await api.get('/admin/stats/platform/')
+    return response.data
+  }
+
+  async function getClinicStats() {
+    const response = await api.get('/admin/stats/clinic/')
+    return response.data
+  }
+
+  async function listOrganisations() {
+    const response = await api.get('/admin/organisations/')
+    return response.data
+  }
+
+  async function createOrganisation(payload) {
+    const response = await api.post('/admin/organisations/', payload)
+    return response.data
+  }
+
+  async function registerClinicAdmin(payload) {
+    const response = await api.post('/admin/register/clinic-admin/', payload)
+    return response.data
+  }
+
+  async function listAllClinicAdmins() {
+    const response = await api.get('/admin/users/clinic-admins/')
+    return response.data
+  }
+
+  async function listAllTherapists() {
+    const response = await api.get('/admin/users/therapists/')
+    return response.data
+  }
+
   async function listPatientEntries(patientId) {
     const response = await api.get(`/auth/patients/${patientId}/entries/`)
     return response.data
@@ -438,6 +473,13 @@ export function AuthProvider({ children }) {
     getPatientEntry,
     listPatientQuestions,
     getPatientQuestion,
+    getPlatformStats,
+    getClinicStats,
+    listOrganisations,
+    createOrganisation,
+    registerClinicAdmin,
+    listAllClinicAdmins,
+    listAllTherapists,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

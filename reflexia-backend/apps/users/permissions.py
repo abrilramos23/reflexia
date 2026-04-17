@@ -6,4 +6,20 @@ class IsTherapistUser(BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        return bool(user and user.is_authenticated and hasattr(user, "therapist_profile"))
+        return bool(user and user.is_authenticated and user.is_therapist)
+
+
+class IsPlatformAdminUser(BasePermission):
+    message = "Only platform administrators can perform this action."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and user.is_platform_admin)
+
+
+class IsClinicAdminUser(BasePermission):
+    message = "Only clinic administrators can perform this action."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and user.is_clinic_admin)

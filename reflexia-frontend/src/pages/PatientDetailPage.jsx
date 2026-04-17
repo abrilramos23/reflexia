@@ -120,7 +120,7 @@ export function PatientDetailPage() {
           <div className="panel-heading">
             <p className="eyebrow">Evolució emocional</p>
             <h3>Gràfics de seguiment</h3>
-            <p className="muted">L'evolució emocional estarà disponible properament.</p>
+            <p className="muted">L&apos;evolució emocional estarà disponible properament.</p>
           </div>
           <div style={{ height: '100px', display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.03)', borderRadius: '16px', border: '1px dashed rgba(0,0,0,0.1)' }}>
              <p className="muted">Evolució emocional (Pròximament)</p>
@@ -177,7 +177,7 @@ export function PatientDetailPage() {
           ) : (
             <div className="page-stack">
               {questions.length === 0 ? (
-                <p className="muted">No s'han assignat preguntes a aquest pacient.</p>
+                <p className="muted">No s&apos;han assignat preguntes a aquest pacient.</p>
               ) : (
                 <ul className="patient-list">
                   {questions.map((q) => (

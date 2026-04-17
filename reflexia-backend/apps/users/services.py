@@ -7,17 +7,45 @@ from django.db import transaction
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from apps.users.models import Patient, Therapist, TherapistPatient, User
+from apps.users.models import Patient, Therapist, TherapistPatient, User, Organisation
 
 
 @transaction.atomic
-def register_therapist(*, first_name, last_name, email, license_number, specialty):
+def create_organisation(*, name, type, plan):
+    organisation = Organisation.objects.create(
+        name=name,
+        type=type,
+        plan=plan,
+    )
+    return organisation
+
+
+@transaction.atomic
+def register_clinic_admin(*, first_name, last_name, email, organisation):
+    user = User(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        role=User.Role.CLINIC_ADMIN,
+        organisation=organisation,
+        is_active=False,
+    )
+    user.set_unusable_password()
+    user.save()
+    activation_url = build_account_activation_url(user)
+    send_clinic_admin_activation_email(user=user, organisation=organisation, activation_url=activation_url)
+    return user, activation_url
+
+
+@transaction.atomic
+def register_therapist(*, first_name, last_name, email, license_number, specialty, organisation=None):
     therapist = Therapist(
         email=email,
         first_name=first_name,
         last_name=last_name,
         license_number=license_number,
         specialty=specialty,
+        organisation=organisation,
         is_active=False,
     )
     therapist.set_unusable_password()
@@ -59,6 +87,24 @@ def build_account_activation_url(user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     return f"{settings.FRONTEND_URL.rstrip('/')}/activate-account?uid={uid}&token={token}"
+
+
+def send_clinic_admin_activation_email(*, user, organisation, activation_url):
+    subject = "Activate your Reflexia clinic admin account"
+    message = (
+        f"Hello {user.first_name},\n\n"
+        f"You have been registered as the administrator for {organisation.name}.\n"
+        "Use the following link to set your password and activate your access:\n\n"
+        f"{activation_url}\n\n"
+        "If you were not expecting this email, you can ignore it."
+    )
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        fail_silently=False,
+    )
 
 
 def send_therapist_activation_email(*, therapist, activation_url):

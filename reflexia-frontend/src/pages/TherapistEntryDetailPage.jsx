@@ -56,7 +56,7 @@ export function TherapistEntryDetailPage() {
             <>
               <div className="panel-heading">
                 <p className="eyebrow">Entrada de Journaling</p>
-                <h1 className="section-title">Detall de l'entrada</h1>
+                <h1 className="section-title">Detall de l&apos;entrada</h1>
                 <p className="muted">
                   Creada el {formatEntryDate(entry.created_at)} i actualitzada el {formatEntryDate(entry.updated_at)}.
                 </p>

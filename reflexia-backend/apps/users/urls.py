@@ -22,6 +22,12 @@ from apps.users.views import (
     TwoFactorEnableView,
     TwoFactorSetupView,
     TwoFactorVerifyView,
+    PlatformStatsView,
+    ClinicStatsView,
+    OrganisationListCreateView,
+    ClinicAdminRegistrationView,
+    GlobalClinicAdminListView,
+    GlobalTherapistListView,
 )
 
 def index(request):
@@ -50,4 +56,10 @@ urlpatterns = [
     path('auth/2fa/enable/', TwoFactorEnableView.as_view(), name='two-factor-enable'),
     path('auth/2fa/verify/', TwoFactorVerifyView.as_view(), name='two-factor-verify'),
     path('auth/2fa/disable/', TwoFactorDisableView.as_view(), name='two-factor-disable'),
+    path('admin/stats/platform/', PlatformStatsView.as_view(), name='platform-stats'),
+    path('admin/stats/clinic/', ClinicStatsView.as_view(), name='clinic-stats'),
+    path('admin/organisations/', OrganisationListCreateView.as_view(), name='organisation-list-create'),
+    path('admin/register/clinic-admin/', ClinicAdminRegistrationView.as_view(), name='clinic-admin-register'),
+    path('admin/users/clinic-admins/', GlobalClinicAdminListView.as_view(), name='global-clinic-admin-list'),
+    path('admin/users/therapists/', GlobalTherapistListView.as_view(), name='global-therapist-list'),
 ]

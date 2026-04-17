@@ -9,8 +9,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import serializers
 
-from apps.users.permissions import IsTherapistUser
-from apps.users.models import User, Patient, Therapist
+from apps.users.permissions import IsTherapistUser, IsPlatformAdminUser, IsClinicAdminUser
+from apps.users.models import User, Patient, Therapist, Organisation
 from apps.users.serializers import (
     AccountActivationSerializer,
     ChangePasswordSerializer,
@@ -31,11 +31,14 @@ from apps.users.serializers import (
     TwoFactorSetupSerializer,
     TwoFactorVerifySerializer,
     UserSummarySerializer,
+    OrganisationSerializer,
+    OrganisationCreateSerializer,
+    ClinicAdminRegistrationSerializer,
 )
 
 
 class TherapistRegistrationView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsPlatformAdminUser | IsClinicAdminUser]
 
     @extend_schema(
         tags=["auth"],
@@ -73,7 +76,13 @@ class TherapistRegistrationView(APIView):
         ],
     )
     def post(self, request):
-        serializer = TherapistRegistrationSerializer(data=request.data)
+        context = {}
+        if request.user.role == User.Role.CLINIC_ADMIN:
+            context["organisation"] = request.user.organisation
+        # If PlatformAdmin, the organisation_id is handled inside the serializer's create method
+        # via the request data.
+
+        serializer = TherapistRegistrationSerializer(data=request.data, context=context)
         serializer.is_valid(raise_exception=True)
         therapist = serializer.save()
 
@@ -686,3 +695,141 @@ class ConsentDocumentView(APIView):
             content_type="application/pdf",
             filename="Reflexia_Consentiment_Informat.pdf",
         )
+class PlatformStatsView(APIView):
+    permission_classes = [IsPlatformAdminUser]
+
+    @extend_schema(
+        tags=["admin"],
+        summary="Obtenir estadístiques de la plataforma",
+        responses={200: inline_serializer(
+            name="PlatformStats",
+            fields={
+                "total_organisations": serializers.IntegerField(),
+                "total_users": serializers.IntegerField(),
+                "users_by_role": serializers.DictField(),
+            }
+        )}
+    )
+    def get(self, request):
+        stats = {
+            "total_organisations": Organisation.objects.count(),
+            "total_users": User.objects.count(),
+            "users_by_role": {
+                role: User.objects.filter(role=role).count()
+                for role, _ in User.Role.choices
+            }
+        }
+        return Response(stats)
+
+
+class ClinicStatsView(APIView):
+    permission_classes = [IsClinicAdminUser]
+
+    @extend_schema(
+        tags=["admin"],
+        summary="Obtenir estadístiques de la clínica",
+        responses={200: inline_serializer(
+            name="ClinicStats",
+            fields={
+                "total_therapists": serializers.IntegerField(),
+                "total_patients": serializers.IntegerField(),
+            }
+        )}
+    )
+    def get(self, request):
+        organisation = request.user.organisation
+        if not organisation:
+            return Response({"detail": "User has no organisation assigned."}, status=status.HTTP_400_BAD_REQUEST)
+
+        stats = {
+            "total_therapists": User.objects.filter(organisation=organisation, role=User.Role.THERAPIST).count(),
+            "total_patients": User.objects.filter(organisation=organisation, role=User.Role.PATIENT).count(),
+        }
+        return Response(stats)
+
+
+class OrganisationListCreateView(APIView):
+    permission_classes = [IsPlatformAdminUser]
+
+    @extend_schema(
+        tags=["admin"],
+        summary="Llistar i crear organitzacions",
+        request=OrganisationCreateSerializer,
+        responses={
+            200: OrganisationSerializer(many=True),
+            201: OrganisationSerializer,
+        },
+    )
+    def get(self, request):
+        organisations = Organisation.objects.all().order_by("name")
+        return Response(OrganisationSerializer(organisations, many=True).data)
+
+    def post(self, request):
+        serializer = OrganisationCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        organisation = serializer.save()
+        return Response(OrganisationSerializer(organisation).data, status=status.HTTP_201_CREATED)
+
+
+class ClinicAdminRegistrationView(APIView):
+    permission_classes = [IsPlatformAdminUser]
+
+    @extend_schema(
+        tags=["admin"],
+        summary="Registrar un administrador de clínica",
+        request=ClinicAdminRegistrationSerializer,
+        responses={
+            201: inline_serializer(
+                name="ClinicAdminRegistrationResponse",
+                fields={
+                    "id": serializers.UUIDField(),
+                    "first_name": serializers.CharField(),
+                    "last_name": serializers.CharField(),
+                    "email": serializers.EmailField(),
+                    "activation_email_sent": serializers.BooleanField(),
+                    "activation_url": serializers.CharField(required=False),
+                },
+            ),
+        },
+    )
+    def post(self, request):
+        serializer = ClinicAdminRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        response_data = {
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "activation_email_sent": True,
+        }
+        if settings.DEBUG:
+            response_data["activation_url"] = serializer.context.get("activation_url")
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+class GlobalClinicAdminListView(APIView):
+    permission_classes = [IsPlatformAdminUser]
+
+    @extend_schema(
+        tags=["admin"],
+        summary="Llistar tots els administradors de clínica",
+        responses={200: UserSummarySerializer(many=True)},
+    )
+    def get(self, request):
+        users = User.objects.filter(role=User.Role.CLINIC_ADMIN).order_by("first_name", "last_name")
+        return Response(UserSummarySerializer(users, many=True).data)
+
+
+class GlobalTherapistListView(APIView):
+    permission_classes = [IsPlatformAdminUser]
+
+    @extend_schema(
+        tags=["admin"],
+        summary="Llistar tots els terapeutes globals",
+        responses={200: UserSummarySerializer(many=True)},
+    )
+    def get(self, request):
+        users = User.objects.filter(role=User.Role.THERAPIST).order_by("first_name", "last_name")
+        return Response(UserSummarySerializer(users, many=True).data)
