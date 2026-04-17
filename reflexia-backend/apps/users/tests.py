@@ -9,7 +9,14 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.users.models import Patient, ProfessionalDirectoryEntry, Therapist, TherapistPatient, User
+from apps.users.models import (
+    Organisation,
+    Patient,
+    ProfessionalDirectoryEntry,
+    Therapist,
+    TherapistPatient,
+    User,
+)
 
 
 @override_settings(
@@ -18,6 +25,11 @@ from apps.users.models import Patient, ProfessionalDirectoryEntry, Therapist, Th
 )
 class TherapistRegistrationTests(APITestCase):
     def setUp(self):
+        self.org = Organisation.objects.create(
+            name="Test Clinic",
+            type=Organisation.Type.CLINIC,
+            plan=Organisation.Plan.CLINIC,
+        )
         ProfessionalDirectoryEntry.objects.create(
             license_number="30809",
             complete_name="LAURA GOMEZ",
@@ -91,6 +103,11 @@ class TherapistRegistrationTests(APITestCase):
 )
 class PatientRegistrationTests(APITestCase):
     def setUp(self):
+        self.org = Organisation.objects.create(
+            name="Test Clinic",
+            type=Organisation.Type.CLINIC,
+            plan=Organisation.Plan.CLINIC,
+        )
         self.therapist = Therapist.objects.create_user(
             email="therapist@example.com",
             password="StrongPass123!",
@@ -98,6 +115,7 @@ class PatientRegistrationTests(APITestCase):
             last_name="Lopez",
             license_number="16385",
             specialty="Clinical Psychology",
+            organisation=self.org,
         )
         self.url = "/api/auth/register/patient/"
 
@@ -167,6 +185,11 @@ class PatientRegistrationTests(APITestCase):
 
 class TherapistPatientManagementTests(APITestCase):
     def setUp(self):
+        self.org = Organisation.objects.create(
+            name="Test Clinic",
+            type=Organisation.Type.CLINIC,
+            plan=Organisation.Plan.CLINIC,
+        )
         self.therapist = Therapist.objects.create_user(
             email="therapist@example.com",
             password="StrongPass123!",
@@ -175,6 +198,7 @@ class TherapistPatientManagementTests(APITestCase):
             license_number="16385",
             specialty="Clinical Psychology",
             is_active=True,
+            organisation=self.org,
         )
         self.patient = Patient.objects.create_user(
             email="patient@example.com",
@@ -183,6 +207,7 @@ class TherapistPatientManagementTests(APITestCase):
             last_name="Sanchez",
             birth_date="2001-01-10",
             is_active=True,
+            organisation=self.org,
         )
         self.other_patient = Patient.objects.create_user(
             email="other@example.com",
@@ -191,6 +216,7 @@ class TherapistPatientManagementTests(APITestCase):
             last_name="Serra",
             birth_date="2000-03-15",
             is_active=True,
+            organisation=self.org,
         )
         TherapistPatient.objects.create(therapist=self.therapist, patient=self.patient)
         self.list_url = "/api/auth/patients/"
@@ -312,6 +338,11 @@ class AccountActivationTests(APITestCase):
 
 class LoginTests(APITestCase):
     def setUp(self):
+        self.org = Organisation.objects.create(
+            name="Test Clinic",
+            type=Organisation.Type.CLINIC,
+            plan=Organisation.Plan.CLINIC,
+        )
         self.therapist = Therapist.objects.create_user(
             email="therapist@example.com",
             password="StrongPass123!",
@@ -319,6 +350,7 @@ class LoginTests(APITestCase):
             last_name="Lopez",
             license_number="16385",
             specialty="Clinical Psychology",
+            organisation=self.org,
         )
         self.patient = Patient.objects.create_user(
             email="patient@example.com",
@@ -327,13 +359,16 @@ class LoginTests(APITestCase):
             last_name="Sanchez",
             birth_date="2001-01-10",
             is_active=True,
+            organisation=self.org,
         )
         self.inactive_patient = Patient.objects.create(
             email="inactive@example.com",
             first_name="Inactive",
             last_name="Patient",
             birth_date="2002-02-02",
+            role=User.Role.PATIENT,
             is_active=False,
+            organisation=self.org,
         )
         self.inactive_patient.set_password("StrongPass123!")
         self.inactive_patient.save(update_fields=["password", "is_active"])
@@ -630,6 +665,11 @@ class PasswordRecoveryTests(APITestCase):
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class ProfileManagementTests(APITestCase):
     def setUp(self):
+        self.org = Organisation.objects.create(
+            name="Test Clinic",
+            type=Organisation.Type.CLINIC,
+            plan=Organisation.Plan.CLINIC,
+        )
         self.patient = Patient.objects.create_user(
             email="patient-profile@example.com",
             password="StrongPass123!",
@@ -637,6 +677,7 @@ class ProfileManagementTests(APITestCase):
             last_name="Sanchez",
             birth_date="2001-01-10",
             is_active=True,
+            organisation=self.org,
         )
         self.therapist = Therapist.objects.create_user(
             email="therapist-profile@example.com",
@@ -645,6 +686,7 @@ class ProfileManagementTests(APITestCase):
             last_name="Lopez",
             license_number="21039",
             specialty="Clinical Psychology",
+            organisation=self.org,
         )
         self.patient_me_url = "/api/auth/me/"
         self.change_password_url = "/api/auth/change-password/"

@@ -45,7 +45,20 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("role", User.Role.PLATFORM_ADMIN)
         return self.create_user(email, password, **extra_fields)
+
+
+class TherapistManager(UserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("role", User.Role.THERAPIST)
+        return super().create_user(email, password, **extra_fields)
+
+
+class PatientManager(UserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("role", User.Role.PATIENT)
+        return super().create_user(email, password, **extra_fields)
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -115,6 +128,8 @@ class Therapist(User):
     license_number = models.CharField(max_length=100, unique=True)
     specialty      = models.CharField(max_length=150)
 
+    objects = TherapistManager()
+
     class Meta:
         verbose_name = 'therapist'
         verbose_name_plural = 'therapists'
@@ -132,6 +147,8 @@ class Patient(User):
     birth_date       = models.DateField()
     consent_accepted = models.BooleanField(default=False)
     consent_date     = models.DateTimeField(null=True, blank=True)
+
+    objects = PatientManager()
 
     class Meta:
         verbose_name = 'patient'
