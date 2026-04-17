@@ -94,7 +94,7 @@ export function ClinicAdminDashboard() {
           <div className="panel-heading">
             <p className="eyebrow">Equip</p>
             <h2>Registrar Nou Terapeuta</h2>
-            <p className="muted">Afegeix un professional al teu equip. Rebrà un correu d'activació.</p>
+            <p className="muted">Afegeix un professional al teu equip. Rebrà un correu d&apos;activació.</p>
           </div>
 
           {inviteMessage && <div className="message">{inviteMessage}</div>}
