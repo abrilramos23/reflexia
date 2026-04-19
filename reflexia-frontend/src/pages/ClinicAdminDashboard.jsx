@@ -92,13 +92,13 @@ export function ClinicAdminDashboard() {
 
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
-            <p className="eyebrow">Detalls de l'Entitat</p>
+            <p className="eyebrow">Detalls de l&apos;Entitat</p>
             <h2>Informació de l&apos;Organització</h2>
           </div>
           
           <div className="management-grid" style={{ marginTop: '1.5rem' }}>
             <div className="screen-card entity-card" style={{ padding: '1.5rem' }}>
-                <p className="entity-card__meta"><strong>ID de l'Organització:</strong> {user.organisation?.id}</p>
+                <p className="entity-card__meta"><strong>ID de l&apos;Organització:</strong> {user.organisation?.id}</p>
                 <p className="entity-card__meta"><strong>Tipus:</strong> Clínica / Centre</p>
                 <p className="entity-card__meta"><strong>Data de Registre:</strong> {new Date(user.organisation?.created_at).toLocaleDateString()}</p>
                 <p className="entity-card__meta">

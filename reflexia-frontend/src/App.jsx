@@ -36,7 +36,7 @@ function LoadingScreen() {
 }
 
 function App() {
-  const { isBootstrapping } = useAuth()
+  const { user, isBootstrapping } = useAuth()
 
   if (isBootstrapping) {
     return <LoadingScreen />
