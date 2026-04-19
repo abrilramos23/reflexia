@@ -16,7 +16,7 @@ export const sidebarConfig = [
   {
     label: 'Clínica',
     path: '/clinic',
-    roles: ['clinic_admin'],
+    roles: [], // Removed clinic_admin from here
     icon: FaBuilding,
   },
   {
@@ -34,7 +34,7 @@ export const sidebarConfig = [
   {
     label: 'Terapeutes',
     path: '/admin/therapists',
-    roles: ['platform_admin'],
+    roles: ['platform_admin', 'clinic_admin'],
     icon: FaUsers,
   },
   {

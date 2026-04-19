@@ -412,6 +412,11 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function listClinicTherapists() {
+    const response = await api.get('/admin/users/clinic/therapists/')
+    return response.data
+  }
+
   async function listPatientEntries(patientId) {
     const response = await api.get(`/auth/patients/${patientId}/entries/`)
     return response.data
@@ -480,6 +485,7 @@ export function AuthProvider({ children }) {
     registerClinicAdmin,
     listAllClinicAdmins,
     listAllTherapists,
+    listClinicTherapists,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

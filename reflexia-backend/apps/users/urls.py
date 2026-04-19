@@ -28,6 +28,7 @@ from apps.users.views import (
     ClinicAdminRegistrationView,
     GlobalClinicAdminListView,
     GlobalTherapistListView,
+    ClinicTherapistListView,
 )
 
 def index(request):
@@ -62,4 +63,5 @@ urlpatterns = [
     path('admin/register/clinic-admin/', ClinicAdminRegistrationView.as_view(), name='clinic-admin-register'),
     path('admin/users/clinic-admins/', GlobalClinicAdminListView.as_view(), name='global-clinic-admin-list'),
     path('admin/users/therapists/', GlobalTherapistListView.as_view(), name='global-therapist-list'),
+    path('admin/users/clinic/therapists/', ClinicTherapistListView.as_view(), name='clinic-therapist-list'),
 ]

@@ -14,6 +14,7 @@ export function PlatformClinicAdminsPage() {
     first_name: '', last_name: '', email: '', organisation_id: '' 
   })
   const [message, setMessage] = useState('')
+  const [devLink, setDevLink] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (!user || user.role !== 'platform_admin') {
@@ -44,11 +45,17 @@ export function PlatformClinicAdminsPage() {
     setIsSubmitting(true)
     setMessage('')
     try {
-      await registerClinicAdmin(form)
+      const result = await registerClinicAdmin(form)
       setMessage('Administrador registrat correctament.')
+      if (result.activation_url) {
+        setDevLink(result.activation_url)
+      }
       setForm({ first_name: '', last_name: '', email: '', organisation_id: '' })
       await loadData()
-      setTimeout(() => setView('list'), 1500)
+      // Don't auto-redirect if there's a dev link, so the user can copy it
+      if (!result.activation_url) {
+        setTimeout(() => setView('list'), 1500)
+      }
     } catch (err) {
       setMessage('Error registrant l\'administrador.')
     } finally {
@@ -72,7 +79,13 @@ export function PlatformClinicAdminsPage() {
           <section className="screen-card dashboard-panel">
             {message && (
               <div className={`message ${message.includes('Error') ? 'error-banner' : ''}`}>
-                {message}
+                <p>{message}</p>
+                {devLink && (
+                  <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0,0,0,0.05)', borderRadius: '8px', border: '1px dashed var(--accent)' }}>
+                    <p className="tiny" style={{ marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>Sincronització de Desenvolupament (Email a la consola):</p>
+                    <a href={devLink} className="text-link" style={{ wordBreak: 'break-all' }}>{devLink}</a>
+                  </div>
+                )}
               </div>
             )}
             <form className="form-stack" onSubmit={handleSubmit}>

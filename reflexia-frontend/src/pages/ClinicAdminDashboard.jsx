@@ -84,74 +84,37 @@ export function ClinicAdminDashboard() {
               <strong>{loading ? '...' : stats?.total_patients || 0}</strong>
             </div>
             <div className="stat-card">
-              <span>Plà</span>
-              <strong>{user.organisation?.plan || 'Estàndard'}</strong>
+              <span>Pla</span>
+              <strong>{user.organisation?.plan.toUpperCase() || 'FREE'}</strong>
             </div>
           </div>
         </section>
 
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
-            <p className="eyebrow">Equip</p>
-            <h2>Registrar Nou Terapeuta</h2>
-            <p className="muted">Afegeix un professional al teu equip. Rebrà un correu d&apos;activació.</p>
+            <p className="eyebrow">Detalls de l'Entitat</p>
+            <h2>Informació de l&apos;Organització</h2>
+          </div>
+          
+          <div className="management-grid" style={{ marginTop: '1.5rem' }}>
+            <div className="screen-card entity-card" style={{ padding: '1.5rem' }}>
+                <p className="entity-card__meta"><strong>ID de l'Organització:</strong> {user.organisation?.id}</p>
+                <p className="entity-card__meta"><strong>Tipus:</strong> Clínica / Centre</p>
+                <p className="entity-card__meta"><strong>Data de Registre:</strong> {new Date(user.organisation?.created_at).toLocaleDateString()}</p>
+                <p className="entity-card__meta">
+                  <strong>Estat:</strong> 
+                  <span className={`status-pill ${user.organisation?.is_active ? 'dashboard-status-pill--active' : 'dashboard-status-pill--muted'}`} style={{ marginLeft: '0.5rem' }}>
+                    {user.organisation?.is_active ? 'Activa' : 'Inactiva'}
+                  </span>
+                </p>
+            </div>
           </div>
 
-          {inviteMessage && <div className="message">{inviteMessage}</div>}
-          {inviteError && <div className="error-banner">{inviteError}</div>}
-
-          <form className="form-stack" onSubmit={handleInviteSubmit}>
-            <div className="inline-fields">
-              <div className="field-group">
-                <label>Nom</label>
-                <input
-                  value={inviteForm.first_name}
-                  onChange={(e) => setInviteForm({...inviteForm, first_name: e.target.value})}
-                  required
-                />
-              </div>
-              <div className="field-group">
-                <label>Cognoms</label>
-                <input
-                  value={inviteForm.last_name}
-                  onChange={(e) => setInviteForm({...inviteForm, last_name: e.target.value})}
-                  required
-                />
-              </div>
-            </div>
-            <div className="inline-fields">
-              <div className="field-group">
-                <label>Correu electrònic</label>
-                <input
-                  type="email"
-                  value={inviteForm.email}
-                  onChange={(e) => setInviteForm({...inviteForm, email: e.target.value})}
-                  required
-                />
-              </div>
-              <div className="field-group">
-                <label>Núm. Col·legiat</label>
-                <input
-                  value={inviteForm.license_number}
-                  onChange={(e) => setInviteForm({...inviteForm, license_number: e.target.value})}
-                  required
-                />
-              </div>
-            </div>
-            <div className="field-group">
-              <label>Especialitat</label>
-              <input
-                value={inviteForm.specialty}
-                onChange={(e) => setInviteForm({...inviteForm, specialty: e.target.value})}
-                required
-              />
-            </div>
-            <div className="button-row">
-              <button className="button-secondary" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Enviant...' : 'Registrar a la Clínica'}
-              </button>
-            </div>
-          </form>
+          <div className="button-row" style={{ marginTop: '2rem' }}>
+            <button className="button-ghost" onClick={() => window.location.href = '/admin/therapists'}>
+              Gestionar Equip de Terapeutes
+            </button>
+          </div>
         </section>
       </div>
     </div>

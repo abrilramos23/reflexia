@@ -85,8 +85,7 @@ export function PlatformOrganisationsPage() {
                     value={orgForm.type} 
                     onChange={e => setOrgForm({...orgForm, type: e.target.value})}
                   >
-                    <option value="clinic">Clínica</option>
-                    <option value="individual">Individual</option>
+                    <option value="clinic">Clínica / Centre</option>
                   </select>
                 </div>
                 <div className="field-group">
@@ -146,7 +145,7 @@ export function PlatformOrganisationsPage() {
                   </div>
                   <div className="entity-card__body">
                     <p className="entity-card__meta">
-                      <strong>Tipus:</strong> {org.type === 'clinic' ? 'Clínica' : 'Individual'}
+                      <strong>Tipus:</strong> Clínica / Centre
                     </p>
                     <p className="entity-card__meta">
                       <strong>Pla:</strong> {org.plan.toUpperCase()}

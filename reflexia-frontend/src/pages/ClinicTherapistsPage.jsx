@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Navigate } from 'react-router-dom'
 
-export function PlatformTherapistsPage() {
-  const { user, listOrganisations, registerTherapist, listAllTherapists } = useAuth()
-  const [organisations, setOrganisations] = useState([])
+export function ClinicTherapistsPage() {
+  const { user, listClinicTherapists, registerTherapist } = useAuth()
   const [therapists, setTherapists] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -16,27 +15,22 @@ export function PlatformTherapistsPage() {
     email: '',
     license_number: '',
     specialty: '',
-    organisation_id: '',
   })
   const [message, setMessage] = useState('')
   const [devLink, setDevLink] = useState('')
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  if (!user || user.role !== 'platform_admin') {
+  if (!user || user.role !== 'clinic_admin') {
     return <Navigate to="/dashboard" replace />
   }
 
   const loadData = async () => {
     try {
-      const [oData, tData] = await Promise.all([
-        listOrganisations(),
-        listAllTherapists()
-      ])
-      setOrganisations(oData)
-      setTherapists(tData)
+      const data = await listClinicTherapists()
+      setTherapists(data)
     } catch (err) {
-      setError('Error carregant dades dels terapeutes.')
+      setError('Error carregant els teus terapeutes.')
     } finally {
       setLoading(false)
     }
@@ -51,18 +45,23 @@ export function PlatformTherapistsPage() {
     setIsSubmitting(true)
     setMessage('')
     setSubmitError('')
+    setDevLink('')
+    
     try {
+      // Logic in backend automatically assigns to admin's clinic
       const result = await registerTherapist(form)
-      setMessage('Terapeuta registrat correctament.')
+      setMessage('Terapeuta registrat correctament a la clínica.')
+      
       if (result.activation_url) {
         setDevLink(result.activation_url)
       }
+      
       setForm({
         first_name: '', last_name: '', email: '',
-        license_number: '', specialty: '', organisation_id: ''
+        license_number: '', specialty: ''
       })
       await loadData()
-      // Don't auto-redirect if there's a dev link
+      
       if (!result.activation_url) {
         setTimeout(() => setView('list'), 1500)
       }
@@ -79,8 +78,8 @@ export function PlatformTherapistsPage() {
         <div className="full-screen-form-shell">
           <div className="form-header">
             <div>
-              <p className="eyebrow">Nou Terapeuta</p>
-              <h1>Registrar Professional</h1>
+              <p className="eyebrow">{user.organisation?.name}</p>
+              <h1>Nou Professional</h1>
             </div>
             <button className="button-ghost" onClick={() => setView('list')}>
               Tornar a la llista
@@ -100,20 +99,8 @@ export function PlatformTherapistsPage() {
               </div>
             )}
             {submitError && <div className="error-banner">{submitError}</div>}
+            
             <form className="form-stack" onSubmit={handleSubmit}>
-              <div className="field-group">
-                <label>Organització (Opcional)</label>
-                <select 
-                  value={form.organisation_id} 
-                  onChange={e => setForm({...form, organisation_id: e.target.value})}
-                >
-                  <option value="">Cap (Independent)</option>
-                  {organisations.map(o => (
-                    <option key={o.id} value={o.id}>{o.name}</option>
-                  ))}
-                </select>
-                <p className="tiny muted">Si no se selecciona cap, es considerarà un terapeuta autònom.</p>
-              </div>
               <div className="inline-fields">
                 <div className="field-group">
                   <label>Nom</label>
@@ -128,7 +115,7 @@ export function PlatformTherapistsPage() {
                   <label>Cognoms</label>
                   <input
                     value={form.last_name}
-                    onChange={(event) => setForm({...form, last_name: event.target.value})}
+                    onChange={(e) => setForm({...form, last_name: e.target.value})}
                     placeholder="Cognoms"
                     required
                   />
@@ -140,7 +127,7 @@ export function PlatformTherapistsPage() {
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({...form, email: e.target.value})}
-                  placeholder="professional@email.com"
+                  placeholder="professional@clinica.com"
                   required
                 />
               </div>
@@ -165,8 +152,8 @@ export function PlatformTherapistsPage() {
                 </div>
               </div>
               <div className="button-row" style={{ marginTop: '2rem' }}>
-                <button className="button" type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Registrant...' : 'Registrar Terapeuta'}
+                <button className="button-secondary" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Registrant...' : 'Registrar i Enviar Invitació'}
                 </button>
                 <button className="button-ghost" type="button" onClick={() => setView('list')}>
                   Cancel·lar
@@ -185,8 +172,8 @@ export function PlatformTherapistsPage() {
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="form-header">
             <div>
-              <p className="eyebrow">Administració</p>
-              <h1 className="section-title">Gestionar Terapeutes</h1>
+              <p className="eyebrow">{user.organisation?.name}</p>
+              <h1 className="section-title">Els teus Terapeutes</h1>
             </div>
             <button className="button" onClick={() => setView('create')}>
               Nou Terapeuta
@@ -196,7 +183,7 @@ export function PlatformTherapistsPage() {
           {error && <div className="error-banner">{error}</div>}
 
           {loading ? (
-            <p>Carregant...</p>
+            <p>Carregant equip...</p>
           ) : (
             <div className="management-grid">
               {therapists.map((t) => (
@@ -215,21 +202,18 @@ export function PlatformTherapistsPage() {
                       <strong>Col·legiat:</strong> {t.license_number}
                     </p>
                     <p className="entity-card__meta">
-                      <strong>Organització:</strong> {t.organisation?.name || 'Independent'}
-                    </p>
-                    <p className="entity-card__meta">
                       <strong>Email:</strong> {t.email}
                     </p>
                   </div>
                   <div className="entity-card__footer">
-                    <span className="tiny muted">Registrat: {new Date(t.registration_date).toLocaleDateString()}</span>
-                    <button className="text-link" style={{ fontSize: '0.9rem' }}>Fitxa tècnica</button>
+                    <span className="tiny muted">Alta: {new Date(t.registration_date).toLocaleDateString()}</span>
                   </div>
                 </div>
               ))}
               {therapists.length === 0 && (
                 <div className="screen-card dashboard-panel profile-card--wide" style={{ textAlign: 'center', padding: '4rem' }}>
-                   <p className="muted">No hi ha terapeutes registrats encara.</p>
+                   <p className="muted">Encara no has registrat cap terapeuta a la teva clínica.</p>
+                   <button className="button-ghost" onClick={() => setView('create')} style={{ marginTop: '1rem' }}>Crea el primer</button>
                 </div>
               )}
             </div>

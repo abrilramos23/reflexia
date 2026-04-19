@@ -833,3 +833,23 @@ class GlobalTherapistListView(APIView):
     def get(self, request):
         users = User.objects.filter(role=User.Role.THERAPIST).order_by("first_name", "last_name")
         return Response(UserSummarySerializer(users, many=True).data)
+
+
+class ClinicTherapistListView(APIView):
+    permission_classes = [IsClinicAdminUser]
+
+    @extend_schema(
+        tags=["admin"],
+        summary="Llistar terapeutes de la clínica",
+        responses={200: UserSummarySerializer(many=True)},
+    )
+    def get(self, request):
+        organisation = request.user.organisation
+        if not organisation:
+            return Response({"detail": "User has no organisation assigned."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        users = User.objects.filter(
+            organisation=organisation, 
+            role=User.Role.THERAPIST
+        ).order_by("first_name", "last_name")
+        return Response(UserSummarySerializer(users, many=True).data)

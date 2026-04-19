@@ -8,7 +8,6 @@ from django.utils import timezone
 
 class Organisation(models.Model):
     class Type(models.TextChoices):
-        INDIVIDUAL = 'individual', 'Individual'
         CLINIC     = 'clinic',     'Clinic'
 
     class Plan(models.TextChoices):

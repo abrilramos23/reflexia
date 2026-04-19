@@ -21,6 +21,7 @@ import { TherapistQuestionDetailPage } from './pages/TherapistQuestionDetailPage
 import { PlatformOrganisationsPage } from './pages/PlatformOrganisationsPage.jsx'
 import { PlatformClinicAdminsPage } from './pages/PlatformClinicAdminsPage.jsx'
 import { PlatformTherapistsPage } from './pages/PlatformTherapistsPage.jsx'
+import { ClinicTherapistsPage } from './pages/ClinicTherapistsPage.jsx'
 
 function LoadingScreen() {
   return (
@@ -168,11 +169,12 @@ function App() {
           </ProtectedLayout>
         }
       />
+      {/* Clinic Admin Specific Routes */}
       <Route
         path="/admin/therapists"
         element={
           <ProtectedLayout>
-            <PlatformTherapistsPage />
+            {user?.role === 'platform_admin' ? <PlatformTherapistsPage /> : <ClinicTherapistsPage />}
           </ProtectedLayout>
         }
       />
