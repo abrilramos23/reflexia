@@ -4,7 +4,7 @@ export const sidebarConfig = [
   {
     label: 'Dashboard',
     path: '/dashboard',
-    roles: ['therapist', 'patient', 'platform_admin', 'clinic_admin'],
+    roles: ['therapist', 'patient', 'platform_admin'],
     icon: FaHome,
   },
   {
@@ -16,7 +16,7 @@ export const sidebarConfig = [
   {
     label: 'Clínica',
     path: '/clinic',
-    roles: [], // Removed clinic_admin from here
+    roles: [], 
     icon: FaBuilding,
   },
   {
@@ -34,7 +34,7 @@ export const sidebarConfig = [
   {
     label: 'Terapeutes',
     path: '/admin/therapists',
-    roles: ['platform_admin', 'clinic_admin'],
+    roles: ['platform_admin', 'therapist'], // We will filter visibility for therapists in the SideBar component based on isAdmin flag
     icon: FaUsers,
   },
   {
@@ -46,7 +46,7 @@ export const sidebarConfig = [
   {
     label: 'Perfil',
     path: '/profile',
-    roles: ['therapist', 'patient', 'platform_admin', 'clinic_admin'],
+    roles: ['therapist', 'patient', 'platform_admin'],
     icon: FaUser,
   },
 ]

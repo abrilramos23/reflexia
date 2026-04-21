@@ -36,7 +36,7 @@ function LoadingScreen() {
 }
 
 function App() {
-  const { user, isBootstrapping } = useAuth()
+  const { user, isClinicAdmin, isBootstrapping } = useAuth()
 
   if (isBootstrapping) {
     return <LoadingScreen />
@@ -174,7 +174,13 @@ function App() {
         path="/admin/therapists"
         element={
           <ProtectedLayout>
-            {user?.role === 'platform_admin' ? <PlatformTherapistsPage /> : <ClinicTherapistsPage />}
+            {user?.role === 'platform_admin' ? (
+              <PlatformTherapistsPage />
+            ) : isClinicAdmin ? (
+              <ClinicTherapistsPage />
+            ) : (
+              <Navigate to="/dashboard" replace />
+            )}
           </ProtectedLayout>
         }
       />

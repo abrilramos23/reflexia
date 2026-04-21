@@ -9,7 +9,6 @@ function formatRole(role) {
   if (role === 'therapist') return 'Terapeuta'
   if (role === 'patient') return 'Pacient'
   if (role === 'platform_admin') return 'Admin Plataforma'
-  if (role === 'clinic_admin') return 'Admin Clínica'
   return 'Usuari'
 }
 
@@ -84,6 +83,7 @@ function buildTherapistActivityItem(patient) {
 export function DashboardPage() {
   const {
     user,
+    isClinicAdmin,
     listAssociatedContacts,
     listTherapistPatients,
     registerTherapist,
@@ -177,7 +177,7 @@ export function DashboardPage() {
     return <PlatformAdminDashboard />
   }
 
-  if (user.role === 'clinic_admin') {
+  if (isClinicAdmin) {
     return <ClinicAdminDashboard />
   }
 

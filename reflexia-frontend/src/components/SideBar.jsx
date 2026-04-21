@@ -6,7 +6,7 @@ import { FaBars, FaSignOutAlt } from 'react-icons/fa'
 import '../App.css'
 
 export function Sidebar() {
-  const { user, logout } = useAuth()
+  const { user, isClinicAdmin, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -20,9 +20,17 @@ export function Sidebar() {
 
   if (!user) return null
 
-  const filteredItems = sidebarConfig.filter(item =>
-    item.roles.includes(user.role)
-  )
+  const filteredItems = sidebarConfig.filter((item) => {
+    const roleMatch = item.roles.includes(user.role)
+    if (!roleMatch) return false
+
+    // If it's an admin path and user is a therapist, they must be a clinic admin
+    if (item.path.startsWith('/admin/') && user.role === 'therapist' && !isClinicAdmin) {
+      return false
+    }
+
+    return true
+  })
 
   async function handleLogout() {
     await logout()

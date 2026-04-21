@@ -77,8 +77,10 @@ class TherapistRegistrationView(APIView):
     )
     def post(self, request):
         context = {}
-        if request.user.role == User.Role.CLINIC_ADMIN:
-            context["organisation"] = request.user.organisation
+        if request.user.is_clinic_admin:
+            membership = request.user.organisation_memberships.filter(is_admin=True).first()
+            if membership:
+                context["organisation"] = membership.organisation
         # If PlatformAdmin, the organisation_id is handled inside the serializer's create method
         # via the request data.
 
@@ -737,13 +739,15 @@ class ClinicStatsView(APIView):
         )}
     )
     def get(self, request):
-        organisation = request.user.organisation
-        if not organisation:
-            return Response({"detail": "User has no organisation assigned."}, status=status.HTTP_400_BAD_REQUEST)
-
+        membership = request.user.organisation_memberships.filter(is_admin=True).first()
+        if not membership:
+            return Response({"detail": "User is not an admin of any organisation."}, status=status.HTTP_403_FORBIDDEN)
+        
+        organisation = membership.organisation
+        
         stats = {
-            "total_therapists": User.objects.filter(organisation=organisation, role=User.Role.THERAPIST).count(),
-            "total_patients": User.objects.filter(organisation=organisation, role=User.Role.PATIENT).count(),
+            "total_therapists": User.objects.filter(organisation_memberships__organisation=organisation, role=User.Role.THERAPIST).count(),
+            "total_patients": User.objects.filter(organisation_memberships__organisation=organisation, role=User.Role.PATIENT).count(),
         }
         return Response(stats)
 
@@ -818,7 +822,9 @@ class GlobalClinicAdminListView(APIView):
         responses={200: UserSummarySerializer(many=True)},
     )
     def get(self, request):
-        users = User.objects.filter(role=User.Role.CLINIC_ADMIN).order_by("first_name", "last_name")
+        users = User.objects.filter(
+            organisation_memberships__is_admin=True
+        ).distinct().order_by("first_name", "last_name")
         return Response(UserSummarySerializer(users, many=True).data)
 
 
@@ -844,12 +850,14 @@ class ClinicTherapistListView(APIView):
         responses={200: UserSummarySerializer(many=True)},
     )
     def get(self, request):
-        organisation = request.user.organisation
-        if not organisation:
-            return Response({"detail": "User has no organisation assigned."}, status=status.HTTP_400_BAD_REQUEST)
+        membership = request.user.organisation_memberships.filter(is_admin=True).first()
+        if not membership:
+            return Response({"detail": "User is not an admin of any organisation."}, status=status.HTTP_403_FORBIDDEN)
+        
+        organisation = membership.organisation
         
         users = User.objects.filter(
-            organisation=organisation, 
+            organisation_memberships__organisation=organisation, 
             role=User.Role.THERAPIST
         ).order_by("first_name", "last_name")
         return Response(UserSummarySerializer(users, many=True).data)

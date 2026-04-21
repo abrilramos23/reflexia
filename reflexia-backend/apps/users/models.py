@@ -1,24 +1,17 @@
 import uuid
-
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils import timezone
 
-
 class Organisation(models.Model):
     class Type(models.TextChoices):
         CLINIC     = 'clinic',     'Clinic'
-
-    class Plan(models.TextChoices):
-        FREE   = 'free',   'Free'
-        PRO    = 'pro',    'Pro'
-        CLINIC = 'clinic', 'Clinic'
+        INDIVIDUAL = 'individual', 'Individual'
 
     id         = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name       = models.CharField(max_length=255)
     type       = models.CharField(max_length=20, choices=Type.choices)
-    plan       = models.CharField(max_length=20, choices=Plan.choices)
     is_active  = models.BooleanField(default=True)
     created_at = models.DateTimeField(default=timezone.now)
 
@@ -28,6 +21,41 @@ class Organisation(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.type})"
+
+
+class Subscription(models.Model):
+    class Plan(models.TextChoices):
+        FREE   = 'free',   'Free'
+        PRO    = 'pro',    'Pro'
+        CLINIC = 'clinic', 'Clinic'
+
+    class Status(models.TextChoices):
+        ACTIVE   = 'active',   'Active'
+        CANCELED = 'canceled', 'Canceled'
+
+    class Periodicity(models.TextChoices):
+        MONTHLY = 'monthly', 'Monthly'
+        YEARLY  = 'yearly',  'Yearly'
+
+    id           = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    plan         = models.CharField(max_length=20, choices=Plan.choices, default=Plan.FREE)
+    status       = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    periodicity  = models.CharField(max_length=20, choices=Periodicity.choices, default=Periodicity.MONTHLY)
+    ini_date     = models.DateTimeField(default=timezone.now)
+    end_date     = models.DateTimeField(null=True, blank=True)
+    organisation = models.ForeignKey(
+                       Organisation,
+                       on_delete=models.CASCADE,
+                       related_name='subscriptions',
+                       null=True, blank=True
+                   )
+
+    class Meta:
+        verbose_name = 'subscription'
+        verbose_name_plural = 'subscriptions'
+
+    def __str__(self):
+        return f"Sub: {self.plan} - {self.organisation.name if self.organisation else 'No Org'}"
 
 
 class UserManager(BaseUserManager):
@@ -63,7 +91,6 @@ class PatientManager(UserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     class Role(models.TextChoices):
         PLATFORM_ADMIN = 'platform_admin', 'Platform Admin'
-        CLINIC_ADMIN   = 'clinic_admin',   'Clinic Admin'
         THERAPIST      = 'therapist',      'Therapist'
         PATIENT        = 'patient',        'Patient'
 
@@ -72,12 +99,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_name                = models.CharField(max_length=150)
     email                    = models.EmailField(unique=True)
     role                     = models.CharField(max_length=20, choices=Role.choices, default=Role.PATIENT)
-    organisation             = models.ForeignKey(
-                                   'Organisation',
-                                   null=True, blank=True,
-                                   on_delete=models.SET_NULL,
-                                   related_name='members'
-                               )
+    
+    organisations            = models.ManyToManyField(
+                                    Organisation,
+                                    through='OrganisationMember',
+                                    related_name='members'
+                                )
+    
     registration_date        = models.DateTimeField(default=timezone.now)
     two_factor_enabled       = models.BooleanField(default=False)
     two_factor_secret        = models.CharField(max_length=64, blank=True)
@@ -97,14 +125,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f"{self.first_name} {self.last_name} <{self.email}>"
 
-    # helpers útiles
     @property
     def is_platform_admin(self):
         return self.role == self.Role.PLATFORM_ADMIN
 
     @property
     def is_clinic_admin(self):
-        return self.role == self.Role.CLINIC_ADMIN
+        # Un ususari és clinic admin si té almenys una subscripció a una organització com a admin
+        return self.organisation_memberships.filter(is_admin=True).exists()
 
     @property
     def is_therapist(self):
@@ -113,6 +141,58 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_patient(self):
         return self.role == self.Role.PATIENT
+
+
+class OrganisationMember(models.Model):
+    user         = models.ForeignKey(User, on_delete=models.CASCADE, related_name='organisation_memberships')
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='user_memberships')
+    is_admin     = models.BooleanField(default=False)
+    joined_at    = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('user', 'organisation')
+        verbose_name = 'organisation member'
+        verbose_name_plural = 'organisation members'
+
+    def clean(self):
+        # El membre ha de ser un terapeuta
+        if self.user.role != User.Role.THERAPIST:
+            raise ValidationError(
+                "Només els usuaris amb el rol de terapeuta poden ser membres d'una organització."
+            )
+
+        # Si és un membre existent i s'està intentant treure el flag d'admin
+        if self.pk:
+            old_instance = OrganisationMember.objects.get(pk=self.pk)
+            if old_instance.is_admin and not self.is_admin:
+                admin_count = OrganisationMember.objects.filter(
+                    organisation=self.organisation, 
+                    is_admin=True
+                ).count()
+                if admin_count <= 1:
+                    raise ValidationError(
+                        "No es pot treure el permís d'administrador perquè ets l'únic administrador d'aquesta organització."
+                    )
+
+    def delete(self, *args, **kwargs):
+        if self.is_admin:
+            admin_count = OrganisationMember.objects.filter(
+                organisation=self.organisation, 
+                is_admin=True
+            ).count()
+            if admin_count <= 1:
+                # Comprovem si hi ha altres usuaris (encara que no siguin admins)
+                # La regla diu: "sempre un admin". Si s'esborra l'últim admin, 
+                # l'org es queda sense admins, el que està prohibit si encara hi ha membres.
+                # Si és l'ÚNIC membre total, llavors l'org es quedaria buida, la qual cosa 
+                # podria estar bé si l'org es va a esborrar, però normalment volem 
+                # protegir l'últim administrador.
+                member_count = OrganisationMember.objects.filter(organisation=self.organisation).count()
+                if member_count > 1:
+                    raise ValidationError(
+                        "No es pot eliminar aquest membre perquè és l'únic administrador de l'organització."
+                    )
+        super().delete(*args, **kwargs)
 
 
 class Therapist(User):
@@ -166,7 +246,7 @@ class TherapistPatient(models.Model):
                      related_name='therapist_links',
                  )
     created_at = models.DateTimeField(default=timezone.now)
-    is_active  = models.BooleanField(default=True)  # para altas/bajas sin borrar
+    is_active  = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = 'therapist-patient relationship'

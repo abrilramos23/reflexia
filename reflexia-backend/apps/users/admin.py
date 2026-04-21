@@ -3,6 +3,8 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from apps.users.models import (
     Organisation,
+    OrganisationMember,
+    Subscription,
     Patient,
     ProfessionalDirectoryEntry,
     Therapist,
@@ -13,9 +15,22 @@ from apps.users.models import (
 
 @admin.register(Organisation)
 class OrganisationAdmin(admin.ModelAdmin):
-    list_display  = ("name", "type", "plan", "is_active", "created_at")
-    list_filter   = ("type", "plan", "is_active")
+    list_display  = ("name", "type", "is_active", "created_at")
+    list_filter   = ("type", "is_active")
     search_fields = ("name",)
+
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ("organisation", "plan", "status", "ini_date", "end_date")
+    list_filter = ("plan", "status")
+
+
+@admin.register(OrganisationMember)
+class OrganisationMemberAdmin(admin.ModelAdmin):
+    list_display = ("user", "organisation", "is_admin", "joined_at")
+    list_filter = ("is_admin", "organisation")
+    search_fields = ("user__email", "organisation__name")
 
 
 @admin.register(User)
@@ -27,7 +42,6 @@ class UserAdmin(DjangoUserAdmin):
         "first_name",
         "last_name",
         "role",
-        "organisation",
         "is_staff",
         "is_active",
         "two_factor_enabled",
@@ -38,7 +52,7 @@ class UserAdmin(DjangoUserAdmin):
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         ("Personal info", {"fields": ("first_name", "last_name")}),
-        ("Role & Organisation", {"fields": ("role", "organisation")}),
+        ("Role", {"fields": ("role",)}),
         ("Security", {"fields": ("two_factor_enabled",)}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Important dates", {"fields": ("last_login", "registration_date")}),
@@ -53,7 +67,6 @@ class UserAdmin(DjangoUserAdmin):
                     "first_name",
                     "last_name",
                     "role",
-                    "organisation",
                     "password1",
                     "password2",
                     "is_staff",
@@ -73,9 +86,8 @@ class PatientAdmin(admin.ModelAdmin):
 
 @admin.register(Therapist)
 class TherapistAdmin(admin.ModelAdmin):
-    list_display  = ("email", "first_name", "last_name", "license_number", "specialty", "organisation")
+    list_display  = ("email", "first_name", "last_name", "license_number", "specialty")
     search_fields = ("email", "first_name", "last_name", "license_number", "specialty")
-    list_filter   = ("organisation",)
 
 
 @admin.register(TherapistPatient)

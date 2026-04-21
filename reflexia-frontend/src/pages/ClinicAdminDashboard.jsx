@@ -3,23 +3,16 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { Navigate } from 'react-router-dom'
 
 export function ClinicAdminDashboard() {
-  const { user, getClinicStats, registerTherapist } = useAuth()
+  const { user, isClinicAdmin, getClinicStats, registerTherapist } = useAuth()
   const [stats, setStats] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
-  const [inviteForm, setInviteForm] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    license_number: '',
-    specialty: '',
-  })
-  const [inviteMessage, setInviteMessage] = useState('')
-  const [inviteError, setInviteError] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  // Use the first admin membership for the dashboard info
+  const adminMembership = user?.memberships?.find(m => m.is_admin)
+  const organisation = adminMembership?.organisation
 
-  if (!user || user.role !== 'clinic_admin') {
+  if (!user || !isClinicAdmin) {
     return <Navigate to="/dashboard" replace />
   }
 
@@ -68,7 +61,7 @@ export function ClinicAdminDashboard() {
           <div className="panel-heading">
             <p className="eyebrow">Administració de Clínica</p>
             <h1 className="section-title">
-              {user.organisation?.name || 'La teva Clínica'}
+              {organisation?.name || 'La teva Clínica'}
             </h1>
           </div>
 
@@ -85,7 +78,7 @@ export function ClinicAdminDashboard() {
             </div>
             <div className="stat-card">
               <span>Pla</span>
-              <strong>{user.organisation?.plan.toUpperCase() || 'FREE'}</strong>
+              <strong>{organisation?.plan?.toUpperCase() || 'FREE'}</strong>
             </div>
           </div>
         </section>
@@ -98,13 +91,13 @@ export function ClinicAdminDashboard() {
           
           <div className="management-grid" style={{ marginTop: '1.5rem' }}>
             <div className="screen-card entity-card" style={{ padding: '1.5rem' }}>
-                <p className="entity-card__meta"><strong>ID de l&apos;Organització:</strong> {user.organisation?.id}</p>
-                <p className="entity-card__meta"><strong>Tipus:</strong> Clínica / Centre</p>
-                <p className="entity-card__meta"><strong>Data de Registre:</strong> {new Date(user.organisation?.created_at).toLocaleDateString()}</p>
+                <p className="entity-card__meta"><strong>ID de l&apos;Organització:</strong> {organisation?.id}</p>
+                <p className="entity-card__meta"><strong>Tipus:</strong> {organisation?.type === 'clinic' ? 'Clínica / Centre' : 'Individual / Professional'}</p>
+                <p className="entity-card__meta"><strong>Data de Registre:</strong> {new Date(organisation?.created_at).toLocaleDateString()}</p>
                 <p className="entity-card__meta">
                   <strong>Estat:</strong> 
-                  <span className={`status-pill ${user.organisation?.is_active ? 'dashboard-status-pill--active' : 'dashboard-status-pill--muted'}`} style={{ marginLeft: '0.5rem' }}>
-                    {user.organisation?.is_active ? 'Activa' : 'Inactiva'}
+                  <span className={`status-pill ${organisation?.is_active ? 'dashboard-status-pill--active' : 'dashboard-status-pill--muted'}`} style={{ marginLeft: '0.5rem' }}>
+                    {organisation?.is_active ? 'Activa' : 'Inactiva'}
                   </span>
                 </p>
             </div>

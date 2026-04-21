@@ -437,8 +437,12 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  const isClinicAdmin = user?.memberships?.some((m) => m.is_admin) || false
+
   const value = {
     user,
+    role: user?.role,
+    isClinicAdmin,
     pendingTwoFactor,
     isAuthenticated: Boolean(user),
     isBootstrapping,
