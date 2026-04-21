@@ -9,7 +9,7 @@ export function PlatformOrganisationsPage() {
   const [error, setError] = useState('')
   const [view, setView] = useState('list') // 'list' | 'create'
 
-  const [orgForm, setOrgForm] = useState({ name: '', type: 'clinic', plan: 'free' })
+  const [orgForm, setOrgForm] = useState({ name: '', type: 'clinic' })
   const [orgMessage, setOrgMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -39,7 +39,7 @@ export function PlatformOrganisationsPage() {
     try {
       await createOrganisation(orgForm)
       setOrgMessage('Organització creada correctament.')
-      setOrgForm({ name: '', type: 'clinic', plan: 'free' })
+      setOrgForm({ name: '', type: 'clinic' })
       await loadOrganisations()
       setTimeout(() => setView('list'), 1500)
     } catch (err) {
@@ -78,7 +78,6 @@ export function PlatformOrganisationsPage() {
                   required 
                 />
               </div>
-              <div className="inline-fields">
                 <div className="field-group">
                   <label>Tipus</label>
                   <select 
@@ -88,18 +87,6 @@ export function PlatformOrganisationsPage() {
                     <option value="clinic">Clínica / Centre</option>
                   </select>
                 </div>
-                <div className="field-group">
-                  <label>Pla de Subscripció</label>
-                  <select 
-                    value={orgForm.plan} 
-                    onChange={e => setOrgForm({...orgForm, plan: e.target.value})}
-                  >
-                    <option value="free">Lliure (Free)</option>
-                    <option value="pro">Professional</option>
-                    <option value="clinic">Clinic Bundle</option>
-                  </select>
-                </div>
-              </div>
               <div className="button-row" style={{ marginTop: '2rem' }}>
                 <button className="button" type="submit" disabled={isSubmitting}>
                   {isSubmitting ? 'Creant...' : 'Confirmar i Crear'}
@@ -146,9 +133,6 @@ export function PlatformOrganisationsPage() {
                   <div className="entity-card__body">
                     <p className="entity-card__meta">
                       <strong>Tipus:</strong> Clínica / Centre
-                    </p>
-                    <p className="entity-card__meta">
-                      <strong>Pla:</strong> {org.plan.toUpperCase()}
                     </p>
                   </div>
                   <div className="entity-card__footer">

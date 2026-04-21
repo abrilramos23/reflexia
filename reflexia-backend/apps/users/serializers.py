@@ -11,7 +11,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.users.models import (
     Organisation,
     OrganisationMember,
-    Subscription,
     Patient,
     ProfessionalDirectoryEntry,
     Therapist,
@@ -34,27 +33,18 @@ from apps.users.services import (
 
 
 class OrganisationSerializer(serializers.ModelSerializer):
-    plan = serializers.SerializerMethodField()
-
     class Meta:
         model = Organisation
-        fields = ("id", "name", "type", "plan", "is_active", "created_at")
-
-    def get_plan(self, obj):
-        sub = obj.subscriptions.filter(status='active').order_by('-ini_date').first()
-        return sub.plan if sub else 'free'
+        fields = ("id", "name", "type", "is_active", "created_at")
 
 
 class OrganisationCreateSerializer(serializers.ModelSerializer):
-    plan = serializers.CharField(write_only=True, required=False)
-
     class Meta:
         model = Organisation
-        fields = ("id", "name", "type", "plan")
+        fields = ("id", "name", "type")
 
     def create(self, validated_data):
-        plan = validated_data.pop("plan", "free")
-        organisation = create_organisation(**validated_data, plan=plan)
+        organisation = create_organisation(**validated_data)
         return organisation
 
 

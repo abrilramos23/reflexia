@@ -4,7 +4,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from apps.users.models import (
     Organisation,
     OrganisationMember,
-    Subscription,
+    # Subscription,
     Patient,
     ProfessionalDirectoryEntry,
     Therapist,
@@ -20,10 +20,12 @@ class OrganisationAdmin(admin.ModelAdmin):
     search_fields = ("name",)
 
 
+"""
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ("organisation", "plan", "status", "ini_date", "end_date")
     list_filter = ("plan", "status")
+"""
 
 
 @admin.register(OrganisationMember)

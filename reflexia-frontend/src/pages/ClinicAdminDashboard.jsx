@@ -76,10 +76,6 @@ export function ClinicAdminDashboard() {
               <span>Pacients totals</span>
               <strong>{loading ? '...' : stats?.total_patients || 0}</strong>
             </div>
-            <div className="stat-card">
-              <span>Pla</span>
-              <strong>{organisation?.plan?.toUpperCase() || 'FREE'}</strong>
-            </div>
           </div>
         </section>
 

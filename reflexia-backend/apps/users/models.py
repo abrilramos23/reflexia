@@ -23,6 +23,7 @@ class Organisation(models.Model):
         return f"{self.name} ({self.type})"
 
 
+"""
 class Subscription(models.Model):
     class Plan(models.TextChoices):
         FREE   = 'free',   'Free'
@@ -56,6 +57,7 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f"Sub: {self.plan} - {self.organisation.name if self.organisation else 'No Org'}"
+"""
 
 
 class UserManager(BaseUserManager):

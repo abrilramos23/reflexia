@@ -7,20 +7,14 @@ from django.db import transaction
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from apps.users.models import Patient, Therapist, TherapistPatient, User, Organisation, OrganisationMember, Subscription
+from apps.users.models import Patient, Therapist, TherapistPatient, User, Organisation, OrganisationMember
 
 
 @transaction.atomic
-def create_organisation(*, name, type, plan='free'):
+def create_organisation(*, name, type):
     organisation = Organisation.objects.create(
         name=name,
         type=type,
-    )
-    # Initialize initial subscription
-    Subscription.objects.create(
-        organisation=organisation,
-        plan=plan,
-        status=Subscription.Status.ACTIVE
     )
     return organisation
 
