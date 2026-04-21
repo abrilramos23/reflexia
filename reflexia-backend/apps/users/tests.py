@@ -16,6 +16,7 @@ from apps.users.models import (
     Therapist,
     TherapistPatient,
     User,
+    OrganisationMember,
 )
 
 
@@ -28,7 +29,6 @@ class TherapistRegistrationTests(APITestCase):
         self.org = Organisation.objects.create(
             name="Test Clinic",
             type=Organisation.Type.CLINIC,
-            plan=Organisation.Plan.CLINIC,
         )
         ProfessionalDirectoryEntry.objects.create(
             license_number="30809",
@@ -106,7 +106,6 @@ class PatientRegistrationTests(APITestCase):
         self.org = Organisation.objects.create(
             name="Test Clinic",
             type=Organisation.Type.CLINIC,
-            plan=Organisation.Plan.CLINIC,
         )
         self.therapist = Therapist.objects.create_user(
             email="therapist@example.com",
@@ -115,8 +114,8 @@ class PatientRegistrationTests(APITestCase):
             last_name="Lopez",
             license_number="16385",
             specialty="Clinical Psychology",
-            organisation=self.org,
         )
+        OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
         self.url = "/api/auth/register/patient/"
 
     def test_register_patient_successfully_for_therapist(self):
@@ -188,7 +187,6 @@ class TherapistPatientManagementTests(APITestCase):
         self.org = Organisation.objects.create(
             name="Test Clinic",
             type=Organisation.Type.CLINIC,
-            plan=Organisation.Plan.CLINIC,
         )
         self.therapist = Therapist.objects.create_user(
             email="therapist@example.com",
@@ -198,8 +196,9 @@ class TherapistPatientManagementTests(APITestCase):
             license_number="16385",
             specialty="Clinical Psychology",
             is_active=True,
-            organisation=self.org,
         )
+        OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
+
         self.patient = Patient.objects.create_user(
             email="patient@example.com",
             password="StrongPass123!",
@@ -207,7 +206,6 @@ class TherapistPatientManagementTests(APITestCase):
             last_name="Sanchez",
             birth_date="2001-01-10",
             is_active=True,
-            organisation=self.org,
         )
         self.other_patient = Patient.objects.create_user(
             email="other@example.com",
@@ -216,8 +214,8 @@ class TherapistPatientManagementTests(APITestCase):
             last_name="Serra",
             birth_date="2000-03-15",
             is_active=True,
-            organisation=self.org,
         )
+        # Link patients to therapist (required for therapist patience list)
         TherapistPatient.objects.create(therapist=self.therapist, patient=self.patient)
         self.list_url = "/api/auth/patients/"
         self.register_url = "/api/auth/register/patient/"
@@ -341,7 +339,6 @@ class LoginTests(APITestCase):
         self.org = Organisation.objects.create(
             name="Test Clinic",
             type=Organisation.Type.CLINIC,
-            plan=Organisation.Plan.CLINIC,
         )
         self.therapist = Therapist.objects.create_user(
             email="therapist@example.com",
@@ -350,8 +347,9 @@ class LoginTests(APITestCase):
             last_name="Lopez",
             license_number="16385",
             specialty="Clinical Psychology",
-            organisation=self.org,
         )
+        OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
+
         self.patient = Patient.objects.create_user(
             email="patient@example.com",
             password="StrongPass123!",
@@ -359,7 +357,6 @@ class LoginTests(APITestCase):
             last_name="Sanchez",
             birth_date="2001-01-10",
             is_active=True,
-            organisation=self.org,
         )
         self.inactive_patient = Patient.objects.create(
             email="inactive@example.com",
@@ -368,7 +365,6 @@ class LoginTests(APITestCase):
             birth_date="2002-02-02",
             role=User.Role.PATIENT,
             is_active=False,
-            organisation=self.org,
         )
         self.inactive_patient.set_password("StrongPass123!")
         self.inactive_patient.save(update_fields=["password", "is_active"])
@@ -668,7 +664,6 @@ class ProfileManagementTests(APITestCase):
         self.org = Organisation.objects.create(
             name="Test Clinic",
             type=Organisation.Type.CLINIC,
-            plan=Organisation.Plan.CLINIC,
         )
         self.patient = Patient.objects.create_user(
             email="patient-profile@example.com",
@@ -677,7 +672,6 @@ class ProfileManagementTests(APITestCase):
             last_name="Sanchez",
             birth_date="2001-01-10",
             is_active=True,
-            organisation=self.org,
         )
         self.therapist = Therapist.objects.create_user(
             email="therapist-profile@example.com",
@@ -686,8 +680,8 @@ class ProfileManagementTests(APITestCase):
             last_name="Lopez",
             license_number="21039",
             specialty="Clinical Psychology",
-            organisation=self.org,
         )
+        OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
         self.patient_me_url = "/api/auth/me/"
         self.change_password_url = "/api/auth/change-password/"
         self.delete_account_url = "/api/auth/delete-account/"

@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.contacts.models import AssociatedContact, DefaultContact, SupportTherapist
-from apps.users.models import Organisation, Patient, Therapist
+from apps.users.models import Organisation, Patient, Therapist, OrganisationMember
 
 
 class AssociatedContactTests(APITestCase):
@@ -10,7 +10,6 @@ class AssociatedContactTests(APITestCase):
         self.org = Organisation.objects.create(
             name="Test Clinic",
             type=Organisation.Type.CLINIC,
-            plan=Organisation.Plan.CLINIC,
         )
         self.patient = Patient.objects.create_user(
             email="patient@example.com",
@@ -19,7 +18,6 @@ class AssociatedContactTests(APITestCase):
             last_name="Sanchez",
             birth_date="2001-01-10",
             is_active=True,
-            organisation=self.org,
         )
         self.url = "/api/contacts/associated/"
 
@@ -68,7 +66,6 @@ class SupportTherapistTests(APITestCase):
         self.org = Organisation.objects.create(
             name="Test Clinic",
             type=Organisation.Type.CLINIC,
-            plan=Organisation.Plan.CLINIC,
         )
         self.therapist = Therapist.objects.create_user(
             email="therapist@example.com",
@@ -78,8 +75,9 @@ class SupportTherapistTests(APITestCase):
             license_number="16385",
             specialty="Clinical Psychology",
             is_active=True,
-            organisation=self.org,
         )
+        OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
+
         self.other_therapist = Therapist.objects.create_user(
             email="support@example.com",
             password="StrongPass123!",
@@ -88,8 +86,8 @@ class SupportTherapistTests(APITestCase):
             license_number="17105",
             specialty="Trauma Therapy",
             is_active=True,
-            organisation=self.org,
         )
+        OrganisationMember.objects.create(user=self.other_therapist, organisation=self.org, is_admin=False)
         self.url = "/api/contacts/support-therapists/"
 
     def test_therapist_can_add_and_list_support_therapists(self):
