@@ -144,3 +144,95 @@ class JournalEntryEditorTests(APITestCase):
         self.assertTrue(entry.deleted_at is not None)
         self.assertEqual(entry.content, "Aquesta entrada ha estat eliminada i anonimitzada.")
         self.assertIsNone(entry.therapist_question)
+
+
+class TherapistPatientEntryTests(APITestCase):
+    def setUp(self):
+        self.therapist = Therapist.objects.create_user(
+            email="therapist@example.com",
+            password="StrongPass123!",
+            first_name="Marta",
+            last_name="Lopez",
+            license_number="16385",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        self.patient = Patient.objects.create_user(
+            email="patient@example.com",
+            password="StrongPass123!",
+            first_name="Paula",
+            last_name="Sanchez",
+            birth_date="2001-01-10",
+            is_active=True,
+        )
+        self.other_patient = Patient.objects.create_user(
+            email="other@example.com",
+            password="StrongPass123!",
+            first_name="Joan",
+            last_name="Serra",
+            birth_date="2000-03-15",
+            is_active=True,
+        )
+        TherapistPatient.objects.create(therapist=self.therapist, patient=self.patient)
+        self.entry = JournalEntry.objects.create(
+            patient=self.patient,
+            content="<p>Entrada del pacient</p>",
+        )
+        self.question = TherapistQuestion.objects.create(
+            therapist=self.therapist,
+            patient=self.patient,
+            question="Com t'has sentit aquesta setmana?",
+            is_active=True,
+        )
+
+    def test_therapist_can_list_assigned_patient_entries(self):
+        self.client.force_authenticate(user=self.therapist)
+
+        response = self.client.get(f"/api/auth/patients/{self.patient.pk}/entries/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertIn("content", response.data[0])
+
+    def test_therapist_cannot_list_entries_of_unassigned_patient(self):
+        self.client.force_authenticate(user=self.therapist)
+
+        response = self.client.get(f"/api/auth/patients/{self.other_patient.pk}/entries/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_therapist_can_get_patient_entry_detail(self):
+        self.client.force_authenticate(user=self.therapist)
+
+        response = self.client.get(
+            f"/api/auth/patients/{self.patient.pk}/entries/{self.entry.pk}/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.entry.pk))
+
+    def test_therapist_can_list_questions_for_assigned_patient(self):
+        self.client.force_authenticate(user=self.therapist)
+
+        response = self.client.get(f"/api/auth/patients/{self.patient.pk}/questions/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["question"], self.question.question)
+
+    def test_therapist_can_get_question_detail(self):
+        self.client.force_authenticate(user=self.therapist)
+
+        response = self.client.get(
+            f"/api/auth/patients/{self.patient.pk}/questions/{self.question.pk}/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.question.pk))
+
+    def test_patient_cannot_access_therapist_patient_entries_endpoint(self):
+        self.client.force_authenticate(user=self.patient)
+
+        response = self.client.get(f"/api/auth/patients/{self.patient.pk}/entries/")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
