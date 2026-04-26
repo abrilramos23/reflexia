@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { Navigate } from 'react-router-dom'
 
 export function ClinicTherapistsPage() {
-  const { user, listClinicTherapists, registerTherapist } = useAuth()
+  const { user, isClinicAdmin, listClinicTherapists, registerTherapist } = useAuth()
   const [therapists, setTherapists] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -21,7 +21,9 @@ export function ClinicTherapistsPage() {
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  if (!user || user.role !== 'clinic_admin') {
+  const organisation = user?.organisation
+
+  if (!user || !isClinicAdmin) {
     return <Navigate to="/dashboard" replace />
   }
 
@@ -78,7 +80,7 @@ export function ClinicTherapistsPage() {
         <div className="full-screen-form-shell">
           <div className="form-header">
             <div>
-              <p className="eyebrow">{user.organisation?.name}</p>
+              <p className="eyebrow">{organisation?.name || 'La teva clínica'}</p>
               <h1>Nou Professional</h1>
             </div>
             <button className="button-ghost" onClick={() => setView('list')}>
@@ -172,7 +174,7 @@ export function ClinicTherapistsPage() {
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="form-header">
             <div>
-              <p className="eyebrow">{user.organisation?.name}</p>
+              <p className="eyebrow">{organisation?.name || 'La teva clínica'}</p>
               <h1 className="section-title">Els teus Terapeutes</h1>
             </div>
             <button className="button" onClick={() => setView('create')}>

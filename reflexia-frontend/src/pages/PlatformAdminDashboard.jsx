@@ -57,7 +57,7 @@ export function PlatformAdminDashboard() {
             </div>
             <div className="stat-card">
               <span>Admins de Clínica</span>
-              <strong>{loading ? '...' : stats?.users_by_role?.clinic_admin || 0}</strong>
+              <strong>{loading ? '...' : stats?.total_clinic_admins || 0}</strong>
             </div>
           </div>
         </section>

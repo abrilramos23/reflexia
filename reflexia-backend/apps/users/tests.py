@@ -1,5 +1,6 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
+from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -886,6 +887,8 @@ class MultiTenancyAndAdminTests(APITestCase):
         self.stats_platform_url = "/api/admin/stats/platform/"
         self.stats_clinic_url = "/api/admin/stats/clinic/"
         self.organisations_url = "/api/admin/organisations/"
+        self.clinic_admins_url = "/api/admin/users/clinic-admins/"
+        self.therapists_url = "/api/admin/users/therapists/"
 
     def test_platform_admin_can_get_platform_stats(self):
         self.client.force_authenticate(user=self.platform_admin)
@@ -895,6 +898,8 @@ class MultiTenancyAndAdminTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("total_organisations", response.data)
         self.assertIn("total_users", response.data)
+        self.assertEqual(response.data["total_clinic_admins"], 1)
+        self.assertEqual(response.data["users_by_role"]["therapist"], 1)
         self.assertIn("users_by_role", response.data)
 
     def test_therapist_cannot_access_platform_stats(self):
@@ -905,13 +910,58 @@ class MultiTenancyAndAdminTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_clinic_admin_can_get_clinic_stats(self):
+        active_patient = Patient.objects.create_user(
+            email="active@example.com",
+            password="StrongPass123!",
+            first_name="Active",
+            last_name="Patient",
+            birth_date="2000-01-01",
+            is_active=True,
+        )
+        inactive_patient = Patient.objects.create_user(
+            email="inactive@example.com",
+            password="StrongPass123!",
+            first_name="Inactive",
+            last_name="Patient",
+            birth_date="2000-01-02",
+            is_active=False,
+        )
+        outsider = Patient.objects.create_user(
+            email="outsider@example.com",
+            password="StrongPass123!",
+            first_name="Outside",
+            last_name="Patient",
+            birth_date="2000-01-03",
+            is_active=True,
+        )
+        TherapistPatient.objects.create(therapist=self.therapist, patient=active_patient)
+        TherapistPatient.objects.create(therapist=self.therapist, patient=inactive_patient)
+
+        external_therapist = Therapist.objects.create_user(
+            email="external@example.com",
+            password="StrongPass123!",
+            first_name="External",
+            last_name="Therapist",
+            license_number="26385",
+            specialty="Neuropsychology",
+            is_active=True,
+        )
+        other_org = Organisation.objects.create(
+            name="Other Clinic",
+            type=Organisation.Type.CLINIC,
+        )
+        OrganisationMember.objects.create(
+            user=external_therapist, organisation=other_org, is_admin=False
+        )
+        TherapistPatient.objects.create(therapist=external_therapist, patient=outsider)
+
         self.client.force_authenticate(user=self.therapist)
 
         response = self.client.get(self.stats_clinic_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("total_therapists", response.data)
-        self.assertIn("total_patients", response.data)
+        self.assertEqual(response.data["total_therapists"], 1)
+        self.assertEqual(response.data["total_patients"], 1)
 
     def test_platform_admin_can_list_organisations(self):
         self.client.force_authenticate(user=self.platform_admin)
@@ -941,6 +991,31 @@ class MultiTenancyAndAdminTests(APITestCase):
         response = self.client.get(self.organisations_url)
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_platform_admin_lists_include_flat_organisation_fields(self):
+        self.client.force_authenticate(user=self.platform_admin)
+
+        admins_response = self.client.get(self.clinic_admins_url)
+        therapists_response = self.client.get(self.therapists_url)
+
+        self.assertEqual(admins_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(therapists_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(admins_response.data[0]["organisation"]["name"], "Test Clinic")
+        self.assertTrue(admins_response.data[0]["is_clinic_admin"])
+        self.assertEqual(therapists_response.data[0]["organisation"]["name"], "Test Clinic")
+
+    def test_therapist_cannot_have_multiple_organisations(self):
+        second_org = Organisation.objects.create(
+            name="Second Clinic",
+            type=Organisation.Type.CLINIC,
+        )
+
+        with self.assertRaises(ValidationError):
+            OrganisationMember.objects.create(
+                user=self.therapist,
+                organisation=second_org,
+                is_admin=False,
+            )
 
 
 class AccessControlTests(APITestCase):

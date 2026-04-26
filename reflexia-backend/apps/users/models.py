@@ -1,6 +1,7 @@
 import uuid
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -133,8 +134,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     @property
     def is_clinic_admin(self):
-        # Un ususari és clinic admin si té almenys una subscripció a una organització com a admin
         return self.organisation_memberships.filter(is_admin=True).exists()
+
+    @property
+    def organisation(self):
+        membership = self.organisation_memberships.select_related("organisation").first()
+        return membership.organisation if membership else None
 
     @property
     def is_therapist(self):
@@ -153,17 +158,20 @@ class OrganisationMember(models.Model):
 
     class Meta:
         unique_together = ('user', 'organisation')
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user",),
+                name="unique_organisation_membership_per_user",
+            ),
+        ]
         verbose_name = 'organisation member'
         verbose_name_plural = 'organisation members'
 
     def clean(self):
-        # El membre ha de ser un terapeuta
         if self.user.role != User.Role.THERAPIST:
             raise ValidationError(
                 "Només els usuaris amb el rol de terapeuta poden ser membres d'una organització."
             )
-
-        # Si és un membre existent i s'està intentant treure el flag d'admin
         if self.pk:
             old_instance = OrganisationMember.objects.get(pk=self.pk)
             if old_instance.is_admin and not self.is_admin:
@@ -176,6 +184,10 @@ class OrganisationMember(models.Model):
                         "No es pot treure el permís d'administrador perquè ets l'únic administrador d'aquesta organització."
                     )
 
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
     def delete(self, *args, **kwargs):
         if self.is_admin:
             admin_count = OrganisationMember.objects.filter(
@@ -183,12 +195,6 @@ class OrganisationMember(models.Model):
                 is_admin=True
             ).count()
             if admin_count <= 1:
-                # Comprovem si hi ha altres usuaris (encara que no siguin admins)
-                # La regla diu: "sempre un admin". Si s'esborra l'últim admin, 
-                # l'org es queda sense admins, el que està prohibit si encara hi ha membres.
-                # Si és l'ÚNIC membre total, llavors l'org es quedaria buida, la qual cosa 
-                # podria estar bé si l'org es va a esborrar, però normalment volem 
-                # protegir l'últim administrador.
                 member_count = OrganisationMember.objects.filter(organisation=self.organisation).count()
                 if member_count > 1:
                     raise ValidationError(

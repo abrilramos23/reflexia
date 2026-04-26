@@ -8,9 +8,7 @@ export function ClinicAdminDashboard() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
-  // Use the first admin membership for the dashboard info
-  const adminMembership = user?.memberships?.find(m => m.is_admin)
-  const organisation = adminMembership?.organisation
+  const organisation = user?.organisation ?? user?.memberships?.find((membership) => membership.is_admin)?.organisation
 
   if (!user || !isClinicAdmin) {
     return <Navigate to="/dashboard" replace />

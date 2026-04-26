@@ -58,6 +58,8 @@ class OrganisationMemberSerializer(serializers.ModelSerializer):
 
 class UserSummarySerializer(serializers.ModelSerializer):
     role_label = serializers.CharField(source="get_role_display", read_only=True)
+    organisation = serializers.SerializerMethodField()
+    is_clinic_admin = serializers.BooleanField(read_only=True)
     memberships = OrganisationMemberSerializer(source="organisation_memberships", many=True, read_only=True)
     consent_accepted = serializers.SerializerMethodField()
     specialty = serializers.SerializerMethodField()
@@ -71,6 +73,8 @@ class UserSummarySerializer(serializers.ModelSerializer):
             "email",
             "role",
             "role_label",
+            "organisation",
+            "is_clinic_admin",
             "memberships",
             "two_factor_enabled",
             "is_active",
@@ -82,6 +86,12 @@ class UserSummarySerializer(serializers.ModelSerializer):
         if hasattr(obj, "patient_profile"):
             return obj.patient_profile.consent_accepted
         return None
+
+    def get_organisation(self, obj):
+        organisation = obj.organisation
+        if organisation is None:
+            return None
+        return OrganisationSerializer(organisation).data
 
     def get_specialty(self, obj):
         if hasattr(obj, "therapist_profile"):

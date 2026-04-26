@@ -708,6 +708,7 @@ class PlatformStatsView(APIView):
             fields={
                 "total_organisations": serializers.IntegerField(),
                 "total_users": serializers.IntegerField(),
+                "total_clinic_admins": serializers.IntegerField(),
                 "users_by_role": serializers.DictField(),
             }
         )}
@@ -716,6 +717,9 @@ class PlatformStatsView(APIView):
         stats = {
             "total_organisations": Organisation.objects.count(),
             "total_users": User.objects.count(),
+            "total_clinic_admins": User.objects.filter(
+                organisation_memberships__is_admin=True
+            ).distinct().count(),
             "users_by_role": {
                 role: User.objects.filter(role=role).count()
                 for role, _ in User.Role.choices
@@ -746,8 +750,15 @@ class ClinicStatsView(APIView):
         organisation = membership.organisation
         
         stats = {
-            "total_therapists": User.objects.filter(organisation_memberships__organisation=organisation, role=User.Role.THERAPIST).count(),
-            "total_patients": User.objects.filter(organisation_memberships__organisation=organisation, role=User.Role.PATIENT).count(),
+            "total_therapists": User.objects.filter(
+                organisation_memberships__organisation=organisation,
+                role=User.Role.THERAPIST,
+            ).distinct().count(),
+            "total_patients": Patient.objects.filter(
+                therapist_links__therapist__organisation_memberships__organisation=organisation,
+                therapist_links__is_active=True,
+                is_active=True,
+            ).distinct().count(),
         }
         return Response(stats)
 
