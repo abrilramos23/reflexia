@@ -1,13 +1,14 @@
 import { Link, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { AppHeader } from '../components/AppHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { consentDocumentUrl } from '../lib/api.js'
+import { PlatformAdminDashboard } from './PlatformAdminDashboard.jsx'
+import { ClinicAdminDashboard } from './ClinicAdminDashboard.jsx'
 
 function formatRole(role) {
   if (role === 'therapist') return 'Terapeuta'
   if (role === 'patient') return 'Pacient'
-  if (role === 'admin') return 'Administrador'
+  if (role === 'platform_admin') return 'Admin Plataforma'
   return 'Usuari'
 }
 
@@ -82,6 +83,7 @@ function buildTherapistActivityItem(patient) {
 export function DashboardPage() {
   const {
     user,
+    isClinicAdmin,
     listAssociatedContacts,
     listTherapistPatients,
     registerTherapist,
@@ -171,10 +173,16 @@ export function DashboardPage() {
     }
   }
 
+  if (user.role === 'platform_admin') {
+    return <PlatformAdminDashboard />
+  }
+
+  if (isClinicAdmin) {
+    return <ClinicAdminDashboard />
+  }
+
   return (
     <div className="screen-shell">
-      <AppHeader />
-
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
@@ -183,16 +191,9 @@ export function DashboardPage() {
               {user.role === 'therapist'
                 ? 'Visió general de la teva activitat clínica.'
                 : user.role === 'patient'
-                  ? 'Benvingut al teu espai personal de Reflexia.'
+                  ? 'El teu espai personal de Reflexia.'
                   : 'Compte actiu i llest per continuar.'}
             </h1>
-            <p className="muted">
-              {user.role === 'therapist'
-                ? 'Consulta l’estat dels teus pacients i accedeix ràpidament a la gestió clínica.'
-                : user.role === 'patient'
-                  ? 'Des d’aquí pots revisar l’estat del teu compte.'
-                  : 'Administra les altes de terapeutes i mantén l’accés a la plataforma sota control.'}
-            </p>
           </div>
 
           {dashboardError ? <div className="error-banner">{dashboardError}</div> : null}
@@ -223,8 +224,7 @@ export function DashboardPage() {
           <>
             <section className="screen-card dashboard-panel profile-card--wide">
               <div className="panel-heading">
-                <p className="eyebrow">Pregunta activa</p>
-                <h2>Seguiment pendent del terapeuta</h2>
+                <p className="eyebrow" style={{ marginBlockEnd: '0' }}>Pregunta activa</p>
               </div>
 
               <div className="content-card section-stack">
@@ -233,9 +233,9 @@ export function DashboardPage() {
                   Quan el teu terapeuta publiqui una nova pregunta de seguiment, la veuràs aquí per poder-la respondre.
                 </p>
                 <div className="button-row">
-                  <button className="button-secondary" type="button" disabled style={{ marginBlockStart: '1rem' }}>
-                    Respondre pregunta
-                  </button>
+                  <Link className="button-secondary" style={{ marginBlockStart: '1rem', textDecoration: 'none' }} to="/entries/new">
+                    Obrir editor
+                  </Link>
                 </div>
               </div>
             </section>
@@ -283,9 +283,9 @@ export function DashboardPage() {
                   Et recomanem començar amb una primera entrada per tal que el sistema pugui començar a construir el teu context emocional.
                 </p>
                 <div className="button-row" style={{ marginBlockStart: '1rem' }}>
-                  <button className="button" type="button" disabled>
+                  <Link className="button" style={{ textDecoration: 'none' }} to="/entries/new">
                     Escriure
-                  </button>
+                  </Link>
                   <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/profile">
                     Gestionar perfil i contactes
                   </Link>
@@ -343,200 +343,14 @@ export function DashboardPage() {
 
               <div className="button-row">
                 <Link className="button" style={{ textDecoration: 'none' }} to="/patients">
-                  Gestionar pacients
-                </Link>
-                <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/profile">
-                  Obrir perfil
+                  Veure pacients
                 </Link>
               </div>
-            </section>
-
-            <section className="screen-card dashboard-panel profile-card--wide">
-              <div className="panel-heading">
-                <p className="eyebrow">Activitat recent</p>
-                <h2>Moviment dels teus pacients assignats</h2>
-                <p className="muted">
-                  Mentre no tinguem el feed complet d’entrades i alertes, aquest bloc resumeix l’estat més recent dels teus pacients segons l’alta, l’activació i el consentiment.
-                </p>
-              </div>
-
-              {therapistPatients.length === 0 ? (
-                <div className="content-card section-stack">
-                  <h3>Encara no hi ha activitat disponible</h3>
-                  <p className="muted">
-                    Quan registris els primers pacients, aquí veuràs els seus canvis d’estat i el seguiment recent.
-                  </p>
-                  <div className="button-row">
-                    <Link className="button-secondary" style={{ textDecoration: 'none' }} to="/patients">
-                      Registrar primer pacient
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <ul className="patient-list dashboard-activity-list">
-                  {therapistPatients.slice(0, 6).map((patient) => {
-                    const activity = buildTherapistActivityItem(patient)
-
-                    return (
-                      <li className="patient-item compact-list-item dashboard-activity-item" key={patient.id}>
-                        <div className="dashboard-activity-copy">
-                          <div className="item-heading-row">
-                            <strong>{patient.first_name} {patient.last_name}</strong>
-                            <span className={`status-pill dashboard-status-pill dashboard-status-pill--${activity.tone}`}>
-                              {activity.label}
-                            </span>
-                          </div>
-                          <p className="muted dashboard-activity-meta">
-                            {patient.email} · Alta: {formatShortDate(patient.registration_date)}
-                          </p>
-                          <p className="muted">{activity.description}</p>
-                        </div>
-                        <div className="list-actions">
-                          <Link className="action-chip action-chip--accent" style={{ textDecoration: 'none' }} to="/patients">
-                            Veure pacient
-                          </Link>
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
             </section>
           </>
         ) : null}
 
-        {user.role === 'admin' ? (
-          <>
-            <section className="screen-card dashboard-panel profile-card--wide">
-              <div className="panel-heading">
-                <p className="eyebrow">Nova alta</p>
-                <h2>Registrar un terapeuta nou</h2>
-                <p className="muted">
-                  Introdueix les dades bàsiques del professional. Si tot és correcte, el sistema enviarà un correu perquè pugui activar el compte i establir la seva contrasenya.
-                </p>
-              </div>
 
-              {inviteMessage ? <div className="message">{inviteMessage}</div> : null}
-              {inviteError ? <div className="error-banner">{inviteError}</div> : null}
-
-              <form className="form-stack" onSubmit={handleTherapistInviteSubmit}>
-                <div className="inline-fields">
-                  <div className="field-group">
-                    <label htmlFor="therapist-first-name">Nom</label>
-                    <input
-                      id="therapist-first-name"
-                      value={therapistInviteForm.first_name}
-                      onChange={(event) =>
-                        setTherapistInviteForm((currentState) => ({
-                          ...currentState,
-                          first_name: event.target.value,
-                        }))
-                      }
-                      required
-                    />
-                  </div>
-
-                  <div className="field-group">
-                    <label htmlFor="therapist-last-name">Cognoms</label>
-                    <input
-                      id="therapist-last-name"
-                      value={therapistInviteForm.last_name}
-                      onChange={(event) =>
-                        setTherapistInviteForm((currentState) => ({
-                          ...currentState,
-                          last_name: event.target.value,
-                        }))
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="inline-fields">
-                  <div className="field-group">
-                    <label htmlFor="therapist-email">Correu electrònic</label>
-                    <input
-                      id="therapist-email"
-                      type="email"
-                      value={therapistInviteForm.email}
-                      onChange={(event) =>
-                        setTherapistInviteForm((currentState) => ({
-                          ...currentState,
-                          email: event.target.value,
-                        }))
-                      }
-                      required
-                    />
-                  </div>
-
-                  <div className="field-group">
-                    <label htmlFor="therapist-license-number">Número de col·legiació</label>
-                    <input
-                      id="therapist-license-number"
-                      value={therapistInviteForm.license_number}
-                      onChange={(event) =>
-                        setTherapistInviteForm((currentState) => ({
-                          ...currentState,
-                          license_number: event.target.value,
-                        }))
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="field-group">
-                  <label htmlFor="therapist-specialty">Especialitat</label>
-                  <input
-                    id="therapist-specialty"
-                    value={therapistInviteForm.specialty}
-                    onChange={(event) =>
-                      setTherapistInviteForm((currentState) => ({
-                        ...currentState,
-                        specialty: event.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="button-row">
-                  <button className="button-secondary" type="submit" disabled={isSubmittingInvite}>
-                    {isSubmittingInvite ? 'Enviant invitació...' : 'Crear i enviar invitació'}
-                  </button>
-                </div>
-              </form>
-            </section>
-
-            <section className="screen-card dashboard-panel profile-card--wide">
-              <div className="panel-heading">
-                <p className="eyebrow">Procés d’accés</p>
-                <h2>Com funciona el flux d’incorporació</h2>
-              </div>
-
-              <div className="dashboard-timeline">
-                <div className="dashboard-timeline-step">
-                  <strong>1. Alta administrativa</strong>
-                  <p className="muted">
-                    L’admin introdueix nom, cognoms, correu, número de col·legiació i especialitat del terapeuta.
-                  </p>
-                </div>
-                <div className="dashboard-timeline-step">
-                  <strong>2. Validació i correu</strong>
-                  <p className="muted">
-                    El sistema valida el correu i la col·legiació i envia un enllaç d’activació al professional.
-                  </p>
-                </div>
-                <div className="dashboard-timeline-step">
-                  <strong>3. Activació segura</strong>
-                  <p className="muted">
-                    El terapeuta estableix la seva contrasenya i activa el compte sense que l’admin l’hagi de gestionar manualment.
-                  </p>
-                </div>
-              </div>
-            </section>
-          </>
-        ) : null}
       </div>
     </div>
   )

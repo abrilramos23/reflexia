@@ -185,7 +185,11 @@ class SupportTherapistListCreateView(APIView):
         },
     )
     def get(self, request):
-        links = SupportTherapist.objects.filter(therapist=request.user.therapist_profile).select_related("support")
+        therapist = request.user.therapist_profile
+        if not therapist.organisation_memberships.filter(organisation__type='clinic').exists():
+            return Response([], status=status.HTTP_200_OK)
+
+        links = SupportTherapist.objects.filter(therapist=therapist).select_related("support")
         return Response(SupportTherapistListSerializer(links, many=True).data, status=status.HTTP_200_OK)
 
     @extend_schema(
@@ -259,6 +263,9 @@ class AvailableSupportTherapistListView(APIView):
     )
     def get(self, request):
         therapist = request.user.therapist_profile
+        if not therapist.organisation_memberships.filter(organisation__type='clinic').exists():
+            return Response([], status=status.HTTP_200_OK)
+
         assigned_ids = SupportTherapist.objects.filter(therapist=therapist).values_list("support_id", flat=True)
         therapists = Therapist.objects.exclude(pk=therapist.pk).exclude(pk__in=assigned_ids)
         return Response(AvailableTherapistSerializer(therapists, many=True).data, status=status.HTTP_200_OK)

@@ -7,11 +7,45 @@ from django.db import transaction
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from apps.users.models import Patient, Therapist, TherapistPatient, User
+from apps.users.models import Patient, Therapist, TherapistPatient, User, Organisation, OrganisationMember
 
 
 @transaction.atomic
-def register_therapist(*, first_name, last_name, email, license_number, specialty):
+def create_organisation(*, name, type):
+    organisation = Organisation.objects.create(
+        name=name,
+        type=type,
+    )
+    return organisation
+
+
+@transaction.atomic
+def register_clinic_admin(*, first_name, last_name, email, organisation):
+    # Clinic Admins are now Therapists with the isAdmin flag in the membership
+    user = User(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        role=User.Role.THERAPIST,
+        is_active=False,
+    )
+    user.set_unusable_password()
+    user.save()
+    
+    # Create the membership relationship
+    OrganisationMember.objects.create(
+        user=user,
+        organisation=organisation,
+        is_admin=True
+    )
+    
+    activation_url = build_account_activation_url(user)
+    send_clinic_admin_activation_email(user=user, organisation=organisation, activation_url=activation_url)
+    return user, activation_url
+
+
+@transaction.atomic
+def register_therapist(*, first_name, last_name, email, license_number, specialty, organisation=None):
     therapist = Therapist(
         email=email,
         first_name=first_name,
@@ -22,6 +56,14 @@ def register_therapist(*, first_name, last_name, email, license_number, specialt
     )
     therapist.set_unusable_password()
     therapist.save()
+    
+    if organisation:
+        OrganisationMember.objects.create(
+            user=therapist,
+            organisation=organisation,
+            is_admin=False
+        )
+        
     activation_url = build_account_activation_url(therapist)
     send_therapist_activation_email(therapist=therapist, activation_url=activation_url)
     return therapist, activation_url
@@ -59,6 +101,24 @@ def build_account_activation_url(user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     return f"{settings.FRONTEND_URL.rstrip('/')}/activate-account?uid={uid}&token={token}"
+
+
+def send_clinic_admin_activation_email(*, user, organisation, activation_url):
+    subject = "Activate your Reflexia clinic admin account"
+    message = (
+        f"Hello {user.first_name},\n\n"
+        f"You have been registered as the administrator for {organisation.name}.\n"
+        "Use the following link to set your password and activate your access:\n\n"
+        f"{activation_url}\n\n"
+        "If you were not expecting this email, you can ignore it."
+    )
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        fail_silently=False,
+    )
 
 
 def send_therapist_activation_email(*, therapist, activation_url):
@@ -211,6 +271,42 @@ def delete_user_account(*, user):
                     ],
                 }
             )
+
+    # Check if user is the sole admin of any organisation
+    sole_admin_orgs = []
+    memberships = user.organisation_memberships.filter(is_admin=True)
+    for membership in memberships:
+        admin_count = OrganisationMember.objects.filter(
+            organisation=membership.organisation,
+            is_admin=True
+        ).count()
+        if admin_count <= 1:
+            # We only block if there are other members who need an admin.
+            # If they are the ONLY member, the organisation will effectively be empty/inactive.
+            # However, the user request says "if it is only one user, this will be the admin".
+            # This implies even if they are alone, they are admin. If they delete themselves, 
+            # the org is empty. That's usually acceptable if the whole account is being deleted, 
+            # but to be safe and follow the spirit of "always have an admin", we block it 
+            # if they are managing a clinic with other therapists.
+            member_count = OrganisationMember.objects.filter(organisation=membership.organisation).count()
+            if member_count > 1:
+                sole_admin_orgs.append(membership.organisation)
+
+    if sole_admin_orgs:
+        raise DjangoValidationError(
+            {
+                "sole_admin_organisations": [
+                    f"Ets l'únic administrador de {len(sole_admin_orgs)} organitzacions."
+                ],
+                "organisations": [
+                    {
+                        "id": str(org.pk),
+                        "name": org.name,
+                    }
+                    for org in sole_admin_orgs
+                ],
+            }
+        )
 
     original_email = user.email
     anonymized_identifier = str(user.pk)

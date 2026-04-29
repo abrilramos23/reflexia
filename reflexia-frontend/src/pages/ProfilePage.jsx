@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { AppHeader } from '../components/AppHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { consentDocumentUrl } from '../lib/api.js'
 
@@ -82,6 +81,7 @@ export function ProfilePage() {
   const [assignedPatients, setAssignedPatients] = useState([])
   const [deleteMessage, setDeleteMessage] = useState('')
   const [busyPatientId, setBusyPatientId] = useState('')
+  const [soleAdminOrgs, setSoleAdminOrgs] = useState([])
   const [associatedContacts, setAssociatedContacts] = useState([])
   const [contactForm, setContactForm] = useState({
     name: '',
@@ -100,6 +100,8 @@ export function ProfilePage() {
   const [showSupportForm, setShowSupportForm] = useState(false)
   const [supportMessage, setSupportMessage] = useState('')
   const [supportError, setSupportError] = useState('')
+
+  const canHaveSupport = user?.role === 'therapist' && user?.memberships?.some(m => m.organisation.type === 'clinic')
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -296,6 +298,9 @@ export function ProfilePage() {
       if (normalizedError?.patients) {
         setAssignedPatients(normalizedError.patients)
       }
+      if (normalizedError?.organisations) {
+        setSoleAdminOrgs(normalizedError.organisations)
+      }
       setDeleteError(firstErrorMessage(normalizedError))
     }
   }
@@ -482,8 +487,6 @@ export function ProfilePage() {
 
   return (
     <div className="screen-shell">
-      <AppHeader />
-
       <div className="profile-grid">
         <section className="screen-card profile-card">
           <button
@@ -763,7 +766,18 @@ export function ProfilePage() {
               <h3>Gestionar cobertura d’alertes</h3>
             </div>
 
-            {!showSupportForm ? (
+            {!canHaveSupport ? (
+              <div className="content-card section-stack" style={{ borderLeft: '4px solid var(--accent-color)', backgroundColor: 'var(--bg-card-alt)' }}>
+                <p className="muted">
+                  <strong>Aquest servei només està disponible per a professionals que pertanyen a una clínica.</strong>
+                </p>
+                <p className="muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                  Com a professional independent, actualment no disposes d&apos;un equip clínic assignat per gestionar la cobertura de suport d&apos;alertes.
+                </p>
+              </div>
+            ) : null}
+
+            {canHaveSupport && !showSupportForm ? (
               <div className="section-toolbar">
                 <button
                   className="button"
@@ -1007,6 +1021,29 @@ export function ProfilePage() {
                     >
                       {busyPatientId === patient.id ? 'Donant de baixa...' : 'Donar de baixa'}
                     </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {soleAdminOrgs.length > 0 ? (
+            <div className="content-card section-stack">
+              <h3 style={{ marginTop: '1rem' }}>Administració obligatòria d&apos;organitzacions</h3>
+              <p className="muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+                No pots tancar el compte perquè ets l&apos;únic administrador de les següents organitzacions. 
+                Has de promoure un altre membre a administrador o donar de baixa l&apos;entitat abans de marxar.
+              </p>
+              <ul className="patient-list">
+                {soleAdminOrgs.map((org) => (
+                  <li className="patient-item" key={org.id}>
+                    <div>
+                      <div className="item-heading-row">
+                        <strong>{org.name}</strong>
+                        <span className="status-pill dashboard-status-pill--active">Admin únic</span>
+                      </div>
+                      <p className="muted">ID: {org.id}</p>
+                    </div>
                   </li>
                 ))}
               </ul>

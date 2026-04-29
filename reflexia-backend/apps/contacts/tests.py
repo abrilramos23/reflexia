@@ -2,11 +2,15 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.contacts.models import AssociatedContact, DefaultContact, SupportTherapist
-from apps.users.models import Patient, Therapist
+from apps.users.models import Organisation, Patient, Therapist, OrganisationMember
 
 
 class AssociatedContactTests(APITestCase):
     def setUp(self):
+        self.org = Organisation.objects.create(
+            name="Test Clinic",
+            type=Organisation.Type.CLINIC,
+        )
         self.patient = Patient.objects.create_user(
             email="patient@example.com",
             password="StrongPass123!",
@@ -59,6 +63,10 @@ class AssociatedContactTests(APITestCase):
 
 class SupportTherapistTests(APITestCase):
     def setUp(self):
+        self.org = Organisation.objects.create(
+            name="Test Clinic",
+            type=Organisation.Type.CLINIC,
+        )
         self.therapist = Therapist.objects.create_user(
             email="therapist@example.com",
             password="StrongPass123!",
@@ -68,6 +76,8 @@ class SupportTherapistTests(APITestCase):
             specialty="Clinical Psychology",
             is_active=True,
         )
+        OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
+
         self.other_therapist = Therapist.objects.create_user(
             email="support@example.com",
             password="StrongPass123!",
@@ -77,6 +87,7 @@ class SupportTherapistTests(APITestCase):
             specialty="Trauma Therapy",
             is_active=True,
         )
+        OrganisationMember.objects.create(user=self.other_therapist, organisation=self.org, is_admin=False)
         self.url = "/api/contacts/support-therapists/"
 
     def test_therapist_can_add_and_list_support_therapists(self):

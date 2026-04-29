@@ -17,10 +17,18 @@ from apps.users.views import (
     TherapistRegistrationView,
     TherapistPatientDeactivateView,
     TherapistPatientListView,
+    TherapistPatientDetailView,
     TwoFactorDisableView,
     TwoFactorEnableView,
     TwoFactorSetupView,
     TwoFactorVerifyView,
+    PlatformStatsView,
+    ClinicStatsView,
+    OrganisationListCreateView,
+    ClinicAdminRegistrationView,
+    GlobalClinicAdminListView,
+    GlobalTherapistListView,
+    ClinicTherapistListView,
 )
 
 def index(request):
@@ -40,6 +48,7 @@ urlpatterns = [
     path('auth/register/therapist/', TherapistRegistrationView.as_view(), name='therapist-register'),
     path('auth/register/patient/', PatientRegistrationView.as_view(), name='patient-register'),
     path('auth/patients/', TherapistPatientListView.as_view(), name='patient-list'),
+    path('auth/patients/<uuid:patient_id>/', TherapistPatientDetailView.as_view(), name='patient-detail'),
     path('auth/patients/deactivate/', TherapistPatientDeactivateView.as_view(), name='patient-deactivate'),
     path('auth/activate/account/', AccountActivationView.as_view(), name='account-activate'),
     path('auth/consent/accept/', PatientConsentAcceptView.as_view(), name='patient-consent-accept'),
@@ -48,4 +57,11 @@ urlpatterns = [
     path('auth/2fa/enable/', TwoFactorEnableView.as_view(), name='two-factor-enable'),
     path('auth/2fa/verify/', TwoFactorVerifyView.as_view(), name='two-factor-verify'),
     path('auth/2fa/disable/', TwoFactorDisableView.as_view(), name='two-factor-disable'),
+    path('admin/stats/platform/', PlatformStatsView.as_view(), name='platform-stats'),
+    path('admin/stats/clinic/', ClinicStatsView.as_view(), name='clinic-stats'),
+    path('admin/organisations/', OrganisationListCreateView.as_view(), name='organisation-list-create'),
+    path('admin/register/clinic-admin/', ClinicAdminRegistrationView.as_view(), name='clinic-admin-register'),
+    path('admin/users/clinic-admins/', GlobalClinicAdminListView.as_view(), name='global-clinic-admin-list'),
+    path('admin/users/therapists/', GlobalTherapistListView.as_view(), name='global-therapist-list'),
+    path('admin/users/clinic/therapists/', ClinicTherapistListView.as_view(), name='clinic-therapist-list'),
 ]

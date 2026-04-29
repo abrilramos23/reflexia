@@ -1,17 +1,27 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
-import { ProtectedRoute } from './components/ProtectedRoute.jsx'
 import { PublicRoute } from './components/PublicRoute.jsx'
 import { useAuth } from './context/AuthContext.jsx'
 import { ActivateAccountPage } from './pages/ActivateAccountPage.jsx'
 import { ConsentPage } from './pages/ConsentPage.jsx'
 import { DashboardPage } from './pages/DashboardPage.jsx'
+import { EntryDetailPage } from './pages/EntryDetailPage.jsx'
+import { EntryEditorPage } from './pages/EntryEditorPage.jsx'
+import { EntriesPage } from './pages/EntriesPage.jsx'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.jsx'
 import { LoginPage } from './pages/LoginPage.jsx'
 import { PatientsPage } from './pages/PatientsPage.jsx'
 import { ProfilePage } from './pages/ProfilePage.jsx'
 import { ResetPasswordPage } from './pages/ResetPasswordPage.jsx'
 import { TwoFactorPage } from './pages/TwoFactorPage.jsx'
+import { ProtectedLayout } from './components/ProtectedLayout.jsx'
+import { PatientDetailPage } from './pages/PatientDetailPage.jsx'
+import { TherapistEntryDetailPage } from './pages/TherapistEntryDetailPage.jsx'
+import { TherapistQuestionDetailPage } from './pages/TherapistQuestionDetailPage.jsx'
+import { PlatformOrganisationsPage } from './pages/PlatformOrganisationsPage.jsx'
+import { PlatformClinicAdminsPage } from './pages/PlatformClinicAdminsPage.jsx'
+import { PlatformTherapistsPage } from './pages/PlatformTherapistsPage.jsx'
+import { ClinicTherapistsPage } from './pages/ClinicTherapistsPage.jsx'
 
 function LoadingScreen() {
   return (
@@ -26,7 +36,7 @@ function LoadingScreen() {
 }
 
 function App() {
-  const { isBootstrapping } = useAuth()
+  const { user, isClinicAdmin, isBootstrapping } = useAuth()
 
   if (isBootstrapping) {
     return <LoadingScreen />
@@ -56,33 +66,122 @@ function App() {
       <Route
         path="/consent"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <ConsentPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         }
       />
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <DashboardPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/entries"
+        element={
+          <ProtectedLayout>
+            <EntriesPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/entries/new"
+        element={
+          <ProtectedLayout>
+            <EntryEditorPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/entries/:entryId"
+        element={
+          <ProtectedLayout>
+            <EntryDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/entries/:entryId/edit"
+        element={
+          <ProtectedLayout>
+            <EntryEditorPage />
+          </ProtectedLayout>
         }
       />
       <Route
         path="/profile"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <ProfilePage />
-          </ProtectedRoute>
+          </ProtectedLayout>
         }
       />
       <Route
         path="/patients"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <PatientsPage />
-          </ProtectedRoute>
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/patients/:patientId"
+        element={
+          <ProtectedLayout>
+            <PatientDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/patients/:patientId/entries/:entryId"
+        element={
+          <ProtectedLayout>
+            <TherapistEntryDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/patients/:patientId/questions/:questionId"
+        element={
+          <ProtectedLayout>
+            <TherapistQuestionDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      
+      {/* Platform Admin Routes */}
+      <Route
+        path="/admin/organisations"
+        element={
+          <ProtectedLayout>
+            <PlatformOrganisationsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/admin/clinic-admins"
+        element={
+          <ProtectedLayout>
+            <PlatformClinicAdminsPage />
+          </ProtectedLayout>
+        }
+      />
+      {/* Clinic Admin Specific Routes */}
+      <Route
+        path="/admin/therapists"
+        element={
+          <ProtectedLayout>
+            {user?.role === 'platform_admin' ? (
+              <PlatformTherapistsPage />
+            ) : isClinicAdmin ? (
+              <ClinicTherapistsPage />
+            ) : (
+              <Navigate to="/dashboard" replace />
+            )}
+          </ProtectedLayout>
         }
       />
       <Route path="/" element={<Navigate to="/login" replace />} />

@@ -103,6 +103,11 @@ class SupportTherapistCreateSerializer(serializers.Serializer):
     def validate(self, attrs):
         therapist = self.context["therapist"]
 
+        if not therapist.organisation_memberships.filter(organisation__type='clinic').exists():
+            raise serializers.ValidationError(
+                {"support_id": "Aquest servei només està disponible per a professionals que pertanyen a una clínica."}
+            )
+
         try:
             support_therapist = Therapist.objects.get(pk=attrs["support_id"])
         except Therapist.DoesNotExist as exc:

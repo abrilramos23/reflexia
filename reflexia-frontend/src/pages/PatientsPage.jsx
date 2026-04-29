@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { AppHeader } from '../components/AppHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
 function firstErrorMessage(error) {
@@ -45,6 +44,7 @@ export function PatientsPage() {
   const [patientsError, setPatientsError] = useState('')
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false)
   const [busyPatientId, setBusyPatientId] = useState('')
+  const [isRegisterSectionOpen, setIsRegisterSectionOpen] = useState(false)
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -142,8 +142,6 @@ export function PatientsPage() {
 
   return (
     <div className="screen-shell">
-      <AppHeader />
-
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
@@ -153,108 +151,112 @@ export function PatientsPage() {
               Des d’aquí pots donar d’alta nous pacients, consultar l’estat del seu accés i gestionar baixes quan sigui necessari.
             </p>
           </div>
+        </section>
 
-          <div className="button-row">
-            <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/dashboard">
-              Tornar al tauler
-            </Link>
-          </div>
+        <section className="screen-card dashboard-panel profile-card--wide">
+          <button
+            className="section-toggle"
+            type="button"
+            onClick={() => setIsRegisterSectionOpen((currentState) => !currentState)}
+          >
+            <div className="panel-heading">
+              <p className="eyebrow">Alta de pacient</p>
+              <h2>Registrar un nou pacient</h2>
+            </div>
+            <span className={`section-toggle-indicator ${isRegisterSectionOpen ? 'section-toggle-indicator--open' : ''}`}>
+              <span aria-hidden="true">▾</span>
+            </span>
+          </button>
+
+          {isRegisterSectionOpen ? (
+            <div className="collapsible-section-body">
+              <p className="muted" style={{ marginBottom: '1.5rem' }}>
+                En crear el compte, s’envia un correu d’activació perquè el pacient estableixi la seva contrasenya i, al primer accés, accepti el consentiment informat.
+              </p>
+
+              {patientMessage ? <div className="message">{patientMessage}</div> : null}
+              {patientError ? <div className="error-banner">{patientError}</div> : null}
+
+              <form className="form-stack" onSubmit={handlePatientSubmit}>
+                <div className="inline-fields">
+                  <div className="field-group">
+                    <label htmlFor="patient-first-name">Nom</label>
+                    <input
+                      id="patient-first-name"
+                      value={patientForm.first_name}
+                      onChange={(event) =>
+                        setPatientForm((currentState) => ({
+                          ...currentState,
+                          first_name: event.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="field-group">
+                    <label htmlFor="patient-last-name">Cognoms</label>
+                    <input
+                      id="patient-last-name"
+                      value={patientForm.last_name}
+                      onChange={(event) =>
+                        setPatientForm((currentState) => ({
+                          ...currentState,
+                          last_name: event.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="inline-fields">
+                  <div className="field-group">
+                    <label htmlFor="patient-email">Correu electrònic</label>
+                    <input
+                      id="patient-email"
+                      type="email"
+                      value={patientForm.email}
+                      onChange={(event) =>
+                        setPatientForm((currentState) => ({
+                          ...currentState,
+                          email: event.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="field-group">
+                    <label htmlFor="patient-birth-date">Data de naixement</label>
+                    <input
+                      id="patient-birth-date"
+                      type="date"
+                      value={patientForm.birth_date}
+                      onChange={(event) =>
+                        setPatientForm((currentState) => ({
+                          ...currentState,
+                          birth_date: event.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="button-row">
+                  <button className="button-secondary" type="submit" disabled={isSubmittingPatient}>
+                    {isSubmittingPatient ? 'Creant pacient...' : 'Crear pacient'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : null}
         </section>
 
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
-            <p className="eyebrow">Alta de pacient</p>
-            <h2>Registrar un nou pacient</h2>
-            <p className="muted">
-              En crear el compte, s’envia un correu d’activació perquè el pacient estableixi la seva contrasenya i, al primer accés, accepti el consentiment informat.
-            </p>
-          </div>
-
-          {patientMessage ? <div className="message">{patientMessage}</div> : null}
-          {patientError ? <div className="error-banner">{patientError}</div> : null}
-
-          <form className="form-stack" onSubmit={handlePatientSubmit}>
-            <div className="inline-fields">
-              <div className="field-group">
-                <label htmlFor="patient-first-name">Nom</label>
-                <input
-                  id="patient-first-name"
-                  value={patientForm.first_name}
-                  onChange={(event) =>
-                    setPatientForm((currentState) => ({
-                      ...currentState,
-                      first_name: event.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
-
-              <div className="field-group">
-                <label htmlFor="patient-last-name">Cognoms</label>
-                <input
-                  id="patient-last-name"
-                  value={patientForm.last_name}
-                  onChange={(event) =>
-                    setPatientForm((currentState) => ({
-                      ...currentState,
-                      last_name: event.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="inline-fields">
-              <div className="field-group">
-                <label htmlFor="patient-email">Correu electrònic</label>
-                <input
-                  id="patient-email"
-                  type="email"
-                  value={patientForm.email}
-                  onChange={(event) =>
-                    setPatientForm((currentState) => ({
-                      ...currentState,
-                      email: event.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
-
-              <div className="field-group">
-                <label htmlFor="patient-birth-date">Data de naixement</label>
-                <input
-                  id="patient-birth-date"
-                  type="date"
-                  value={patientForm.birth_date}
-                  onChange={(event) =>
-                    setPatientForm((currentState) => ({
-                      ...currentState,
-                      birth_date: event.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="button-row">
-              <button className="button-secondary" type="submit" disabled={isSubmittingPatient}>
-                {isSubmittingPatient ? 'Creant pacient...' : 'Crear pacient'}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="screen-card dashboard-panel profile-card--wide">
-          <div className="panel-heading">
-            <p className="eyebrow">Llista actual</p>
-            <h2>Llista de pacients</h2>
-            <p className="muted">
-              Pots veure si el compte està actiu i si el consentiment informat ja s’ha acceptat.
-            </p>
+            <p className="eyebrow" style={{ marginBottom: '0rem' }}>Llista de pacients</p>
           </div>
 
           {patientsError ? <div className="error-banner">{patientsError}</div> : null}
@@ -264,32 +266,42 @@ export function PatientsPage() {
           ) : (
             <ul className="patient-list">
               {therapistPatients.map((patient) => (
-                <li className="patient-item compact-list-item" key={patient.id}>
-                  <div>
-                    <div className="item-heading-row">
-                      <strong>{patient.first_name} {patient.last_name}</strong>
-                      <span className="status-pill">
-                        {patient.is_active ? 'Compte actiu' : 'Compte inactiu'}
-                      </span>
+                <li className="patient-item compact-list-item" key={patient.id} style={{ padding: 0, overflow: 'hidden' }}>
+                  <Link
+                    to={`/patients/${patient.id}`}
+                    style={{ textDecoration: 'none', color: 'inherit', display: 'flex', padding: '14px 16px', width: '100%', alignItems: 'center', transition: 'background-color 0.2s' }}
+                    className="patient-card-link"
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div className="item-heading-row">
+                        <strong>{patient.first_name} {patient.last_name}</strong>
+                        <span className="status-pill">
+                          {patient.is_active ? 'Compte actiu' : 'Compte inactiu'}
+                        </span>
+                      </div>
+                      <p className="muted" style={{ fontWeight: 'bold', margin: '0.5rem 0' }}>{patient.email}</p>
+                      <p className="muted" style={{ margin: 0 }}>
+                        Naixement: {patient.birth_date}
+                        <br />
+                        Consentiment: {patient.consent_accepted ? 'Acceptat' : 'Pendent'}
+                      </p>
                     </div>
-                    <p className="muted" style={{ fontWeight: 'bold' }}>{patient.email}</p>
-                    <p className="muted">
-                      Naixement: {patient.birth_date}
-                      <br />
-                      Consentiment: {patient.consent_accepted ? 'Acceptat' : 'Pendent'}
-                    </p>
-                  </div>
 
-                  <div className="list-actions">
-                    <button
-                      className="action-chip action-chip--danger"
-                      type="button"
-                      disabled={!patient.is_active || busyPatientId === patient.id}
-                      onClick={() => handleDeactivatePatient(patient)}
-                    >
-                      {busyPatientId === patient.id ? 'Donant de baixa...' : 'Donar de baixa'}
-                    </button>
-                  </div>
+                    <div className="list-actions" style={{ marginLeft: '1rem' }}>
+                      <button
+                        className="action-chip action-chip--danger"
+                        type="button"
+                        disabled={!patient.is_active || busyPatientId === patient.id}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleDeactivatePatient(patient)
+                        }}
+                      >
+                        {busyPatientId === patient.id ? 'Donant de baixa...' : 'Donar de baixa'}
+                      </button>
+                    </div>
+                  </Link>
                 </li>
               ))}
             </ul>

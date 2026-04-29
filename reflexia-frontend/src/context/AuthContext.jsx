@@ -286,6 +286,46 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function getPatient(patientId) {
+    const response = await api.get(`/auth/patients/${patientId}/`)
+    return response.data
+  }
+
+  async function getEntriesEditorContext() {
+    const response = await api.get('/entries/editor/')
+    return response.data
+  }
+
+  async function listEntries() {
+    const response = await api.get('/entries/')
+    return response.data
+  }
+
+  async function getEntry(entryId) {
+    const response = await api.get(`/entries/${entryId}/`)
+    return response.data
+  }
+
+  async function createEntryDraft(payload) {
+    const response = await api.post('/entries/', payload)
+    return response.data
+  }
+
+  async function updateEntryDraft(entryId, payload) {
+    const response = await api.patch(`/entries/${entryId}/`, payload)
+    return response.data
+  }
+
+  async function analyzeEntry(entryId, payload = {}) {
+    const response = await api.post(`/entries/${entryId}/analyze/`, payload)
+    return response.data
+  }
+
+  async function deleteEntry(entryId) {
+    const response = await api.delete(`/entries/${entryId}/`)
+    return response.data
+  }
+
   async function setupTwoFactor() {
     const response = await api.post('/auth/2fa/setup/')
     return response.data
@@ -337,8 +377,72 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function getPlatformStats() {
+    const response = await api.get('/admin/stats/platform/')
+    return response.data
+  }
+
+  async function getClinicStats() {
+    const response = await api.get('/admin/stats/clinic/')
+    return response.data
+  }
+
+  async function listOrganisations() {
+    const response = await api.get('/admin/organisations/')
+    return response.data
+  }
+
+  async function createOrganisation(payload) {
+    const response = await api.post('/admin/organisations/', payload)
+    return response.data
+  }
+
+  async function registerClinicAdmin(payload) {
+    const response = await api.post('/admin/register/clinic-admin/', payload)
+    return response.data
+  }
+
+  async function listAllClinicAdmins() {
+    const response = await api.get('/admin/users/clinic-admins/')
+    return response.data
+  }
+
+  async function listAllTherapists() {
+    const response = await api.get('/admin/users/therapists/')
+    return response.data
+  }
+
+  async function listClinicTherapists() {
+    const response = await api.get('/admin/users/clinic/therapists/')
+    return response.data
+  }
+
+  async function listPatientEntries(patientId) {
+    const response = await api.get(`/auth/patients/${patientId}/entries/`)
+    return response.data
+  }
+
+  async function getPatientEntry(patientId, entryId) {
+    const response = await api.get(`/auth/patients/${patientId}/entries/${entryId}/`)
+    return response.data
+  }
+
+  async function listPatientQuestions(patientId) {
+    const response = await api.get(`/auth/patients/${patientId}/questions/`)
+    return response.data
+  }
+
+  async function getPatientQuestion(patientId, questionId) {
+    const response = await api.get(`/auth/patients/${patientId}/questions/${questionId}/`)
+    return response.data
+  }
+
+  const isClinicAdmin = user?.is_clinic_admin ?? user?.memberships?.some((m) => m.is_admin) ?? false
+
   const value = {
     user,
+    role: user?.role,
+    isClinicAdmin,
     pendingTwoFactor,
     isAuthenticated: Boolean(user),
     isBootstrapping,
@@ -361,11 +465,31 @@ export function AuthProvider({ children }) {
     registerTherapist,
     registerPatient,
     listTherapistPatients,
+    getPatient,
+    getEntriesEditorContext,
+    listEntries,
+    getEntry,
+    createEntryDraft,
+    updateEntryDraft,
+    analyzeEntry,
+    deleteEntry,
     setupTwoFactor,
     enableTwoFactor,
     disableTwoFactor,
     deleteAccount,
     deactivatePatient,
+    listPatientEntries,
+    getPatientEntry,
+    listPatientQuestions,
+    getPatientQuestion,
+    getPlatformStats,
+    getClinicStats,
+    listOrganisations,
+    createOrganisation,
+    registerClinicAdmin,
+    listAllClinicAdmins,
+    listAllTherapists,
+    listClinicTherapists,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

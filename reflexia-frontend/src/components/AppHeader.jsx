@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 
 function formatRole(role) {
@@ -9,16 +9,7 @@ function formatRole(role) {
 }
 
 export function AppHeader() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-
-  async function handleLogout() {
-    await logout()
-    navigate('/login', {
-      replace: true,
-      state: { message: 'Sessió tancada correctament.' },
-    })
-  }
+  const { user } = useAuth()
 
   return (
     <header className="app-header-wrap">
@@ -31,24 +22,8 @@ export function AppHeader() {
           </span>
         </Link>
 
-        {user ? (
-          <nav className="app-header-nav">
-            <span className="status-pill" style={{ textDecoration: 'none', backgroundColor: 'transparent' }}>{formatRole(user.role)}</span>
-            {user.role === 'therapist' ? (
-              <Link style={{ textDecoration: 'none' }} className="button-ghost" to="/patients">
-                Pacients
-              </Link>
-            ) : null}
-            <Link style={{ textDecoration: 'none' }} className="button-ghost" to="/profile">
-              Perfil
-            </Link>
-          </nav>
-        ) : (
-          <nav className="app-header-nav">
-            <Link style={{ textDecoration: 'none' }} className="button-ghost" to="/forgot-password">
-              Recuperar accés
-            </Link>
-          </nav>
+        {user && (
+          <span className="status-pill">{formatRole(user.role)}</span>
         )}
       </div>
     </header>
