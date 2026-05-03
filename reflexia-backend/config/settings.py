@@ -99,6 +99,8 @@ STATIC_URL = 'static/'
 
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@reflexia.local')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+OPENAI_ANALYSIS_MODEL = os.getenv('OPENAI_ANALYSIS_MODEL', 'gpt-5.4-mini')
 EMAIL_BACKEND = os.getenv(
     'EMAIL_BACKEND',
     'django.core.mail.backends.console.EmailBackend',

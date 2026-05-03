@@ -23,4 +23,6 @@ def soft_delete_entry(*, entry):
             "updated_at",
         ]
     )
+    if hasattr(entry, "analysis"):
+        entry.analysis.delete()
     return entry
