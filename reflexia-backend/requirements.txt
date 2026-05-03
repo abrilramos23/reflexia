@@ -6,3 +6,4 @@ djangorestframework
 djangorestframework-simplejwt
 drf-spectacular
 pyotp
+openai>=2.8.1

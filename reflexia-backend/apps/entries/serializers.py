@@ -1,6 +1,7 @@
 from django.utils.html import strip_tags
 from rest_framework import serializers
 
+from apps.analysis.serializers import EmotionalAnalysisSerializer
 from apps.entries.models import JournalEntry, TherapistQuestion
 
 
@@ -12,6 +13,7 @@ class TherapistQuestionSerializer(serializers.ModelSerializer):
 
 class JournalEntrySerializer(serializers.ModelSerializer):
     therapist_question = TherapistQuestionSerializer(read_only=True)
+    analysis = EmotionalAnalysisSerializer(read_only=True)
     is_deleted = serializers.SerializerMethodField()
     preview = serializers.SerializerMethodField()
 
@@ -26,6 +28,7 @@ class JournalEntrySerializer(serializers.ModelSerializer):
             "updated_at",
             "is_deleted",
             "therapist_question",
+            "analysis",
         )
         read_only_fields = (
             "id",
@@ -34,6 +37,7 @@ class JournalEntrySerializer(serializers.ModelSerializer):
             "updated_at",
             "is_deleted",
             "therapist_question",
+            "analysis",
         )
 
     def get_is_deleted(self, obj):
@@ -94,10 +98,13 @@ class JournalEntryDraftSerializer(serializers.ModelSerializer):
                 therapist_question_id=therapist_question_id,
             )
 
+        content_changed = next_content != instance.content
         instance.content = next_content
         instance.status = JournalEntry.STATUS_DRAFT
 
         instance.save(update_fields=["content", "status", "therapist_question", "updated_at"])
+        if content_changed and hasattr(instance, "analysis"):
+            instance.analysis.delete()
 
         return instance
 
