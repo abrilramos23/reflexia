@@ -13,14 +13,13 @@ def soft_delete_entry(*, entry):
     entry.content = DELETED_ENTRY_PLACEHOLDER
     entry.deleted_at = timezone.now()
     entry.therapist_question = None
-    entry.status = JournalEntry.STATUS_DRAFT
+    entry.status = JournalEntry.STATUS_DELETED
     entry.save(
         update_fields=[
             "content",
             "deleted_at",
             "therapist_question",
             "status",
-            "updated_at",
         ]
     )
     if hasattr(entry, "analysis"):

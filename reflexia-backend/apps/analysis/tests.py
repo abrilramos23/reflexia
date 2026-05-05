@@ -53,7 +53,6 @@ class AnalysisEndpointTests(APITestCase):
             primary_emotion=primary_emotion,
             risk_level=risk_level,
             summary="Predomina la tristesa amb elements d'esperanca.",
-            tone="reflexiu",
         )
 
     def test_patient_gets_pending_message_when_analysis_does_not_exist(self):
@@ -122,7 +121,7 @@ class AnalysisEndpointTests(APITestCase):
             response.data["therapist_correction"],
             "La lectura correcta es ansietat anticipatoria lleu.",
         )
-        self.assertEqual(response.data["corrected_by"], self.therapist.pk)
+        self.assertTrue(response.data["reviewed_by_therapist"])
 
     def test_unassigned_therapist_cannot_consult_patient_analysis(self):
         self.create_analysis()

@@ -34,9 +34,11 @@ class TherapistQuestion(models.Model):
 class JournalEntry(models.Model):
     STATUS_DRAFT = "draft"
     STATUS_ANALYZED = "analyzed"
+    STATUS_DELETED = "deleted"
     STATUS_CHOICES = (
         (STATUS_DRAFT, "Draft"),
         (STATUS_ANALYZED, "Analyzed"),
+        (STATUS_DELETED, "Deleted"),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

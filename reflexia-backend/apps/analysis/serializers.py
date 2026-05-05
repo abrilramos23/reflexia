@@ -1,4 +1,3 @@
-from django.utils import timezone
 from rest_framework import serializers
 
 from apps.analysis.models import EmotionalAnalysis
@@ -15,38 +14,28 @@ class EmotionScoreSerializer(serializers.Serializer):
 
 
 class EmotionalAnalysisSerializer(serializers.ModelSerializer):
+    entry_id = serializers.UUIDField(read_only=True)
     emotions = EmotionScoreSerializer(many=True)
     disclaimer = serializers.SerializerMethodField()
-    corrected_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = EmotionalAnalysis
         fields = (
-            "id",
+            "entry_id",
             "emotions",
             "primary_emotion",
             "risk_level",
             "summary",
-            "tone",
-            "key_themes",
             "recommendations",
+            "analyzed_at",
+            "reviewed_by_therapist",
             "therapist_correction",
-            "corrected_by",
-            "corrected_by_name",
-            "corrected_at",
-            "created_at",
-            "updated_at",
             "disclaimer",
         )
         read_only_fields = fields
 
     def get_disclaimer(self, obj):
         return ANALYSIS_DISCLAIMER
-
-    def get_corrected_by_name(self, obj):
-        if not obj.corrected_by:
-            return ""
-        return f"{obj.corrected_by.first_name} {obj.corrected_by.last_name}".strip()
 
 
 class AnalysisCorrectionSerializer(serializers.ModelSerializer):
@@ -66,7 +55,6 @@ class AnalysisCorrectionSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         instance.therapist_correction = validated_data["therapist_correction"]
-        instance.corrected_by = self.context["therapist"]
-        instance.corrected_at = timezone.now()
-        instance.save(update_fields=["therapist_correction", "corrected_by", "corrected_at", "updated_at"])
+        instance.reviewed_by_therapist = True
+        instance.save(update_fields=["therapist_correction", "reviewed_by_therapist"])
         return instance

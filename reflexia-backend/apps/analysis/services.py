@@ -1,6 +1,7 @@
 import json
 
 from django.conf import settings
+from django.utils import timezone
 from django.utils.html import strip_tags
 
 from apps.analysis.models import EmotionalAnalysis
@@ -29,8 +30,6 @@ ANALYSIS_SCHEMA = {
         "primary_emotion": {"type": "string"},
         "risk_level": {"type": "string", "enum": ["none", "low", "moderate", "high"]},
         "summary": {"type": "string"},
-        "tone": {"type": "string"},
-        "key_themes": {"type": "array", "items": {"type": "string"}},
         "recommendations": {"type": "array", "items": {"type": "string"}},
     },
     "required": [
@@ -38,8 +37,6 @@ ANALYSIS_SCHEMA = {
         "primary_emotion",
         "risk_level",
         "summary",
-        "tone",
-        "key_themes",
         "recommendations",
     ],
     "additionalProperties": False,
@@ -66,7 +63,6 @@ def analyze_journal_entry(*, entry):
 
     payload = _request_openai_analysis(entry=entry)
     normalized_payload = _normalize_analysis_payload(payload)
-    model_name = getattr(settings, "OPENAI_ANALYSIS_MODEL", "gpt-5.4-mini")
 
     analysis, _ = EmotionalAnalysis.objects.update_or_create(
         entry=entry,
@@ -75,15 +71,10 @@ def analyze_journal_entry(*, entry):
             "primary_emotion": normalized_payload["primary_emotion"],
             "risk_level": normalized_payload["risk_level"],
             "summary": normalized_payload["summary"],
-            "tone": normalized_payload["tone"],
-            "key_themes": normalized_payload["key_themes"],
             "recommendations": normalized_payload["recommendations"],
-            "model_name": model_name,
-            "model_response_id": normalized_payload.get("_response_id", ""),
-            "raw_response": payload,
+            "analyzed_at": timezone.now(),
+            "reviewed_by_therapist": False,
             "therapist_correction": "",
-            "corrected_by": None,
-            "corrected_at": None,
         },
     )
 
@@ -191,7 +182,6 @@ def _request_openai_analysis(*, entry):
     except (TypeError, ValueError) as exc:
         raise AnalysisServiceError("OpenAI ha retornat una resposta no valida.") from exc
 
-    parsed["_response_id"] = getattr(response, "id", "")
     return parsed
 
 
@@ -264,12 +254,9 @@ def _normalize_analysis_payload(payload):
         "primary_emotion": payload.get("primary_emotion") or emotions[0]["emotion"],
         "risk_level": risk_level,
         "summary": payload.get("summary", "").strip() or "Analisi generada sense resum disponible.",
-        "tone": payload.get("tone", "").strip(),
-        "key_themes": [str(theme).strip() for theme in payload.get("key_themes", []) if str(theme).strip()],
         "recommendations": [
             str(recommendation).strip()
             for recommendation in payload.get("recommendations", [])
             if str(recommendation).strip()
         ],
-        "_response_id": payload.get("_response_id", ""),
     }
