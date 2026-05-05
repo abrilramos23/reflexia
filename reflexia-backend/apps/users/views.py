@@ -54,6 +54,7 @@ class TherapistRegistrationView(APIView):
                     "email": serializers.EmailField(),
                     "license_number": serializers.CharField(),
                     "specialty": serializers.CharField(),
+                    "is_clinic_admin": serializers.BooleanField(),
                     "registration_date": serializers.DateTimeField(),
                     "two_factor_enabled": serializers.BooleanField(),
                     "activation_email_sent": serializers.BooleanField(),
@@ -70,6 +71,8 @@ class TherapistRegistrationView(APIView):
                     "email": "therapist@example.com",
                     "license_number": "21039",
                     "specialty": "Clinical Psychology",
+                    "organisation_id": "11111111-1111-1111-1111-111111111111",
+                    "is_admin": True,
                 },
                 request_only=True,
             )
@@ -91,6 +94,7 @@ class TherapistRegistrationView(APIView):
         response_serializer = TherapistRegistrationSerializer(therapist)
         response_data = {
             **response_serializer.data,
+            "is_clinic_admin": therapist.is_clinic_admin,
             "activation_email_sent": True,
         }
         if settings.DEBUG:
@@ -801,26 +805,39 @@ class ClinicAdminRegistrationView(APIView):
                     "first_name": serializers.CharField(),
                     "last_name": serializers.CharField(),
                     "email": serializers.EmailField(),
-                    "activation_email_sent": serializers.BooleanField(),
-                    "activation_url": serializers.CharField(required=False),
+                    "license_number": serializers.CharField(),
+                    "specialty": serializers.CharField(),
+                    "is_clinic_admin": serializers.BooleanField(),
+                    "organisation": OrganisationSerializer(),
                 },
             ),
         },
+        examples=[
+            OpenApiExample(
+                "Assignar terapeuta existent com a admin de clínica",
+                value={
+                    "organisation_id": "11111111-1111-1111-1111-111111111111",
+                    "therapist_id": "22222222-2222-2222-2222-222222222222",
+                },
+                request_only=True,
+            )
+        ],
     )
     def post(self, request):
         serializer = ClinicAdminRegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+        therapist = serializer.save()
 
         response_data = {
-            "id": user.id,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "email": user.email,
-            "activation_email_sent": True,
+            "id": therapist.id,
+            "first_name": therapist.first_name,
+            "last_name": therapist.last_name,
+            "email": therapist.email,
+            "license_number": therapist.license_number,
+            "specialty": therapist.specialty,
+            "is_clinic_admin": therapist.is_clinic_admin,
+            "organisation": OrganisationSerializer(therapist.organisation).data if therapist.organisation else None,
         }
-        if settings.DEBUG:
-            response_data["activation_url"] = serializer.context.get("activation_url")
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 

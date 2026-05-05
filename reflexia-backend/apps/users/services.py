@@ -20,38 +20,45 @@ def create_organisation(*, name, type):
 
 
 @transaction.atomic
-def register_clinic_admin(*, first_name, last_name, email, organisation):
-    # Clinic Admins are now Therapists with the isAdmin flag in the membership
-    user = User(
-        first_name=first_name,
-        last_name=last_name,
-        email=email,
-        role=User.Role.THERAPIST,
-        is_active=False,
-    )
-    user.set_unusable_password()
-    user.save()
-    
-    # Create the membership relationship
-    OrganisationMember.objects.create(
-        user=user,
+def register_clinic_admin(*, therapist, organisation):
+    membership = OrganisationMember.objects.filter(
+        user=therapist,
         organisation=organisation,
-        is_admin=True
-    )
-    
-    activation_url = build_account_activation_url(user)
-    send_clinic_admin_activation_email(user=user, organisation=organisation, activation_url=activation_url)
-    return user, activation_url
+    ).first()
+
+    if membership is None:
+        raise DjangoValidationError(
+            {"therapist_id": ["This therapist is not assigned to the selected organisation."]}
+        )
+
+    if membership.is_admin:
+        raise DjangoValidationError(
+            {"therapist_id": ["This therapist is already an administrator of the selected organisation."]}
+        )
+
+    membership.is_admin = True
+    membership.save(update_fields=["is_admin"])
+    return therapist
 
 
 @transaction.atomic
-def register_therapist(*, first_name, last_name, email, license_number, specialty, organisation=None):
+def register_therapist(
+    *,
+    first_name,
+    last_name,
+    email,
+    license_number,
+    specialty,
+    organisation=None,
+    is_admin=False,
+):
     therapist = Therapist(
         email=email,
         first_name=first_name,
         last_name=last_name,
         license_number=license_number,
         specialty=specialty,
+        role=User.Role.THERAPIST,
         is_active=False,
     )
     therapist.set_unusable_password()
@@ -61,7 +68,7 @@ def register_therapist(*, first_name, last_name, email, license_number, specialt
         OrganisationMember.objects.create(
             user=therapist,
             organisation=organisation,
-            is_admin=False
+            is_admin=is_admin,
         )
         
     activation_url = build_account_activation_url(therapist)
@@ -87,6 +94,7 @@ def register_patient(
         birth_date=birth_date,
         consent_accepted=consent_accepted,
         consent_date=consent_date,
+        role=User.Role.PATIENT,
         is_active=False,
     )
     patient.set_unusable_password()

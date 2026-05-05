@@ -97,6 +97,31 @@ class TherapistRegistrationTests(APITestCase):
         self.assertIn("license_number", response.data)
         self.assertEqual(Therapist.objects.count(), 0)
 
+    def test_register_therapist_can_assign_organisation_admin_role(self):
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {
+            "first_name": "Laura",
+            "last_name": "Gomez",
+            "email": "laura-admin@example.com",
+            "license_number": "30809",
+            "specialty": "Clinical Psychology",
+            "organisation_id": str(self.org.id),
+            "is_admin": True,
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        therapist = Therapist.objects.get(email="laura-admin@example.com")
+        self.assertTrue(
+            OrganisationMember.objects.filter(
+                user=therapist,
+                organisation=self.org,
+                is_admin=True,
+            ).exists()
+        )
+        self.assertTrue(response.data["is_clinic_admin"])
+
 
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
@@ -888,6 +913,7 @@ class MultiTenancyAndAdminTests(APITestCase):
         self.stats_clinic_url = "/api/admin/stats/clinic/"
         self.organisations_url = "/api/admin/organisations/"
         self.clinic_admins_url = "/api/admin/users/clinic-admins/"
+        self.register_clinic_admin_url = "/api/admin/register/clinic-admin/"
         self.therapists_url = "/api/admin/users/therapists/"
 
     def test_platform_admin_can_get_platform_stats(self):
@@ -1003,6 +1029,47 @@ class MultiTenancyAndAdminTests(APITestCase):
         self.assertEqual(admins_response.data[0]["organisation"]["name"], "Test Clinic")
         self.assertTrue(admins_response.data[0]["is_clinic_admin"])
         self.assertEqual(therapists_response.data[0]["organisation"]["name"], "Test Clinic")
+
+    def test_platform_admin_can_assign_existing_therapist_as_clinic_admin(self):
+        self.client.force_authenticate(user=self.platform_admin)
+        therapist_to_assign = Therapist.objects.create_user(
+            email="clinic-admin@example.com",
+            password="StrongPass123!",
+            first_name="Abigail",
+            last_name="Sisquella",
+            license_number="17105",
+            specialty="Psicologia Clínica",
+            is_active=True,
+        )
+        OrganisationMember.objects.create(
+            user=therapist_to_assign,
+            organisation=self.org,
+            is_admin=False,
+        )
+
+        response = self.client.post(
+            self.register_clinic_admin_url,
+            {
+                "organisation_id": str(self.org.id),
+                "therapist_id": str(therapist_to_assign.id),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        therapist_to_assign.refresh_from_db()
+        self.assertEqual(therapist_to_assign.license_number, "17105")
+        self.assertEqual(therapist_to_assign.specialty, "Psicologia Clínica")
+        self.assertTrue(
+            OrganisationMember.objects.filter(
+                user=therapist_to_assign,
+                organisation=self.org,
+                is_admin=True,
+            ).exists()
+        )
+        self.assertEqual(response.data["license_number"], "17105")
+        self.assertEqual(response.data["specialty"], "Psicologia Clínica")
+        self.assertTrue(response.data["is_clinic_admin"])
 
     def test_therapist_cannot_have_multiple_organisations(self):
         second_org = Organisation.objects.create(
