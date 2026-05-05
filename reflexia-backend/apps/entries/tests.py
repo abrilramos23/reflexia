@@ -141,6 +141,7 @@ class JournalEntryEditorTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         entry.refresh_from_db()
+        self.assertEqual(entry.status, JournalEntry.STATUS_DELETED)
         self.assertTrue(entry.deleted_at is not None)
         self.assertEqual(entry.content, "Aquesta entrada ha estat eliminada i anonimitzada.")
         self.assertIsNone(entry.therapist_question)
