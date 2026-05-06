@@ -1150,3 +1150,127 @@ class AccessControlTests(APITestCase):
         response = self.client.get(f"/api/auth/patients/{self.patient.pk}/")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class AdminEntityManagementTests(APITestCase):
+    def setUp(self):
+        self.org = Organisation.objects.create(
+            name="Central Clinic",
+            type=Organisation.Type.CLINIC,
+        )
+        self.other_org = Organisation.objects.create(
+            name="Other Clinic",
+            type=Organisation.Type.CLINIC,
+        )
+        self.platform_admin = User.objects.create_superuser(
+            email="platform@example.com",
+            password="StrongPass123!",
+            first_name="Platform",
+            last_name="Admin",
+        )
+        self.clinic_admin = Therapist.objects.create_user(
+            email="clinic-admin@example.com",
+            password="StrongPass123!",
+            first_name="Clara",
+            last_name="Admin",
+            license_number="10001",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        self.second_admin = Therapist.objects.create_user(
+            email="second-admin@example.com",
+            password="StrongPass123!",
+            first_name="Joan",
+            last_name="Admin",
+            license_number="10002",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        self.therapist = Therapist.objects.create_user(
+            email="therapist-team@example.com",
+            password="StrongPass123!",
+            first_name="Marta",
+            last_name="Lopez",
+            license_number="10003",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        self.other_therapist = Therapist.objects.create_user(
+            email="therapist-other@example.com",
+            password="StrongPass123!",
+            first_name="Laura",
+            last_name="Gomez",
+            license_number="10004",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        OrganisationMember.objects.create(user=self.clinic_admin, organisation=self.org, is_admin=True)
+        OrganisationMember.objects.create(user=self.second_admin, organisation=self.org, is_admin=True)
+        OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=False)
+        OrganisationMember.objects.create(user=self.other_therapist, organisation=self.other_org, is_admin=False)
+
+    def test_clinic_admin_can_update_own_organisation(self):
+        self.client.force_authenticate(user=self.clinic_admin)
+
+        response = self.client.patch(
+            f"/api/admin/organisations/{self.org.pk}/",
+            {"name": "Central Clinic Updated"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.name, "Central Clinic Updated")
+
+    def test_clinic_admin_cannot_update_other_organisation(self):
+        self.client.force_authenticate(user=self.clinic_admin)
+
+        response = self.client.patch(
+            f"/api/admin/organisations/{self.other_org.pk}/",
+            {"name": "Forbidden"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_clinic_admin_can_update_therapist_in_own_organisation(self):
+        self.client.force_authenticate(user=self.clinic_admin)
+
+        response = self.client.patch(
+            f"/api/admin/users/therapists/{self.therapist.pk}/",
+            {"specialty": "Trauma"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.therapist.refresh_from_db()
+        self.assertEqual(self.therapist.specialty, "Trauma")
+
+    def test_clinic_admin_cannot_update_therapist_in_other_organisation(self):
+        self.client.force_authenticate(user=self.clinic_admin)
+
+        response = self.client.patch(
+            f"/api/admin/users/therapists/{self.other_therapist.pk}/",
+            {"specialty": "Forbidden"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_platform_admin_can_soft_delete_organisation(self):
+        self.client.force_authenticate(user=self.platform_admin)
+
+        response = self.client.delete(f"/api/admin/organisations/{self.org.pk}/")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.org.refresh_from_db()
+        self.assertFalse(self.org.is_active)
+
+    def test_platform_admin_can_revoke_clinic_admin_role(self):
+        self.client.force_authenticate(user=self.platform_admin)
+
+        response = self.client.delete(f"/api/admin/users/clinic-admins/{self.clinic_admin.pk}/")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        membership = OrganisationMember.objects.get(user=self.clinic_admin, organisation=self.org)
+        self.assertFalse(membership.is_admin)

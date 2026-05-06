@@ -25,9 +25,12 @@ from apps.users.views import (
     PlatformStatsView,
     ClinicStatsView,
     OrganisationListCreateView,
+    OrganisationDetailView,
     ClinicAdminRegistrationView,
     GlobalClinicAdminListView,
+    ClinicAdminDetailView,
     GlobalTherapistListView,
+    TherapistAdminDetailView,
     ClinicTherapistListView,
 )
 
@@ -60,8 +63,11 @@ urlpatterns = [
     path('admin/stats/platform/', PlatformStatsView.as_view(), name='platform-stats'),
     path('admin/stats/clinic/', ClinicStatsView.as_view(), name='clinic-stats'),
     path('admin/organisations/', OrganisationListCreateView.as_view(), name='organisation-list-create'),
+    path('admin/organisations/<uuid:organisation_id>/', OrganisationDetailView.as_view(), name='organisation-detail'),
     path('admin/register/clinic-admin/', ClinicAdminRegistrationView.as_view(), name='clinic-admin-register'),
     path('admin/users/clinic-admins/', GlobalClinicAdminListView.as_view(), name='global-clinic-admin-list'),
+    path('admin/users/clinic-admins/<uuid:user_id>/', ClinicAdminDetailView.as_view(), name='clinic-admin-detail'),
     path('admin/users/therapists/', GlobalTherapistListView.as_view(), name='global-therapist-list'),
+    path('admin/users/therapists/<uuid:user_id>/', TherapistAdminDetailView.as_view(), name='therapist-admin-detail'),
     path('admin/users/clinic/therapists/', ClinicTherapistListView.as_view(), name='clinic-therapist-list'),
 ]
