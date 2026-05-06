@@ -1,7 +1,9 @@
 import { Link, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { EmotionalEvolutionPanel } from '../components/EmotionalEvolutionPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { consentDocumentUrl } from '../lib/api.js'
+import { formatEntryDate } from '../lib/entries.js'
 import { PlatformAdminDashboard } from './PlatformAdminDashboard.jsx'
 import { ClinicAdminDashboard } from './ClinicAdminDashboard.jsx'
 
@@ -84,12 +86,14 @@ export function DashboardPage() {
   const {
     user,
     isClinicAdmin,
-    listAssociatedContacts,
+    getMyEvolution,
+    listEntries,
     listTherapistPatients,
     registerTherapist,
   } = useAuth()
-  const [patientContactsCount, setPatientContactsCount] = useState(0)
-  const [defaultContactsCount, setDefaultContactsCount] = useState(0)
+  const [patientEvolution, setPatientEvolution] = useState(null)
+  const [recentEntries, setRecentEntries] = useState([])
+  const [isEvolutionLoading, setIsEvolutionLoading] = useState(false)
   const [therapistPatients, setTherapistPatients] = useState([])
   const [therapistInviteForm, setTherapistInviteForm] = useState({
     first_name: '',
@@ -115,13 +119,15 @@ export function DashboardPage() {
 
       try {
         if (user.role === 'patient') {
-          const contacts = await listAssociatedContacts()
+          setIsEvolutionLoading(true)
+          const [evolution, entries] = await Promise.all([
+            getMyEvolution(),
+            listEntries(),
+          ])
 
           if (!isCancelled) {
-            setPatientContactsCount(contacts.length)
-            setDefaultContactsCount(
-              contacts.filter((contact) => contact.is_default).length,
-            )
+            setPatientEvolution(evolution)
+            setRecentEntries(entries.slice(0, 3))
           }
         }
 
@@ -135,6 +141,10 @@ export function DashboardPage() {
       } catch (error) {
         if (!isCancelled) {
           setDashboardError(firstErrorMessage(error.response?.data || error))
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsEvolutionLoading(false)
         }
       }
     }
@@ -245,27 +255,7 @@ export function DashboardPage() {
                 <p className="eyebrow">Evolució emocional</p>
               </div>
 
-              <div className="stat-list">
-                <div className="stat-card">
-                  <span>Entrades analitzades</span>
-                  <strong>0</strong>
-                </div>
-                <div className="stat-card">
-                  <span>Tendència emocional</span>
-                  <strong>Sense dades</strong>
-                </div>
-                <div className="stat-card">
-                  <span>Contactes actius</span>
-                  <strong>{patientContactsCount}</strong>
-                </div>
-              </div>
-
-              <div className="content-card section-stack">
-                <h3>Encara no hi ha prou informació</h3>
-                <p className="muted">
-                  Quan tinguis prou entrades escrites i analitzades, aquí es mostraran algunes mètriques d’evolució emocional per ajudar-te a veure el teu progrés.
-                </p>
-              </div>
+              <EmotionalEvolutionPanel evolution={patientEvolution} isLoading={isEvolutionLoading} />
             </section>
 
             <section className="screen-card dashboard-panel profile-card--wide">
@@ -275,13 +265,33 @@ export function DashboardPage() {
               </div>
 
               <div className="content-card section-stack">
-                <h3>Encara no hi ha entrades disponibles</h3>
-                <p className="muted">
-                  Quan escriguis les primeres entrades, aquí apareixeran ordenades de la més recent a la més antiga amb el resultat de l’anàlisi emocional.
-                </p>
-                <p className="muted">
-                  Et recomanem començar amb una primera entrada per tal que el sistema pugui començar a construir el teu context emocional.
-                </p>
+                {recentEntries.length ? (
+                  <ul className="patient-list">
+                    {recentEntries.map((entry) => (
+                      <li className="compact-list-item" key={entry.id}>
+                        <Link to={`/entries/${entry.id}`} style={{ textDecoration: 'none' }}>
+                          <div className="item-heading-row">
+                            <strong>{formatEntryDate(entry.updated_at)}</strong>
+                            <span className="status-pill">
+                              {entry.analysis ? entry.analysis.primary_emotion : 'Sense analisi'}
+                            </span>
+                          </div>
+                          <p className="muted">{entry.preview}</p>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <>
+                    <h3>Encara no hi ha entrades disponibles</h3>
+                    <p className="muted">
+                      Quan escriguis les primeres entrades, aquí apareixeran ordenades de la més recent a la més antiga amb el resultat de l’anàlisi emocional.
+                    </p>
+                    <p className="muted">
+                      Et recomanem començar amb una primera entrada per tal que el sistema pugui començar a construir el teu context emocional.
+                    </p>
+                  </>
+                )}
                 <div className="button-row" style={{ marginBlockStart: '1rem' }}>
                   <Link className="button" style={{ textDecoration: 'none' }} to="/entries/new">
                     Escriure

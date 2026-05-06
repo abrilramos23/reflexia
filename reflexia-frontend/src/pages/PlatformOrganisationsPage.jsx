@@ -143,7 +143,6 @@ export function PlatformOrganisationsPage() {
               {organisations.length === 0 && (
                 <div className="screen-card dashboard-panel profile-card--wide" style={{ textAlign: 'center', padding: '4rem' }}>
                    <p className="muted">No hi ha organitzacions registrades encara.</p>
-                   <button className="button-ghost" onClick={() => setView('create')}>Crea la primera</button>
                 </div>
               )}
             </div>

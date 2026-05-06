@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
+import { EntryAnalysisPanel } from '../components/EntryAnalysisPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import {
   firstErrorMessage,
@@ -9,11 +10,13 @@ import {
 } from '../lib/entries.js'
 
 export function EntryDetailPage() {
-  const { user, getEntry } = useAuth()
+  const { user, getEntry, analyzeEntry } = useAuth()
   const { entryId } = useParams()
   const [entry, setEntry] = useState(null)
   const [pageError, setPageError] = useState('')
+  const [pageMessage, setPageMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   useEffect(() => {
     let isCancelled = false
@@ -53,6 +56,22 @@ export function EntryDetailPage() {
     return <Navigate to="/dashboard" replace />
   }
 
+  async function handleAnalyzeEntry() {
+    setPageError('')
+    setPageMessage('')
+    setIsAnalyzing(true)
+
+    try {
+      const response = await analyzeEntry(entry.id)
+      setEntry(response.entry)
+      setPageMessage(response.message)
+    } catch (error) {
+      setPageError(firstErrorMessage(error.response?.data || error))
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
   return (
     <div className="screen-shell">
       <div className="profile-grid">
@@ -71,6 +90,7 @@ export function EntryDetailPage() {
 
         <section className="screen-card dashboard-panel profile-card--wide">
           {pageError ? <div className="error-banner">{pageError}</div> : null}
+          {pageMessage ? <div className="message">{pageMessage}</div> : null}
 
           {isLoading ? (
             <p className="muted">Carregant detall...</p>
@@ -86,8 +106,8 @@ export function EntryDetailPage() {
 
               <div className="entries-toolbar">
                 <span className="status-pill">{formatEntryStatus(entry)}</span>
-                {entry.last_analyzed_at ? (
-                  <span className="status-pill">Analitzada {formatEntryDate(entry.last_analyzed_at)}</span>
+                {entry.analysis ? (
+                  <span className="status-pill">Analitzada {formatEntryDate(entry.analysis.analyzed_at)}</span>
                 ) : null}
               </div>
 
@@ -116,17 +136,18 @@ export function EntryDetailPage() {
               </div>
 
               {entry.analysis ? (
+                <EntryAnalysisPanel analysis={entry.analysis} />
+              ) : (
                 <div className="content-card section-stack entries-analysis-card">
-                  <div className="item-heading-row" style={{ marginBottom: 0 }}>
-                    <h3>Lectura emocional orientativa</h3>
-                    <span className="status-pill">{entry.analysis.primary_emotion}</span>
-                  </div>
-                  <p>{entry.analysis.summary}</p>
+                  <h3>Analisi emocional</h3>
                   <p className="muted">
-                    To detectat: {entry.analysis.tone}. {entry.analysis.disclaimer}
+                    L&apos;analisi encara no s&apos;ha generat. Pots generar-la ara per consultar les emocions detectades i el nivell de risc orientatiu.
                   </p>
+                  <button className="button" type="button" disabled={isAnalyzing} onClick={handleAnalyzeEntry}>
+                    {isAnalyzing ? 'Generant analisi...' : 'Generar analisi'}
+                  </button>
                 </div>
-              ) : null}
+              )}
             </>
           ) : null}
         </section>

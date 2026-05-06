@@ -17,6 +17,7 @@ export function PlatformTherapistsPage() {
     license_number: '',
     specialty: '',
     organisation_id: '',
+    is_admin: false,
   })
   const [message, setMessage] = useState('')
   const [devLink, setDevLink] = useState('')
@@ -59,7 +60,7 @@ export function PlatformTherapistsPage() {
       }
       setForm({
         first_name: '', last_name: '', email: '',
-        license_number: '', specialty: '', organisation_id: ''
+        license_number: '', specialty: '', organisation_id: '', is_admin: false,
       })
       await loadData()
       // Don't auto-redirect if there's a dev link
@@ -105,7 +106,7 @@ export function PlatformTherapistsPage() {
                 <label>Organització (Opcional)</label>
                 <select 
                   value={form.organisation_id} 
-                  onChange={e => setForm({...form, organisation_id: e.target.value})}
+                  onChange={e => setForm({...form, organisation_id: e.target.value, is_admin: e.target.value ? form.is_admin : false})}
                 >
                   <option value="">Cap (Independent)</option>
                   {organisations.map(o => (
@@ -114,6 +115,16 @@ export function PlatformTherapistsPage() {
                 </select>
                 <p className="tiny muted">Si no se selecciona cap, es considerarà un terapeuta autònom.</p>
               </div>
+              {form.organisation_id ? (
+                <label className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={form.is_admin}
+                    onChange={(e) => setForm({...form, is_admin: e.target.checked})}
+                  />
+                  <span>Assignar també com a administrador de l&apos;organització</span>
+                </label>
+              ) : null}
               <div className="inline-fields">
                 <div className="field-group">
                   <label>Nom</label>
@@ -186,7 +197,7 @@ export function PlatformTherapistsPage() {
           <div className="form-header">
             <div>
               <p className="eyebrow">Administració</p>
-              <h1 className="section-title">Gestionar Terapeutes</h1>
+              <h1 className="section-title">Terapeutes</h1>
             </div>
             <button className="button" onClick={() => setView('create')}>
               Nou Terapeuta
@@ -203,9 +214,16 @@ export function PlatformTherapistsPage() {
                 <div key={t.id} className="screen-card entity-card">
                   <div className="entity-card__header">
                     <h3 className="entity-card__title">{t.first_name} {t.last_name}</h3>
-                    <span className={`status-pill ${t.is_active ? 'dashboard-status-pill--active' : 'dashboard-status-pill--pending'}`}>
-                      {t.is_active ? 'Actiu' : 'Pendent'}
-                    </span>
+                    <div className="item-heading-row">
+                      <span className={`status-pill ${t.is_active ? 'dashboard-status-pill--active' : 'dashboard-status-pill--pending'}`}>
+                        {t.is_active ? 'Actiu' : 'Pendent'}
+                      </span>
+                      {t.is_clinic_admin ? (
+                        <span className="status-pill dashboard-status-pill--active">
+                          Admin
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="entity-card__body">
                     <p className="entity-card__meta">
@@ -223,7 +241,6 @@ export function PlatformTherapistsPage() {
                   </div>
                   <div className="entity-card__footer">
                     <span className="tiny muted">Registrat: {new Date(t.registration_date).toLocaleDateString()}</span>
-                    <button className="text-link" style={{ fontSize: '0.9rem' }}>Fitxa tècnica</button>
                   </div>
                 </div>
               ))}

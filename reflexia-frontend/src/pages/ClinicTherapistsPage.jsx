@@ -15,6 +15,7 @@ export function ClinicTherapistsPage() {
     email: '',
     license_number: '',
     specialty: '',
+    is_admin: false,
   })
   const [message, setMessage] = useState('')
   const [devLink, setDevLink] = useState('')
@@ -60,7 +61,7 @@ export function ClinicTherapistsPage() {
       
       setForm({
         first_name: '', last_name: '', email: '',
-        license_number: '', specialty: ''
+        license_number: '', specialty: '', is_admin: false,
       })
       await loadData()
       
@@ -103,6 +104,14 @@ export function ClinicTherapistsPage() {
             {submitError && <div className="error-banner">{submitError}</div>}
             
             <form className="form-stack" onSubmit={handleSubmit}>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={form.is_admin}
+                  onChange={(e) => setForm({...form, is_admin: e.target.checked})}
+                />
+                <span>Assignar també com a administrador de l&apos;organització</span>
+              </label>
               <div className="inline-fields">
                 <div className="field-group">
                   <label>Nom</label>
@@ -175,7 +184,7 @@ export function ClinicTherapistsPage() {
           <div className="form-header">
             <div>
               <p className="eyebrow">{organisation?.name || 'La teva clínica'}</p>
-              <h1 className="section-title">Els teus Terapeutes</h1>
+              <h1 className="section-title">Equip de Terapeutes</h1>
             </div>
             <button className="button" onClick={() => setView('create')}>
               Nou Terapeuta
@@ -192,9 +201,16 @@ export function ClinicTherapistsPage() {
                 <div key={t.id} className="screen-card entity-card">
                   <div className="entity-card__header">
                     <h3 className="entity-card__title">{t.first_name} {t.last_name}</h3>
-                    <span className={`status-pill ${t.is_active ? 'dashboard-status-pill--active' : 'dashboard-status-pill--pending'}`}>
-                      {t.is_active ? 'Actiu' : 'Pendent'}
-                    </span>
+                    <div className="item-heading-row">
+                      <span className={`status-pill ${t.is_active ? 'dashboard-status-pill--active' : 'dashboard-status-pill--pending'}`}>
+                        {t.is_active ? 'Actiu' : 'Pendent'}
+                      </span>
+                      {t.is_clinic_admin ? (
+                        <span className="status-pill dashboard-status-pill--active">
+                          Admin
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="entity-card__body">
                     <p className="entity-card__meta">

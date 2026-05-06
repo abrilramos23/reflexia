@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
+import { EntryAnalysisPanel } from '../components/EntryAnalysisPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { firstErrorMessage, formatEntryDate, formatEntryStatus, normalizeStoredContentToHtml } from '../lib/entries.js'
 
 export function TherapistEntryDetailPage() {
-  const { user, getPatientEntry } = useAuth()
+  const { user, getPatientEntry, updatePatientEntryAnalysisCorrection } = useAuth()
   const { patientId, entryId } = useParams()
   const [entry, setEntry] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [correctionError, setCorrectionError] = useState('')
+  const [correctionMessage, setCorrectionMessage] = useState('')
+  const [isSavingCorrection, setIsSavingCorrection] = useState(false)
 
   useEffect(() => {
     let isCancelled = false
@@ -35,6 +39,24 @@ export function TherapistEntryDetailPage() {
 
   if (!user) return <Navigate to="/login" replace />
   if (user.role !== 'therapist') return <Navigate to="/dashboard" replace />
+
+  async function handleSaveCorrection(therapistCorrection) {
+    setCorrectionError('')
+    setCorrectionMessage('')
+    setIsSavingCorrection(true)
+
+    try {
+      const analysis = await updatePatientEntryAnalysisCorrection(patientId, entryId, {
+        therapist_correction: therapistCorrection,
+      })
+      setEntry((currentEntry) => ({ ...currentEntry, analysis }))
+      setCorrectionMessage('Correccio guardada correctament.')
+    } catch (err) {
+      setCorrectionError(firstErrorMessage(err.response?.data || err))
+    } finally {
+      setIsSavingCorrection(false)
+    }
+  }
 
   return (
     <div className="screen-shell">
@@ -80,6 +102,15 @@ export function TherapistEntryDetailPage() {
                   dangerouslySetInnerHTML={{ __html: normalizeStoredContentToHtml(entry.content) }}
                 />
               </div>
+
+              <EntryAnalysisPanel
+                analysis={entry.analysis}
+                canCorrect={Boolean(entry.analysis)}
+                correctionError={correctionError}
+                correctionMessage={correctionMessage}
+                isSavingCorrection={isSavingCorrection}
+                onSaveCorrection={handleSaveCorrection}
+              />
             </>
           ) : null}
         </section>

@@ -321,6 +321,11 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function getMyEvolution() {
+    const response = await api.get('/analysis/evolution/')
+    return response.data
+  }
+
   async function deleteEntry(entryId) {
     const response = await api.delete(`/entries/${entryId}/`)
     return response.data
@@ -427,6 +432,16 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function getPatientEvolution(patientId) {
+    const response = await api.get(`/auth/patients/${patientId}/analysis/evolution/`)
+    return response.data
+  }
+
+  async function updatePatientEntryAnalysisCorrection(patientId, entryId, payload) {
+    const response = await api.patch(`/auth/patients/${patientId}/entries/${entryId}/analysis/`, payload)
+    return response.data
+  }
+
   async function listPatientQuestions(patientId) {
     const response = await api.get(`/auth/patients/${patientId}/questions/`)
     return response.data
@@ -472,6 +487,7 @@ export function AuthProvider({ children }) {
     createEntryDraft,
     updateEntryDraft,
     analyzeEntry,
+    getMyEvolution,
     deleteEntry,
     setupTwoFactor,
     enableTwoFactor,
@@ -480,6 +496,8 @@ export function AuthProvider({ children }) {
     deactivatePatient,
     listPatientEntries,
     getPatientEntry,
+    getPatientEvolution,
+    updatePatientEntryAnalysisCorrection,
     listPatientQuestions,
     getPatientQuestion,
     getPlatformStats,

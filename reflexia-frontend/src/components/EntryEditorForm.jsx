@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { EntryAnalysisPanel } from './EntryAnalysisPanel.jsx'
 import {
   extractPlainTextFromHtml,
   formatEntryDate,
@@ -88,8 +89,8 @@ export function EntryEditorForm({
                 ? formatEntryStatus(entry)
                 : 'Nova entrada'}
         </span>
-        {entry?.last_analyzed_at ? (
-          <span className="status-pill">Analitzada {formatEntryDate(entry.last_analyzed_at)}</span>
+        {entry?.analysis ? (
+          <span className="status-pill">Analitzada {formatEntryDate(entry.analysis.analyzed_at)}</span>
         ) : null}
         {isDeletedEntry ? <span className="status-pill">Només lectura</span> : null}
       </div>
@@ -123,23 +124,14 @@ export function EntryEditorForm({
           className="button"
           type="button"
           disabled={isDeletedEntry || isSavingDraft || isAnalyzing || !plainTextContent.trim()}
-          onClick={null}
+          onClick={() => onAnalyze(contentHtml)}
         >
           {isAnalyzing ? 'Guardant i analitzant...' : 'Guardar i analitzar'}
         </button>
       </div>
 
       {entry?.analysis ? (
-        <div className="content-card section-stack entries-analysis-card">
-          <div className="item-heading-row" style={{ marginBottom: 0 }}>
-            <h3>Lectura emocional orientativa</h3>
-            <span className="status-pill">{entry.analysis.primary_emotion}</span>
-          </div>
-          <p>{entry.analysis.summary}</p>
-          <p className="muted">
-            To detectat: {entry.analysis.tone}. {entry.analysis.disclaimer}
-          </p>
-        </div>
+        <EntryAnalysisPanel analysis={entry.analysis} />
       ) : null}
       <div className="content-card section-stack entries-note-card">
         <div className="item-heading-row" style={{ marginBottom: 0 }}>

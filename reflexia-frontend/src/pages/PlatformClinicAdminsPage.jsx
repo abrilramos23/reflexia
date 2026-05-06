@@ -3,18 +3,18 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { Navigate } from 'react-router-dom'
 
 export function PlatformClinicAdminsPage() {
-  const { user, listOrganisations, registerClinicAdmin, listAllClinicAdmins } = useAuth()
+  const { user, listOrganisations, registerClinicAdmin, listAllClinicAdmins, listAllTherapists } = useAuth()
   const [organisations, setOrganisations] = useState([])
   const [admins, setAdmins] = useState([])
+  const [therapists, setTherapists] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [view, setView] = useState('list') // 'list' | 'create'
 
   const [form, setForm] = useState({ 
-    first_name: '', last_name: '', email: '', organisation_id: '' 
+    organisation_id: '', therapist_id: '',
   })
   const [message, setMessage] = useState('')
-  const [devLink, setDevLink] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (!user || user.role !== 'platform_admin') {
@@ -23,12 +23,14 @@ export function PlatformClinicAdminsPage() {
 
   const loadData = async () => {
     try {
-      const [oData, aData] = await Promise.all([
+      const [oData, aData, tData] = await Promise.all([
         listOrganisations(),
-        listAllClinicAdmins()
+        listAllClinicAdmins(),
+        listAllTherapists(),
       ])
       setOrganisations(oData.filter(o => o.type === 'clinic'))
       setAdmins(aData)
+      setTherapists(tData)
     } catch (err) {
       setError('Error carregant dades dels administradors.')
     } finally {
@@ -45,17 +47,11 @@ export function PlatformClinicAdminsPage() {
     setIsSubmitting(true)
     setMessage('')
     try {
-      const result = await registerClinicAdmin(form)
-      setMessage('Administrador registrat correctament.')
-      if (result.activation_url) {
-        setDevLink(result.activation_url)
-      }
-      setForm({ first_name: '', last_name: '', email: '', organisation_id: '' })
+      await registerClinicAdmin(form)
+      setMessage('Administrador assignat correctament.')
+      setForm({ organisation_id: '', therapist_id: '' })
       await loadData()
-      // Don't auto-redirect if there's a dev link, so the user can copy it
-      if (!result.activation_url) {
-        setTimeout(() => setView('list'), 1500)
-      }
+      setTimeout(() => setView('list'), 1500)
     } catch (err) {
       setMessage('Error registrant l\'administrador.')
     } finally {
@@ -63,13 +59,24 @@ export function PlatformClinicAdminsPage() {
     }
   }
 
+  const availableTherapists = therapists.filter((therapist) => {
+    if (!form.organisation_id) {
+      return false
+    }
+
+    return (
+      therapist.organisation?.id === form.organisation_id
+      && !therapist.is_clinic_admin
+    )
+  })
+
   if (view === 'create') {
     return (
       <div className="screen-shell">
         <div className="full-screen-form-shell">
           <div className="form-header">
             <div>
-              <h1>Registrar Admin de Clínica</h1>
+              <h1>Assignar Admin de Clínica</h1>
             </div>
             <button className="button-ghost" onClick={() => setView('list')}>
               Tornar a la llista
@@ -80,12 +87,6 @@ export function PlatformClinicAdminsPage() {
             {message && (
               <div className={`message ${message.includes('Error') ? 'error-banner' : ''}`}>
                 <p>{message}</p>
-                {devLink && (
-                  <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0,0,0,0.05)', borderRadius: '8px', border: '1px dashed var(--accent)' }}>
-                    <p className="tiny" style={{ marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>Sincronització de Desenvolupament (Email a la consola):</p>
-                    <a href={devLink} className="text-link" style={{ wordBreak: 'break-all' }}>{devLink}</a>
-                  </div>
-                )}
               </div>
             )}
             <form className="form-stack" onSubmit={handleSubmit}>
@@ -93,7 +94,7 @@ export function PlatformClinicAdminsPage() {
                 <label>Clínica Assignada</label>
                 <select 
                   value={form.organisation_id} 
-                  onChange={e => setForm({...form, organisation_id: e.target.value})}
+                  onChange={e => setForm({...form, organisation_id: e.target.value, therapist_id: ''})}
                   required
                 >
                   <option value="">Selecciona una clínica...</option>
@@ -102,39 +103,30 @@ export function PlatformClinicAdminsPage() {
                   ))}
                 </select>
               </div>
-              <div className="inline-fields">
-                <div className="field-group">
-                  <label>Nom</label>
-                  <input 
-                    value={form.first_name} 
-                    onChange={e => setForm({...form, first_name: e.target.value})} 
-                    placeholder="Nom de pila"
-                    required 
-                  />
-                </div>
-                <div className="field-group">
-                  <label>Cognoms</label>
-                  <input 
-                    value={form.last_name} 
-                    onChange={e => setForm({...form, last_name: e.target.value})} 
-                    placeholder="Cognoms complets"
-                    required 
-                  />
-                </div>
-              </div>
               <div className="field-group">
-                <label>Correu Electrònic</label>
-                <input 
-                  type="email" 
-                  value={form.email} 
-                  onChange={e => setForm({...form, email: e.target.value})} 
-                  placeholder="admin@clinica.com"
+                <label>Terapeuta de la clínica</label>
+                <select
+                  value={form.therapist_id}
+                  onChange={e => setForm({...form, therapist_id: e.target.value})}
                   required 
-                />
+                  disabled={!form.organisation_id}
+                >
+                  <option value="">
+                    {form.organisation_id ? 'Selecciona un terapeuta...' : 'Selecciona primer una clínica...'}
+                  </option>
+                  {availableTherapists.map((therapist) => (
+                    <option key={therapist.id} value={therapist.id}>
+                      {therapist.first_name} {therapist.last_name} · {therapist.specialty} · {therapist.license_number}
+                    </option>
+                  ))}
+                </select>
+                <p className="tiny muted">
+                  Només es mostren terapeutes d’aquesta organització que encara no siguin administradors.
+                </p>
               </div>
               <div className="button-row" style={{ marginTop: '2rem' }}>
                 <button className="button-secondary" type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Registrant...' : 'Registrar Administrador'}
+                  {isSubmitting ? 'Assignant...' : 'Assignar com a administrador'}
                 </button>
                 <button className="button-ghost" type="button" onClick={() => setView('list')}>
                   Cancel·lar
@@ -157,7 +149,7 @@ export function PlatformClinicAdminsPage() {
               <h1 className="section-title">Admins de Clínica</h1>
             </div>
             <button className="button" onClick={() => setView('create')}>
-              Registrar Admin
+              Assignar Admin
             </button>
           </div>
 
@@ -176,12 +168,31 @@ export function PlatformClinicAdminsPage() {
                     </span>
                   </div>
                   <div className="entity-card__body">
-                    <p className="entity-card__meta">
-                      <strong>Email:</strong> {admin.email}
-                    </p>
-                    <p className="entity-card__meta">
-                      <strong>Clínica:</strong> {admin.organisation?.name || 'No assignada'}
-                    </p>
+                    <section className="entity-card__section">
+                      <p className="entity-card__section-label">Compte del terapeuta</p>
+                      <p className="entity-card__meta">
+                        <strong>Email:</strong> {admin.email}
+                      </p>
+                      <p className="entity-card__meta">
+                        <strong>Especialitat:</strong> {admin.specialty || 'No disponible'}
+                      </p>
+                      <p className="entity-card__meta">
+                        <strong>Núm. col·legiat:</strong> {admin.license_number || 'No disponible'}
+                      </p>
+                    </section>
+
+                    <section className="entity-card__section">
+                      <p className="entity-card__section-label">Organització</p>
+                      <p className="entity-card__meta">
+                        <strong>Nom:</strong> {admin.organisation?.name || 'No assignada'}
+                      </p>
+                      <p className="entity-card__meta">
+                        <strong>Tipus:</strong> {admin.organisation?.type === 'clinic' ? 'Clínica / Centre' : 'Independent'}
+                      </p>
+                      <p className="entity-card__meta">
+                        <strong>Estat org.:</strong> {admin.organisation?.is_active ? 'Activa' : 'Inactiva'}
+                      </p>
+                    </section>
                   </div>
                   <div className="entity-card__footer">
                     <span className="tiny muted">Alta: {new Date(admin.registration_date).toLocaleDateString()}</span>

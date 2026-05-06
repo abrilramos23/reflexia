@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
+import { EmotionalEvolutionPanel } from '../components/EmotionalEvolutionPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { firstErrorMessage, formatEntryDate, formatEntryStatus } from '../lib/entries.js'
 
 export function PatientDetailPage() {
-  const { user, getPatient, listPatientEntries, listPatientQuestions } = useAuth()
+  const { user, getPatient, getPatientEvolution, listPatientEntries, listPatientQuestions } = useAuth()
   const { patientId } = useParams()
   
   const [patient, setPatient] = useState(null)
   const [entries, setEntries] = useState([])
   const [questions, setQuestions] = useState([])
+  const [evolution, setEvolution] = useState(null)
   const [activeTab, setActiveTab] = useState('entries') // 'entries' | 'questions'
   
   const [isLoading, setIsLoading] = useState(true)
@@ -22,16 +24,18 @@ export function PatientDetailPage() {
       setIsLoading(true)
       setError('')
       try {
-        const [patientData, entriesData, questionsData] = await Promise.all([
+        const [patientData, entriesData, questionsData, evolutionData] = await Promise.all([
           getPatient(patientId),
           listPatientEntries(patientId),
-          listPatientQuestions(patientId)
+          listPatientQuestions(patientId),
+          getPatientEvolution(patientId),
         ])
 
         if (!isCancelled) {
           setPatient(patientData)
           setEntries(entriesData)
           setQuestions(questionsData)
+          setEvolution(evolutionData)
         }
       } catch (err) {
         if (!isCancelled) {
@@ -49,7 +53,7 @@ export function PatientDetailPage() {
     return () => {
       isCancelled = true
     }
-  }, [patientId, getPatient, listPatientEntries, listPatientQuestions])
+  }, [patientId, getPatient, getPatientEvolution, listPatientEntries, listPatientQuestions])
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -115,16 +119,13 @@ export function PatientDetailPage() {
           </div>
         </section>
 
-        {/* Emotional Evolution Placeholder */}
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
             <p className="eyebrow">Evolució emocional</p>
             <h3>Gràfics de seguiment</h3>
-            <p className="muted">L&apos;evolució emocional estarà disponible properament.</p>
+            <p className="muted">Dades construides amb les analisis de les entrades del pacient, ordenades cronologicament.</p>
           </div>
-          <div style={{ height: '100px', display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.03)', borderRadius: '16px', border: '1px dashed rgba(0,0,0,0.1)' }}>
-             <p className="muted">Evolució emocional (Pròximament)</p>
-          </div>
+          <EmotionalEvolutionPanel evolution={evolution} />
         </section>
 
         {/* Tabs Control */}
@@ -163,6 +164,11 @@ export function PatientDetailPage() {
                           <span className="status-pill">{formatEntryStatus(entry)}</span>
                         </div>
                         <p className="muted" style={{ margin: '0.5rem 0' }}>{entry.preview}</p>
+                        {entry.analysis ? (
+                          <span className="status-pill" style={{ fontSize: '0.75rem' }}>
+                            {entry.analysis.primary_emotion} · risc {entry.analysis.risk_level}
+                          </span>
+                        ) : null}
                         {entry.therapist_question && (
                           <span className="status-pill dashboard-status-pill--active" style={{ fontSize: '0.75rem' }}>
                             Respondre a: {entry.therapist_question.question.substring(0, 30)}...
