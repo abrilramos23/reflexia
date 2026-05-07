@@ -1,15 +1,25 @@
 import { useEffect, useState } from 'react'
+import { FaEdit, FaTrash, FaArrowLeft } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Navigate } from 'react-router-dom'
 
 export function PlatformClinicAdminsPage() {
-  const { user, listOrganisations, registerClinicAdmin, listAllClinicAdmins, listAllTherapists } = useAuth()
+  const {
+    user,
+    listOrganisations,
+    registerClinicAdmin,
+    listAllClinicAdmins,
+    listAllTherapists,
+    updateClinicAdmin,
+    deleteClinicAdmin,
+  } = useAuth()
   const [organisations, setOrganisations] = useState([])
   const [admins, setAdmins] = useState([])
   const [therapists, setTherapists] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [view, setView] = useState('list') // 'list' | 'create'
+  const [view, setView] = useState('list') // 'list' | 'create' | 'edit'
+  const [selectedAdmin, setSelectedAdmin] = useState(null)
 
   const [form, setForm] = useState({ 
     organisation_id: '', therapist_id: '',
@@ -47,7 +57,10 @@ export function PlatformClinicAdminsPage() {
     setIsSubmitting(true)
     setMessage('')
     try {
-      await registerClinicAdmin(form)
+      await registerClinicAdmin({
+        organisation_id: form.organisation_id,
+        therapist_id: form.therapist_id,
+      })
       setMessage('Administrador assignat correctament.')
       setForm({ organisation_id: '', therapist_id: '' })
       await loadData()
@@ -56,6 +69,67 @@ export function PlatformClinicAdminsPage() {
       setMessage('Error registrant l\'administrador.')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  function openCreateView() {
+    setSelectedAdmin(null)
+    setForm({ organisation_id: '', therapist_id: '' })
+    setMessage('')
+    setView('create')
+  }
+
+  function openEditView(admin) {
+    setSelectedAdmin(admin)
+    setForm({
+      organisation_id: admin.organisation?.id || '',
+      therapist_id: admin.id,
+      first_name: admin.first_name,
+      last_name: admin.last_name,
+      email: admin.email,
+      license_number: admin.license_number || '',
+      specialty: admin.specialty || '',
+      is_active: admin.is_active,
+    })
+    setMessage('')
+    setView('edit')
+  }
+
+  async function handleUpdate(e) {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setMessage('')
+
+    try {
+      await updateClinicAdmin(selectedAdmin.id, {
+        organisation_id: form.organisation_id,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        email: form.email,
+        license_number: form.license_number,
+        specialty: form.specialty,
+        is_active: form.is_active,
+      })
+      setMessage('Administrador actualitzat correctament.')
+      await loadData()
+      setTimeout(() => setView('list'), 1000)
+    } catch (err) {
+      setMessage('Error actualitzant l\'administrador.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleDelete(admin) {
+    if (!window.confirm(`Vols eliminar ${admin.first_name} ${admin.last_name} com a admin de clínica?`)) {
+      return
+    }
+
+    try {
+      await deleteClinicAdmin(admin.id)
+      await loadData()
+    } catch (err) {
+      setError('Error eliminant l\'administrador. Pot ser l’únic admin d’una clínica amb membres.')
     }
   }
 
@@ -70,16 +144,18 @@ export function PlatformClinicAdminsPage() {
     )
   })
 
-  if (view === 'create') {
+  if (view === 'create' || view === 'edit') {
+    const isEdit = view === 'edit'
+
     return (
       <div className="screen-shell">
         <div className="full-screen-form-shell">
           <div className="form-header">
             <div>
-              <h1>Assignar Admin de Clínica</h1>
+              <h1>{isEdit ? 'Editar Admin de Clínica' : 'Assignar Admin de Clínica'}</h1>
             </div>
-            <button className="button-ghost" onClick={() => setView('list')}>
-              Tornar a la llista
+             <button className="button-ghost" onClick={() => setView('list')} title="Tornar">
+              <FaArrowLeft />
             </button>
           </div>
 
@@ -89,7 +165,7 @@ export function PlatformClinicAdminsPage() {
                 <p>{message}</p>
               </div>
             )}
-            <form className="form-stack" onSubmit={handleSubmit}>
+            <form className="form-stack" onSubmit={isEdit ? handleUpdate : handleSubmit}>
               <div className="field-group">
                 <label>Clínica Assignada</label>
                 <select 
@@ -103,30 +179,67 @@ export function PlatformClinicAdminsPage() {
                   ))}
                 </select>
               </div>
-              <div className="field-group">
-                <label>Terapeuta de la clínica</label>
-                <select
-                  value={form.therapist_id}
-                  onChange={e => setForm({...form, therapist_id: e.target.value})}
-                  required 
-                  disabled={!form.organisation_id}
-                >
-                  <option value="">
-                    {form.organisation_id ? 'Selecciona un terapeuta...' : 'Selecciona primer una clínica...'}
-                  </option>
-                  {availableTherapists.map((therapist) => (
-                    <option key={therapist.id} value={therapist.id}>
-                      {therapist.first_name} {therapist.last_name} · {therapist.specialty} · {therapist.license_number}
+              {isEdit ? (
+                <>
+                  <div className="inline-fields">
+                    <div className="field-group">
+                      <label>Nom</label>
+                      <input value={form.first_name} onChange={e => setForm({...form, first_name: e.target.value})} required />
+                    </div>
+                    <div className="field-group">
+                      <label>Cognoms</label>
+                      <input value={form.last_name} onChange={e => setForm({...form, last_name: e.target.value})} required />
+                    </div>
+                  </div>
+                  <div className="field-group">
+                    <label>Email</label>
+                    <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required />
+                  </div>
+                  <div className="inline-fields">
+                    <div className="field-group">
+                      <label>Núm. col·legiat</label>
+                      <input value={form.license_number} onChange={e => setForm({...form, license_number: e.target.value})} required />
+                    </div>
+                    <div className="field-group">
+                      <label>Especialitat</label>
+                      <input value={form.specialty} onChange={e => setForm({...form, specialty: e.target.value})} required />
+                    </div>
+                  </div>
+                  <label className="checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={form.is_active}
+                      onChange={e => setForm({...form, is_active: e.target.checked})}
+                    />
+                    <span>Compte actiu</span>
+                  </label>
+                </>
+              ) : (
+                <div className="field-group">
+                  <label>Terapeuta de la clínica</label>
+                  <select
+                    value={form.therapist_id}
+                    onChange={e => setForm({...form, therapist_id: e.target.value})}
+                    required 
+                    disabled={!form.organisation_id}
+                  >
+                    <option value="">
+                      {form.organisation_id ? 'Selecciona un terapeuta...' : 'Selecciona primer una clínica...'}
                     </option>
-                  ))}
-                </select>
-                <p className="tiny muted">
-                  Només es mostren terapeutes d’aquesta organització que encara no siguin administradors.
-                </p>
-              </div>
+                    {availableTherapists.map((therapist) => (
+                      <option key={therapist.id} value={therapist.id}>
+                        {therapist.first_name} {therapist.last_name} · {therapist.specialty} · {therapist.license_number}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="tiny muted">
+                    Només es mostren terapeutes d’aquesta organització que encara no siguin administradors.
+                  </p>
+                </div>
+              )}
               <div className="button-row" style={{ marginTop: '2rem' }}>
                 <button className="button-secondary" type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Assignant...' : 'Assignar com a administrador'}
+                  {isSubmitting ? 'Desant...' : isEdit ? 'Guardar canvis' : 'Assignar com a administrador'}
                 </button>
                 <button className="button-ghost" type="button" onClick={() => setView('list')}>
                   Cancel·lar
@@ -148,7 +261,7 @@ export function PlatformClinicAdminsPage() {
               <p className="eyebrow">Administració</p>
               <h1 className="section-title">Admins de Clínica</h1>
             </div>
-            <button className="button" onClick={() => setView('create')}>
+            <button className="button" onClick={openCreateView}>
               Assignar Admin
             </button>
           </div>
@@ -196,6 +309,14 @@ export function PlatformClinicAdminsPage() {
                   </div>
                   <div className="entity-card__footer">
                     <span className="tiny muted">Alta: {new Date(admin.registration_date).toLocaleDateString()}</span>
+                     <div className="button-row entity-actions">
+                       <button className="button-ghost" type="button" onClick={() => openEditView(admin)} title="Editar" aria-label="Editar">
+                        <FaEdit />
+                      </button>
+                      <button className="button-danger" type="button" onClick={() => handleDelete(admin)} title="Eliminar" aria-label="Eliminar">
+                        <FaTrash />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

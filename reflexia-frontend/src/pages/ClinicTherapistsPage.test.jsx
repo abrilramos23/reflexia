@@ -32,7 +32,7 @@ describe('ClinicTherapistsPage', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Els teus Terapeutes')).toBeInTheDocument()
+    expect(screen.getByText('Terapeutes')).toBeInTheDocument()
     expect(screen.getByText('Clínica Central')).toBeInTheDocument()
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument()
   })

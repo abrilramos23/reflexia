@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
+import { FaArrowLeft } from 'react-icons/fa'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { EmotionalEvolutionPanel } from '../components/EmotionalEvolutionPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { firstErrorMessage, formatEntryDate, formatEntryStatus } from '../lib/entries.js'
+import { firstErrorMessage, formatEntryDate, formatEntryStatus, formatRiskLevel } from '../lib/entries.js'
 
 export function PatientDetailPage() {
-  const { user, getPatient, getPatientEvolution, listPatientEntries, listPatientQuestions } = useAuth()
+  const { user, getPatient, getPatientEvolution, listPatientEntries, listPatientQuestions, createPatientQuestion, exportPatientEntriesPdf } = useAuth()
   const { patientId } = useParams()
   
   const [patient, setPatient] = useState(null)
@@ -13,6 +14,10 @@ export function PatientDetailPage() {
   const [questions, setQuestions] = useState([])
   const [evolution, setEvolution] = useState(null)
   const [activeTab, setActiveTab] = useState('entries') // 'entries' | 'questions'
+  const [newQuestionText, setNewQuestionText] = useState('')
+  const [questionMessage, setQuestionMessage] = useState('')
+  const [isCreatingQuestion, setIsCreatingQuestion] = useState(false)
+  const [isExportingEntries, setIsExportingEntries] = useState(false)
   
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -63,6 +68,40 @@ export function PatientDetailPage() {
     return <Navigate to="/dashboard" replace />
   }
 
+  async function handleCreateQuestion(event) {
+    event.preventDefault()
+    setQuestionMessage('')
+    setError('')
+    setIsCreatingQuestion(true)
+
+    try {
+      const response = await createPatientQuestion(patientId, { text: newQuestionText })
+      setQuestions((currentQuestions) => [response.question, ...currentQuestions.map((question) => ({ ...question, is_active: false, resolved: true }))])
+      setNewQuestionText('')
+      setQuestionMessage(response.message)
+      setActiveTab('questions')
+    } catch (err) {
+      setError(firstErrorMessage(err.response?.data || err))
+    } finally {
+      setIsCreatingQuestion(false)
+    }
+  }
+
+  async function handleExportEntries() {
+    setQuestionMessage('')
+    setError('')
+    setIsExportingEntries(true)
+
+    try {
+      const { blob, filename } = await exportPatientEntriesPdf(patientId)
+      triggerBrowserDownload(blob, filename)
+    } catch (err) {
+      setError(firstErrorMessage(err.response?.data || err))
+    } finally {
+      setIsExportingEntries(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="screen-shell">
@@ -75,14 +114,13 @@ export function PatientDetailPage() {
     )
   }
 
-  if (error) {
+  if (error && !patient) {
     return (
       <div className="screen-shell">
         <div className="profile-grid">
           <section className="screen-card dashboard-panel profile-card--wide">
             <div className="error-banner">{error}</div>
-            <Link to="/patients" className="button-ghost" style={{ textDecoration: 'none' }}>
-              Tornar a la llista
+            <Link to="/patients" className="button-ghost" style={{ textDecoration: 'none' }} icon="arrow-left">
             </Link>
           </section>
         </div>
@@ -95,9 +133,10 @@ export function PatientDetailPage() {
       <div className="profile-grid">
         {/* Patient Header Card */}
         <section className="screen-card dashboard-panel profile-card--wide">
-          <div className="button-row" style={{ marginBottom: '1rem' }}>
-            <Link to="/patients" className="button-ghost" style={{ textDecoration: 'none' }}>
-              ← Tornar
+          {error ? <div className="error-banner">{error}</div> : null}
+           <div className="button-row" style={{ marginBottom: '1rem' }}>
+            <Link to="/patients" className="button-ghost" style={{ textDecoration: 'none' }} title="Tornar" aria-label="Tornar">
+              <FaArrowLeft />
             </Link>
           </div>
           <div className="panel-heading">
@@ -116,6 +155,11 @@ export function PatientDetailPage() {
               <strong>Data de naixement:</strong> {patient.birth_date} <br />
               <strong>Data de registre:</strong> {new Date(patient.registration_date).toLocaleDateString()}
             </p>
+          </div>
+          <div className="button-row" style={{ marginTop: '1rem' }}>
+            <button className="button-secondary" type="button" disabled={isExportingEntries} onClick={handleExportEntries}>
+              {isExportingEntries ? 'Generant PDF...' : 'Exportar historial PDF'}
+            </button>
           </div>
         </section>
 
@@ -150,6 +194,7 @@ export function PatientDetailPage() {
 
         {/* Tab Content */}
         <section className="screen-card dashboard-panel profile-card--wide">
+          {questionMessage ? <div className="message">{questionMessage}</div> : null}
           {activeTab === 'entries' ? (
             <div className="page-stack">
               {entries.length === 0 ? (
@@ -164,11 +209,9 @@ export function PatientDetailPage() {
                           <span className="status-pill">{formatEntryStatus(entry)}</span>
                         </div>
                         <p className="muted" style={{ margin: '0.5rem 0' }}>{entry.preview}</p>
-                        {entry.analysis ? (
-                          <span className="status-pill" style={{ fontSize: '0.75rem' }}>
-                            {entry.analysis.primary_emotion} · risc {entry.analysis.risk_level}
-                          </span>
-                        ) : null}
+                        <span className="status-pill" style={{ fontSize: '0.75rem' }}>
+                          {formatRiskLevel(entry.analysis?.risk_level)}
+                        </span>
                         {entry.therapist_question && (
                           <span className="status-pill dashboard-status-pill--active" style={{ fontSize: '0.75rem' }}>
                             Respondre a: {entry.therapist_question.question.substring(0, 30)}...
@@ -182,6 +225,25 @@ export function PatientDetailPage() {
             </div>
           ) : (
             <div className="page-stack">
+              <form className="content-card section-stack" onSubmit={handleCreateQuestion}>
+                <h3>Nova pregunta</h3>
+                <div className="field-group">
+                  <label htmlFor="new-patient-question">Pregunta per al pacient</label>
+                  <textarea
+                    id="new-patient-question"
+                    value={newQuestionText}
+                    onChange={(event) => setNewQuestionText(event.target.value)}
+                    rows={3}
+                    placeholder="Escriu una pregunta de seguiment..."
+                  />
+                </div>
+                <div className="button-row">
+                  <button className="button" type="submit" disabled={isCreatingQuestion || !newQuestionText.trim()}>
+                    {isCreatingQuestion ? 'Creant pregunta...' : 'Crear pregunta'}
+                  </button>
+                </div>
+              </form>
+
               {questions.length === 0 ? (
                 <p className="muted">No s&apos;han assignat preguntes a aquest pacient.</p>
               ) : (
@@ -191,7 +253,7 @@ export function PatientDetailPage() {
                       <Link to={`/patients/${patientId}/questions/${q.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', width: '100%' }}>
                         <div className="item-heading-row">
                           <span className={`status-pill ${q.is_active ? 'dashboard-status-pill--active' : 'dashboard-status-pill--muted'}`}>
-                            {q.is_active ? 'Activa' : 'Inactiva'}
+                            {q.is_active ? 'Activa' : 'Resolta'}
                           </span>
                           <span className="muted" style={{ fontSize: '0.85rem' }}>{formatEntryDate(q.created_at)}</span>
                         </div>
@@ -207,4 +269,15 @@ export function PatientDetailPage() {
       </div>
     </div>
   )
+}
+
+function triggerBrowserDownload(blob, filename) {
+  const fileUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = fileUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(fileUrl)
 }

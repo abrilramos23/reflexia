@@ -24,6 +24,7 @@ import { PlatformTherapistsPage } from './pages/PlatformTherapistsPage.jsx'
 import { ClinicAdminDashboard } from './pages/ClinicAdminDashboard.jsx'
 import { ClinicTherapistsPage } from './pages/ClinicTherapistsPage.jsx'
 import { SupportTherapistsPage } from './pages/SupportTherapistsPage.jsx'
+import { TrustedContactsPage } from './pages/TrustedContactsPage.jsx'
 
 function LoadingScreen() {
   return (
@@ -68,7 +69,7 @@ function App() {
       <Route
         path="/consent"
         element={
-          <ProtectedLayout>
+          <ProtectedLayout hideSidebar={true}>
             <ConsentPage />
           </ProtectedLayout>
         }
@@ -126,6 +127,14 @@ function App() {
         element={
           <ProtectedLayout>
             <SupportTherapistsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/contacts"
+        element={
+          <ProtectedLayout>
+            <TrustedContactsPage />
           </ProtectedLayout>
         }
       />

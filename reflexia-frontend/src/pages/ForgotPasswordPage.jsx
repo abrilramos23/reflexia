@@ -64,8 +64,7 @@ export function ForgotPasswordPage() {
               <button className="button-secondary" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Enviant...' : 'Enviar enllaç'}
               </button>
-              <Link style={{ textDecoration: 'none' }} className="text-link" to="/login">
-                Tornar al login
+              <Link style={{ textDecoration: 'none' }} className="text-link" to="/login" icon="arrow-left">
               </Link>
             </div>
           </form>

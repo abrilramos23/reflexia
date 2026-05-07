@@ -25,9 +25,9 @@ export function EntryAnalysisPanel({
   if (!analysis) {
     return (
       <div className="content-card section-stack entries-analysis-card">
-        <h3>Analisi emocional</h3>
+        <h3>Anàlisi emocional</h3>
         <p className="muted">
-          L&apos;analisi encara no s&apos;ha generat. Quan estigui disponible, es mostraran les emocions detectades i el nivell de risc associat.
+          L&apos;anàlisi encara no s&apos;ha generat. Quan estigui disponible, es mostraran les emocions detectades i el nivell de risc associat.
         </p>
       </div>
     )
@@ -45,6 +45,11 @@ export function EntryAnalysisPanel({
         <span className={`status-pill risk-pill risk-pill--${analysis.risk_level}`}>
           {riskLabels[analysis.risk_level] || analysis.risk_level}
         </span>
+        {analysis.reviewed_by_therapist ? (
+          <span className="status-pill dashboard-status-pill--active">Revisada pel terapeuta</span>
+        ) : (
+          <span className="status-pill dashboard-status-pill--pending">Pendent de revisió</span>
+        )}
       </div>
 
       <p>{analysis.summary}</p>
@@ -71,17 +76,9 @@ export function EntryAnalysisPanel({
         </div>
       ) : null}
 
-      <p className="muted">{analysis.disclaimer}</p>
-
-      {analysis.reviewed_by_therapist ? (
-        <span className="status-pill dashboard-status-pill--active">Revisada pel terapeuta</span>
-      ) : (
-        <span className="status-pill dashboard-status-pill--pending">Pendent de revisio</span>
-      )}
-
       {analysis.therapist_correction ? (
         <div className="analysis-correction-note">
-          <strong>Correccio del terapeuta</strong>
+          <strong>Correcció del terapeuta</strong>
           <p>{analysis.therapist_correction}</p>
         </div>
       ) : null}
@@ -91,17 +88,17 @@ export function EntryAnalysisPanel({
           {correctionMessage ? <div className="message">{correctionMessage}</div> : null}
           {correctionError ? <div className="error-banner">{firstErrorMessage(correctionError)}</div> : null}
           <div className="field-group">
-            <label htmlFor="analysis-correction">Correccio clinica</label>
+            <label htmlFor="analysis-correction">Correcció clínica</label>
             <textarea
               id="analysis-correction"
               value={correction}
               onChange={(event) => setCorrection(event.target.value)}
               rows={4}
-              placeholder="Afegeix una lectura alternativa o una matisacio clinica..."
+              placeholder="Afegeix una lectura alternativa o una matisació clínica..."
             />
           </div>
           <button className="button-secondary" type="submit" disabled={isSavingCorrection || !correction.trim()}>
-            {isSavingCorrection ? 'Guardant correccio...' : 'Guardar correccio'}
+            {isSavingCorrection ? 'Guardant correcció...' : 'Guardar correcció'}
           </button>
         </form>
       ) : null}

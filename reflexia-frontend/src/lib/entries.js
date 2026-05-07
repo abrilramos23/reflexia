@@ -97,11 +97,26 @@ export function formatEntryStatus(entry) {
     return 'Eliminada'
   }
 
-  if (entry.status === 'analyzed') {
-    return 'Analitzada'
+  if (entry.status === 'modified') {
+    return 'Modificada'
   }
 
-  return 'Esborrany'
+  return 'Activa'
+}
+
+export function formatRiskLevel(riskLevel) {
+  if (!riskLevel) {
+    return 'Sense analisi'
+  }
+
+  const labels = {
+    none: 'Sense risc',
+    low: 'Risc baix',
+    moderate: 'Risc moderat',
+    high: 'Risc alt',
+  }
+
+  return labels[riskLevel] || riskLevel
 }
 
 export function extractPlainTextFromHtml(content) {

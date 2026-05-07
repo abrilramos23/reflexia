@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { FaEdit, FaArrowLeft } from 'react-icons/fa'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { EntryAnalysisPanel } from '../components/EntryAnalysisPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -10,13 +11,14 @@ import {
 } from '../lib/entries.js'
 
 export function EntryDetailPage() {
-  const { user, getEntry, analyzeEntry } = useAuth()
+  const { user, getEntry, analyzeEntry, exportEntryPdf } = useAuth()
   const { entryId } = useParams()
   const [entry, setEntry] = useState(null)
   const [pageError, setPageError] = useState('')
   const [pageMessage, setPageMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   useEffect(() => {
     let isCancelled = false
@@ -72,18 +74,39 @@ export function EntryDetailPage() {
     }
   }
 
+  async function handleExport() {
+    setPageError('')
+    setPageMessage('')
+    setIsExporting(true)
+
+    try {
+      const { blob, filename } = await exportEntryPdf(entry.id)
+      triggerBrowserDownload(blob, filename)
+      setPageMessage('S’ha generat el PDF de l’entrada.')
+    } catch (error) {
+      setPageError(firstErrorMessage(error.response?.data || error))
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <div className="screen-shell">
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="button-row">
-            <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/entries">
-              Tornar al llistat
+             <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/entries" title="Tornar">
+              <FaArrowLeft />
             </Link>
             {entry && !entry.is_deleted ? (
-              <Link className="button" style={{ textDecoration: 'none' }} to={`/entries/${entry.id}/edit`}>
-                Editar entrada
-              </Link>
+              <>
+                <button className="button-secondary" type="button" disabled={isExporting} onClick={handleExport}>
+                  {isExporting ? 'Generant PDF...' : 'Exportar PDF'}
+                </button>
+                 <Link className="button" style={{ textDecoration: 'none' }} to={`/entries/${entry.id}/edit`} title="Editar entrada">
+                  <FaEdit />
+                </Link>
+              </>
             ) : null}
           </div>
         </section>
@@ -100,7 +123,8 @@ export function EntryDetailPage() {
                 <p className="eyebrow">Detall</p>
                 <h1 className="section-title">Detall de l’entrada</h1>
                 <p className="muted">
-                  Creada el {formatEntryDate(entry.created_at)} i actualitzada el {formatEntryDate(entry.updated_at)}.
+                  Creada el {formatEntryDate(entry.creation_date || entry.created_at)}
+                  {entry.modification_date ? ` i modificada el ${formatEntryDate(entry.modification_date)}.` : '.'}
                 </p>
               </div>
 
@@ -154,4 +178,15 @@ export function EntryDetailPage() {
       </div>
     </div>
   )
+}
+
+function triggerBrowserDownload(blob, filename) {
+  const fileUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = fileUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(fileUrl)
 }

@@ -16,7 +16,7 @@ function formatRole(role) {
 
 function firstErrorMessage(error) {
   if (!error) {
-    return 'S’ha produït un error inesperat.'
+    return 'S`ha produït un error inesperat.'
   }
 
   if (typeof error === 'string') {
@@ -33,7 +33,7 @@ function firstErrorMessage(error) {
     return firstEntry
   }
 
-  return 'S’ha produït un error inesperat.'
+  return 'S`ha produït un error inesperat.'
 }
 
 function formatShortDate(value) {
@@ -77,7 +77,7 @@ function buildTherapistActivityItem(patient) {
 
   return {
     label: 'Seguiment actiu',
-    description: 'El pacient està actiu i amb el consentiment acceptat, preparat per continuar el seguiment.',
+    description: 'El pacient està actiu i amb el consentiment acceptat.',
     tone: 'active',
   }
 }
@@ -90,11 +90,16 @@ export function DashboardPage() {
     listEntries,
     listTherapistPatients,
     registerTherapist,
+    getTherapistDashboardData,
+    getEntriesEditorContext,
   } = useAuth()
   const [patientEvolution, setPatientEvolution] = useState(null)
   const [recentEntries, setRecentEntries] = useState([])
+  const [activeQuestion, setActiveQuestion] = useState(null)
   const [isEvolutionLoading, setIsEvolutionLoading] = useState(false)
   const [therapistPatients, setTherapistPatients] = useState([])
+  const [therapistDashboardData, setTherapistDashboardData] = useState(null)
+  const [isTherapistDataLoading, setIsTherapistDataLoading] = useState(false)
   const [therapistInviteForm, setTherapistInviteForm] = useState({
     first_name: '',
     last_name: '',
@@ -120,22 +125,29 @@ export function DashboardPage() {
       try {
         if (user.role === 'patient') {
           setIsEvolutionLoading(true)
-          const [evolution, entries] = await Promise.all([
+          const [evolution, entries, context] = await Promise.all([
             getMyEvolution(),
             listEntries(),
+            getEntriesEditorContext(),
           ])
 
           if (!isCancelled) {
             setPatientEvolution(evolution)
             setRecentEntries(entries.slice(0, 3))
+            setActiveQuestion(context.active_question)
           }
         }
 
-        if (user.role === 'therapist') {
-          const patients = await listTherapistPatients()
+        if (user.role === 'therapist' || isClinicAdmin) {
+          setIsTherapistDataLoading(true)
+          const [patients, dashboardData] = await Promise.all([
+            listTherapistPatients(),
+            getTherapistDashboardData(),
+          ])
 
           if (!isCancelled) {
             setTherapistPatients(sortByRegistrationDate(patients))
+            setTherapistDashboardData(dashboardData)
           }
         }
       } catch (error) {
@@ -145,6 +157,7 @@ export function DashboardPage() {
       } finally {
         if (!isCancelled) {
           setIsEvolutionLoading(false)
+          setIsTherapistDataLoading(false)
         }
       }
     }
@@ -166,7 +179,7 @@ export function DashboardPage() {
       const response = await registerTherapist(therapistInviteForm)
       setInviteMessage(
         response.activation_email_sent
-          ? `Invitació enviada correctament a ${response.email}. El terapeuta haurà d’activar el compte des del correu.`
+          ? `Invitació enviada correctament a ${response.email}. El terapeuta haurà d'activar el compte des del correu.`
           : 'Terapeuta registrat correctament.',
       )
       setTherapistInviteForm({
@@ -188,7 +201,7 @@ export function DashboardPage() {
   }
 
   if (isClinicAdmin) {
-    return <ClinicAdminDashboard />
+    // We fall through to show the unified therapist/admin dashboard
   }
 
   return (
@@ -199,10 +212,10 @@ export function DashboardPage() {
             <p className="eyebrow">Tauler inicial</p>
             <h1 className="section-title">
               {user.role === 'therapist'
-                ? 'Visió general de la teva activitat clínica.'
+                ? 'Resum de la teva activitat.'
                 : user.role === 'patient'
-                  ? 'El teu espai personal de Reflexia.'
-                  : 'Compte actiu i llest per continuar.'}
+                  ? 'El teu espai personal.'
+                  : 'Compte actiu'}
             </h1>
           </div>
 
@@ -234,24 +247,6 @@ export function DashboardPage() {
           <>
             <section className="screen-card dashboard-panel profile-card--wide">
               <div className="panel-heading">
-                <p className="eyebrow" style={{ marginBlockEnd: '0' }}>Pregunta activa</p>
-              </div>
-
-              <div className="content-card section-stack">
-                <h3 style={{ marginBlockEnd: '0' }}>Cap pregunta activa disponible</h3>
-                <p className="muted">
-                  Quan el teu terapeuta publiqui una nova pregunta de seguiment, la veuràs aquí per poder-la respondre.
-                </p>
-                <div className="button-row">
-                  <Link className="button-secondary" style={{ marginBlockStart: '1rem', textDecoration: 'none' }} to="/entries/new">
-                    Obrir editor
-                  </Link>
-                </div>
-              </div>
-            </section>
-
-            <section className="screen-card dashboard-panel profile-card--wide">
-              <div className="panel-heading">
                 <p className="eyebrow">Evolució emocional</p>
               </div>
 
@@ -260,8 +255,46 @@ export function DashboardPage() {
 
             <section className="screen-card dashboard-panel profile-card--wide">
               <div className="panel-heading">
+                <p className="eyebrow" style={{ marginBlockEnd: '0' }}>Pregunta activa</p>
+              </div>
+
+              <div className="content-card section-stack">
+                {activeQuestion ? (
+                  <>
+                    <h3 style={{ marginBlockEnd: '0' }}>{activeQuestion.text}</h3>
+                    <p className="muted">
+                      Aquesta és una pregunta personalitzada del teu terapeuta per ajudar-te a aprofundir en el teu procés.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 style={{ marginBlockEnd: '0' }}>Cap pregunta activa disponible</h3>
+                    <p className="muted">
+                      Quan el teu terapeuta publiqui una nova pregunta, la veuràs aquí per poder-la respondre.
+                    </p>
+                  </>
+                )}
+                <div className="button-row">
+                  <Link
+                    className="button-secondary"
+                    style={{ marginBlockStart: '1rem', textDecoration: 'none' }}
+                    to="/entries/new"
+                  >
+                    Obrir editor
+                  </Link>
+                </div>
+              </div>
+            </section>
+
+            <section className="screen-card dashboard-panel profile-card--wide">
+              <div className="panel-heading">
                 <p className="eyebrow">Entrades recents</p>
                 <h2>El teu historial més recent</h2>
+                <div className="button-row" style={{ marginBlockStart: '1rem' }}>
+                  <Link className="button" style={{ textDecoration: 'none' }} to="/entries/new">
+                    Escriure
+                  </Link>
+                </div>
               </div>
 
               <div className="content-card section-stack">
@@ -285,76 +318,117 @@ export function DashboardPage() {
                   <>
                     <h3>Encara no hi ha entrades disponibles</h3>
                     <p className="muted">
-                      Quan escriguis les primeres entrades, aquí apareixeran ordenades de la més recent a la més antiga amb el resultat de l’anàlisi emocional.
+                      Quan escriguis les primeres entrades, aquí apareixeran ordenades de la més recent a la més antiga amb el resultat de l&apos;anàlisi emocional.
                     </p>
                     <p className="muted">
                       Et recomanem començar amb una primera entrada per tal que el sistema pugui començar a construir el teu context emocional.
                     </p>
                   </>
                 )}
-                <div className="button-row" style={{ marginBlockStart: '1rem' }}>
-                  <Link className="button" style={{ textDecoration: 'none' }} to="/entries/new">
-                    Escriure
-                  </Link>
-                  <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/profile">
-                    Gestionar perfil i contactes
-                  </Link>
-                  <a
-                    className="button-ghost"
-                    style={{ textDecoration: 'none' }}
-                    href={consentDocumentUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Veure consentiment PDF
-                  </a>
-                </div>
               </div>
             </section>
           </>
         ) : null}
 
-        {user.role === 'therapist' ? (
+        {user.role === 'therapist' || isClinicAdmin ? (
           <>
+            {isClinicAdmin && (
+              <section className="screen-card dashboard-panel profile-card--wide">
+                <div className="panel-heading">
+                  <p className="eyebrow">Administració</p>
+                  <h2>Gestió de la Clínica</h2>
+                  <p className="muted">Com a administrador, tens accés a la configuració de l&apos;entitat i la gestió de l&apos;equip.</p>
+                </div>
+                <div className="button-row">
+                  <Link className="button-secondary" style={{ textDecoration: 'none' }} to="/clinic">
+                    Panell d&apos;Administrador
+                  </Link>
+                  <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/admin/therapists">
+                    Gestionar Equip
+                  </Link>
+                </div>
+              </section>
+            )}
+
             <section className="screen-card dashboard-panel profile-card--wide">
               <div className="panel-heading">
                 <p className="eyebrow">Visió clínica</p>
-                <h2>Panell d’activitat del terapeuta</h2>
+                <h2>Panell d&apos;activitat del terapeuta</h2>
                 <p className="muted">
-                  Aquí tens una lectura ràpida de l’estat actual dels teus pacients assignats i dels espais que requeriran revisió a mesura que avancem amb entrades, anàlisi i alertes.
+                  Aquí tens una lectura ràpida de l&apos;estat actual dels teus pacients assignats i dels espais que requeriran revisió.
                 </p>
               </div>
 
               <div className="dashboard-metrics-grid">
-                <div className="dashboard-metric-card dashboard-metric-card--alert">
-                  <span>Alertes pendents</span>
-                  <strong>0</strong>
-                  <p>Quan activem el mòdul d’alertes, aquí veuràs els casos que necessiten resposta.</p>
-                </div>
-
                 <div className="dashboard-metric-card dashboard-metric-card--active">
                   <span>Pacients actius</span>
-                  <strong>{therapistPatients.filter((patient) => patient.is_active).length}</strong>
+                  <strong>{therapistDashboardData?.metrics.active_patients ?? '-'}</strong>
                   <p>Total de pacients assignats amb accés actiu a la plataforma.</p>
                 </div>
 
                 <div className="dashboard-metric-card">
-                  <span>Entrades del dia</span>
-                  <strong>0</strong>
-                  <p>Aquest comptador s’omplirà quan connectem el mòdul d’entrades de journaling.</p>
+                  <span>Total d&apos;entrades</span>
+                  <strong>{therapistDashboardData?.metrics.total_entries ?? '-'}</strong>
+                  <p>Nombre total d&apos;entrades registrades pels teus pacients.</p>
+                </div>
+
+                <div className="dashboard-metric-card">
+                  <span>Entrades d&apos;avui</span>
+                  <strong>{therapistDashboardData?.metrics.entries_today ?? '-'}</strong>
+                  <p>Entrades de journaling realitzades durant el dia d&apos;avui.</p>
                 </div>
 
                 <div className="dashboard-metric-card dashboard-metric-card--pending">
                   <span>Anàlisis pendents</span>
-                  <strong>{therapistPatients.filter((patient) => patient.is_active && !patient.consent_accepted).length}</strong>
-                  <p>De moment mostrem els pacients actius que encara no han completat el consentiment.</p>
+                  <strong>{therapistDashboardData?.metrics.pending_analyses ?? '-'}</strong>
+                  <p>Entrades que encara no has revisat o corregit.</p>
                 </div>
               </div>
 
-              <div className="button-row">
+              <div className="button-row" style={{ marginTop: '1rem' }}>
                 <Link className="button" style={{ textDecoration: 'none' }} to="/patients">
                   Veure pacients
                 </Link>
+              </div>
+            </section>
+
+            <section className="screen-card dashboard-panel profile-card--wide">
+              <div className="panel-heading">
+                <p className="eyebrow">Activitat recent</p>
+                <h2>Últimes entrades dels teus pacients</h2>
+                <p className="muted">
+                  Segueix de prop l&apos;activitat més recent per detectar canvis d&apos;estat o riscos en temps real.
+                </p>
+              </div>
+
+              <div className="content-card section-stack">
+                {isTherapistDataLoading ? (
+                  <p className="muted">Carregant activitat...</p>
+                ) : therapistDashboardData?.recent_activity.length ? (
+                  <ul className="patient-list">
+                    {therapistDashboardData.recent_activity.map((item) => (
+                      <li className="compact-list-item" key={item.id}>
+                        <Link to={`/patients/${item.patient_id}/entries/${item.id}`} style={{ textDecoration: 'none' }}>
+                          <div className="item-heading-row">
+                            <strong>{item.patient_name}</strong>
+                            <span className="muted">•</span>
+                            <span>{formatEntryDate(item.updated_at)}</span>
+                            {item.primary_emotion ? (
+                              <span className={`status-pill risk-pill--${item.risk_level?.toLowerCase() || 'none'}`}>
+                                {item.primary_emotion}
+                              </span>
+                            ) : (
+                              <span className="status-pill">Sense anàlisi</span>
+                            )}
+                          </div>
+                          <p className="muted">{item.preview}</p>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="muted">Encara no hi ha activitat recent dels teus pacients.</p>
+                )}
               </div>
             </section>
           </>

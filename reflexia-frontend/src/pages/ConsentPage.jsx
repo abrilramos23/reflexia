@@ -70,10 +70,10 @@ export function ConsentPage() {
         <aside className="screen-card hero-panel">
           <div className="hero-copy">
             <p className="eyebrow">Consentiment informat</p>
-            <h1>Abans d’entrar, necessitem la teva decisió explícita.</h1>
+            <h1>Abans d&apos;entrar, necessitem la teva decisió explícita.</h1>
             <p className="hero-lead">
-              Llegeix l’abast del tractament de dades i decideix si vols
-              continuar amb l’eina.
+              Llegeix el document de consentiment informat i decideix si vols
+              continuar amb l&apos;eina.
             </p>
           </div>
           <div className="hero-footer">
@@ -86,7 +86,7 @@ export function ConsentPage() {
         <section className="screen-card form-panel">
           <div className="panel-heading">
             <p className="eyebrow">Primer accés del pacient</p>
-            <h2>Has d’acceptar o rebutjar el consentiment</h2>
+            <h2>Has d&apos;acceptar o rebutjar el consentiment</h2>
           </div>
 
           {error ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{error}</div> : null}
@@ -95,9 +95,9 @@ export function ConsentPage() {
             <h3>Informació essencial</h3>
             <div className="info-list muted">
               <p><strong>Finalitat del tractament:</strong> anàlisi emocional amb IA per donar suport al seguiment terapèutic.</p>
-              <p><strong>Qui tindrà accés:</strong> el teu terapeuta assignat i, en cas d’alerta, terapeutes de suport autoritzats.</p>
+              <p><strong>Qui tindrà accés:</strong> el teu terapeuta assignat i, en cas d&apos;alerta, terapeutes de suport autoritzats.</p>
               <p><strong>Període de conservació:</strong> mínim 5 anys per obligació legal.</p>
-              <p><strong>Drets:</strong> accés, rectificació, portabilitat i la resta de drets de la normativa aplicable.</p>
+              <p><strong>Drets:</strong> accés, rectificació i la resta de drets de la normativa aplicable.</p>
               <p><strong>Important:</strong> Reflexia no diagnostica ni substitueix el criteri clínic professional.</p>
             </div>
           </div>

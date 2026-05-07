@@ -315,7 +315,47 @@
   background: rgba(255, 255, 255, 0.78);
   color: var(--ink);
   border: 1px solid rgba(61, 102, 89, 0.16);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
+
+/* Global Icon Support via [icon] attribute */
+[icon]::before {
+  font-family: 'primeicons';
+  speak: none;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  display: inline-block;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[icon="arrow-left"]::before {
+  content: '\e91a';
+}
+
+[icon="+"]::before {
+  content: '\e90d';
+}
+
+[icon]:not(:empty)::before {
+  margin-right: 8px;
+}
+
+.button[icon]:empty,
+.button-ghost[icon]:empty,
+.button-secondary[icon]:empty {
+  padding: 10px;
+  width: 42px;
+  height: 42px;
+}
+
+
 
 .button-danger {
   background: linear-gradient(135deg, #a03939 0%, #7b2626 100%);
@@ -1151,6 +1191,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.entity-actions {
+  gap: 8px;
+}
+
+.entity-actions .button-ghost,
+.entity-actions .button-danger {
+  padding: 9px 14px;
+  font-size: 0.88rem;
 }
 
 .full-screen-form-shell {

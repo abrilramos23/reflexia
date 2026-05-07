@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import { FaUserSlash } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext.jsx'
 
 function firstErrorMessage(error) {
@@ -146,7 +147,7 @@ export function PatientsPage() {
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
             <p className="eyebrow">Gestió de pacients</p>
-            <h1 className="section-title">Pacients assignats al teu compte.</h1>
+            <h1 className="section-title">Pacients assignats</h1>
             <p className="muted">
               Des d’aquí pots donar d’alta nous pacients, consultar l’estat del seu accés i gestionar baixes quan sigui necessari.
             </p>
@@ -288,7 +289,7 @@ export function PatientsPage() {
                     </div>
 
                     <div className="list-actions" style={{ marginLeft: '1rem' }}>
-                      <button
+                       <button
                         className="action-chip action-chip--danger"
                         type="button"
                         disabled={!patient.is_active || busyPatientId === patient.id}
@@ -297,8 +298,10 @@ export function PatientsPage() {
                           e.stopPropagation()
                           handleDeactivatePatient(patient)
                         }}
+                        title="Donar de baixa"
+                        aria-label="Donar de baixa"
                       >
-                        {busyPatientId === patient.id ? 'Donant de baixa...' : 'Donar de baixa'}
+                        {busyPatientId === patient.id ? '...' : <FaUserSlash />}
                       </button>
                     </div>
                   </Link>

@@ -58,6 +58,13 @@ export const sidebarConfig = [
     section: 'Compte',
   },
   {
+    label: 'Contactes',
+    path: '/contacts',
+    roles: ['patient'],
+    icon: FaUsers,
+    section: 'Compte',
+  },
+  {
     label: 'Perfil',
     path: '/profile',
     roles: ['therapist', 'patient', 'platform_admin'],

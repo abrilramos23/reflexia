@@ -128,8 +128,7 @@ export function EntryEditorPage() {
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="button-row">
-            <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/entries">
-              Tornar al llistat
+            <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/entries" icon="arrow-left">
             </Link>
             {entry ? (
               <Link className="button-ghost" style={{ textDecoration: 'none' }} to={`/entries/${entry.id}`}>
@@ -150,8 +149,7 @@ export function EntryEditorPage() {
               <Link className="button-ghost" style={{ textDecoration: 'none' }} to={`/entries/${entry.id}`}>
                 Consultar detall
               </Link>
-              <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/entries">
-                Tornar al llistat
+              <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/entries" icon="arrow-left">
               </Link>
             </div>
           </section>
