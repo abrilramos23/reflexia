@@ -14,6 +14,9 @@ from apps.users.models import Patient
 from apps.users.permissions import IsTherapistUser
 
 
+VISIBLE_ENTRY_STATUSES = [JournalEntry.STATUS_ACTIVE, JournalEntry.STATUS_MODIFIED]
+
+
 class PatientAnalysisMixin:
     permission_classes = [IsAuthenticated]
 
@@ -43,7 +46,7 @@ class PatientEntryAnalysisView(PatientAnalysisMixin, APIView):
         if error_response is not None:
             return error_response
 
-        entry = get_object_or_404(JournalEntry, pk=entry_id, patient=patient)
+        entry = get_object_or_404(JournalEntry, pk=entry_id, patient=patient, status__in=VISIBLE_ENTRY_STATUSES)
         analysis = getattr(entry, "analysis", None)
         if analysis is None:
             return Response(
@@ -74,7 +77,7 @@ class PatientAnalyzeEntryView(PatientAnalysisMixin, APIView):
             JournalEntry.objects.select_related("therapist_question"),
             pk=entry_id,
             patient=patient,
-            deleted_at__isnull=True,
+            status__in=VISIBLE_ENTRY_STATUSES,
         )
 
         try:
@@ -131,7 +134,7 @@ class TherapistPatientEntryAnalysisView(TherapistPatientAnalysisMixin, APIView):
     )
     def get(self, request, patient_id, entry_id):
         patient = self.get_patient(request, patient_id)
-        entry = get_object_or_404(JournalEntry, pk=entry_id, patient=patient)
+        entry = get_object_or_404(JournalEntry, pk=entry_id, patient=patient, status__in=VISIBLE_ENTRY_STATUSES)
         analysis = getattr(entry, "analysis", None)
         if analysis is None:
             return Response(
@@ -154,7 +157,7 @@ class TherapistPatientEntryAnalysisView(TherapistPatientAnalysisMixin, APIView):
     )
     def patch(self, request, patient_id, entry_id):
         patient = self.get_patient(request, patient_id)
-        entry = get_object_or_404(JournalEntry, pk=entry_id, patient=patient)
+        entry = get_object_or_404(JournalEntry, pk=entry_id, patient=patient, status__in=VISIBLE_ENTRY_STATUSES)
         analysis = get_object_or_404(EmotionalAnalysis, entry=entry)
         serializer = AnalysisCorrectionSerializer(
             analysis,

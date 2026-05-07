@@ -74,12 +74,10 @@ class AnalysisEndpointTests(APITestCase):
         self.assertEqual(response.data["risk_level"], "low")
         self.assertIn("disclaimer", response.data)
 
-    @patch("apps.analysis.views.analyze_journal_entry")
+    @patch("apps.entries.views.analyze_journal_entry")
     def test_patient_can_request_entry_analysis_generation(self, mocked_analyze):
         def create_mocked_analysis(entry):
             analysis = self.create_analysis(entry=entry)
-            entry.status = JournalEntry.STATUS_ANALYZED
-            entry.save(update_fields=["status", "updated_at"])
             return analysis
 
         mocked_analyze.side_effect = create_mocked_analysis
@@ -89,7 +87,7 @@ class AnalysisEndpointTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["entry"]["analysis"]["primary_emotion"], "Tristesa")
-        self.assertEqual(response.data["entry"]["status"], JournalEntry.STATUS_ANALYZED)
+        self.assertEqual(response.data["entry"]["status"], JournalEntry.STATUS_ACTIVE)
 
     def test_patient_evolution_is_chronological(self):
         older_entry = JournalEntry.objects.create(patient=self.patient, content="Primer text")

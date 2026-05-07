@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.utils.html import strip_tags
 
 from apps.analysis.models import EmotionalAnalysis
+from apps.entries.models import JournalEntry
 from apps.users.models import TherapistPatient
 
 
@@ -58,7 +59,7 @@ Escriu resums i recomanacions en catala, amb llenguatge clar i no alarmista.
 
 
 def analyze_journal_entry(*, entry):
-    if entry.deleted_at is not None:
+    if entry.is_deleted:
         raise AnalysisServiceError("No es poden analitzar entrades eliminades.")
 
     payload = _request_openai_analysis(entry=entry)
@@ -78,14 +79,16 @@ def analyze_journal_entry(*, entry):
         },
     )
 
-    entry.status = entry.STATUS_ANALYZED
-    entry.save(update_fields=["status", "updated_at"])
+    entry.save(update_fields=["updated_at"])
     return analysis
 
 
 def build_evolution_payload(*, patient):
     analyses = (
-        EmotionalAnalysis.objects.filter(entry__patient=patient, entry__deleted_at__isnull=True)
+        EmotionalAnalysis.objects.filter(
+            entry__patient=patient,
+            entry__status__in=[JournalEntry.STATUS_ACTIVE, JournalEntry.STATUS_MODIFIED],
+        )
         .select_related("entry")
         .order_by("entry__created_at")
     )
