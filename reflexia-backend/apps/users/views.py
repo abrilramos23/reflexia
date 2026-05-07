@@ -1,4 +1,5 @@
 from pathlib import Path
+from django.utils import timezone
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -502,6 +503,90 @@ class TherapistPatientDetailView(APIView):
             TherapistPatientSummarySerializer(patient).data,
             status=status.HTTP_200_OK,
         )
+
+
+class TherapistDashboardView(APIView):
+    permission_classes = [IsTherapistUser]
+
+    @extend_schema(
+        tags=["profile"],
+        summary="Obtenir dades del tauler del terapeuta",
+        responses={200: inline_serializer(
+            name="TherapistDashboardData",
+            fields={
+                "metrics": inline_serializer(
+                    name="TherapistMetrics",
+                    fields={
+                        "total_patients": serializers.IntegerField(),
+                        "active_patients": serializers.IntegerField(),
+                        "total_entries": serializers.IntegerField(),
+                        "entries_today": serializers.IntegerField(),
+                        "pending_analyses": serializers.IntegerField(),
+                    }
+                ),
+                "recent_activity": serializers.ListField(child=serializers.DictField())
+            }
+        )}
+    )
+    def get(self, request):
+        therapist = request.user.therapist_profile
+        patients = Patient.objects.filter(therapist_links__therapist=therapist)
+        
+        # Metrics
+        active_patients = patients.filter(is_active=True)
+        
+        from apps.entries.models import JournalEntry
+        from apps.analysis.models import EmotionalAnalysis
+        
+        patient_ids = patients.values_list('id', flat=True)
+        total_entries = JournalEntry.objects.filter(patient_id__in=patient_ids).count()
+        
+        today = timezone.now().date()
+        entries_today = JournalEntry.objects.filter(
+            patient_id__in=patient_ids,
+            created_at__date=today
+        ).count()
+        
+        pending_analyses = EmotionalAnalysis.objects.filter(
+            entry__patient_id__in=patient_ids,
+            reviewed_by_therapist=False
+        ).count()
+        
+        # Recent Activity
+        recent_entries = JournalEntry.objects.filter(
+            patient_id__in=patient_ids
+        ).select_related('patient', 'analysis').order_by('-updated_at')[:5]
+        
+        recent_activity = []
+        for entry in recent_entries:
+            recent_activity.append({
+                "id": str(entry.id),
+                "patient_id": str(entry.patient_id),
+                "patient_name": f"{entry.patient.first_name} {entry.patient.last_name}",
+                "preview": self._get_preview(entry.content),
+                "created_at": entry.created_at,
+                "updated_at": entry.updated_at,
+                "primary_emotion": entry.analysis.primary_emotion if hasattr(entry, 'analysis') else None,
+                "risk_level": entry.analysis.risk_level if hasattr(entry, 'analysis') else None,
+            })
+
+        return Response({
+            "metrics": {
+                "total_patients": patients.count(),
+                "active_patients": active_patients.count(),
+                "total_entries": total_entries,
+                "entries_today": entries_today,
+                "pending_analyses": pending_analyses,
+            },
+            "recent_activity": recent_activity
+        })
+
+    def _get_preview(self, content):
+        from django.utils.html import strip_tags
+        plain_text = strip_tags(content or "").strip()
+        if len(plain_text) <= 100:
+            return plain_text
+        return f"{plain_text[:100]}..."
 
 
 class PatientConsentAcceptView(APIView):

@@ -32,6 +32,7 @@ from apps.users.views import (
     GlobalTherapistListView,
     TherapistAdminDetailView,
     ClinicTherapistListView,
+    TherapistDashboardView,
 )
 
 def index(request):
@@ -54,6 +55,7 @@ urlpatterns = [
     path('auth/patients/<uuid:patient_id>/', TherapistPatientDetailView.as_view(), name='patient-detail'),
     path('auth/patients/deactivate/', TherapistPatientDeactivateView.as_view(), name='patient-deactivate'),
     path('auth/activate/account/', AccountActivationView.as_view(), name='account-activate'),
+    path('auth/dashboard/therapist/', TherapistDashboardView.as_view(), name='therapist-dashboard'),
     path('auth/consent/accept/', PatientConsentAcceptView.as_view(), name='patient-consent-accept'),
     path('auth/consent/reject/', PatientConsentRejectView.as_view(), name='patient-consent-reject'),
     path('auth/2fa/setup/', TwoFactorSetupView.as_view(), name='two-factor-setup'),

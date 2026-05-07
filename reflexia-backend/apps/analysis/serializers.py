@@ -4,7 +4,7 @@ from apps.analysis.models import EmotionalAnalysis
 
 
 ANALYSIS_DISCLAIMER = (
-    "Aquesta analisi es orientativa, no substitueix el criteri clinic i sera revisada pel terapeuta."
+    "Aquesta anàlisi és orientativa, no substitueix el criteri clínic i serà revisada pel terapeuta."
 )
 
 
@@ -63,12 +63,12 @@ class AnalysisCorrectionSerializer(serializers.ModelSerializer):
 
     def validate_therapist_correction(self, value):
         if not value or not value.strip():
-            raise serializers.ValidationError("La correccio no pot estar buida.")
+            raise serializers.ValidationError("La correcció no pot estar buida.")
         return value.strip()
 
     def validate(self, attrs):
         if not attrs.get("therapist_correction"):
-            raise serializers.ValidationError({"therapist_correction": "La correccio no pot estar buida."})
+            raise serializers.ValidationError({"therapist_correction": "La correcció no pot estar buida."})
         return attrs
 
     def update(self, instance, validated_data):
