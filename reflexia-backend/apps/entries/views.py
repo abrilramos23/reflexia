@@ -466,3 +466,19 @@ class TherapistPatientEntriesExportView(TherapistPatientMixin, APIView):
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{build_export_filename(prefix="patient-history", suffix=str(patient.pk)[:8])}"'
         return response
+
+class TherapistAllQuestionsView(APIView):
+    permission_classes = [IsTherapistUser]
+
+    @extend_schema(
+        tags=["therapist-patients"],
+        summary="Llistar totes les preguntes creades pel terapeuta",
+        responses={
+            200: TherapistQuestionSerializer(many=True),
+        },
+    )
+    def get(self, request):
+        therapist = request.user.therapist_profile
+        questions = TherapistQuestion.objects.filter(therapist=therapist).select_related("patient").order_by("-created_at")
+        
+        return Response(TherapistQuestionSerializer(questions, many=True).data, status=status.HTTP_200_OK)

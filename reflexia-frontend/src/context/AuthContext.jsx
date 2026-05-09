@@ -524,6 +524,11 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function listAllTherapistQuestions() {
+    const response = await api.get('/auth/questions/')
+    return response.data
+  }
+
   async function listPatientEntryNotes(patientId, entryId) {
     const response = await api.get(`/auth/patients/${patientId}/entries/${entryId}/notes/`)
     return response.data
@@ -587,6 +592,7 @@ export function AuthProvider({ children }) {
     listPatientQuestions,
     createPatientQuestion,
     getPatientQuestion,
+    listAllTherapistQuestions,
     listPatientEntryNotes,
     createPatientEntryNote,
     getPlatformStats,

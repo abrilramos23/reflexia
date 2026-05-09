@@ -25,6 +25,7 @@ import { ClinicAdminDashboard } from './pages/ClinicAdminDashboard.jsx'
 import { ClinicTherapistsPage } from './pages/ClinicTherapistsPage.jsx'
 import { SupportTherapistsPage } from './pages/SupportTherapistsPage.jsx'
 import { TrustedContactsPage } from './pages/TrustedContactsPage.jsx'
+import { TherapistQuestionsPage } from './pages/TherapistQuestionsPage.jsx'
 
 function LoadingScreen() {
   return (
@@ -167,6 +168,14 @@ function App() {
         element={
           <ProtectedLayout>
             <TherapistQuestionDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/questions"
+        element={
+          <ProtectedLayout>
+            <TherapistQuestionsPage />
           </ProtectedLayout>
         }
       />

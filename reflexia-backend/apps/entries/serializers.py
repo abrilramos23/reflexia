@@ -10,7 +10,8 @@ from apps.entries.models import JournalEntry, PrivateNote, TherapistQuestion
 class TherapistQuestionSerializer(serializers.ModelSerializer):
     text = serializers.CharField(source="question", read_only=True)
     creation_date = serializers.DateTimeField(source="created_at", read_only=True)
-    resolved = serializers.SerializerMethodField()
+    patient_name = serializers.SerializerMethodField()
+    patient_id = serializers.UUIDField(source="patient.id", read_only=True)
 
     class Meta:
         model = TherapistQuestion
@@ -22,8 +23,13 @@ class TherapistQuestionSerializer(serializers.ModelSerializer):
             "created_at",
             "resolved",
             "is_active",
+            "patient_name",
+            "patient_id",
         )
         read_only_fields = fields
+
+    def get_patient_name(self, obj):
+        return f"{obj.patient.first_name} {obj.patient.last_name}"
 
     def get_resolved(self, obj):
         return not obj.is_active

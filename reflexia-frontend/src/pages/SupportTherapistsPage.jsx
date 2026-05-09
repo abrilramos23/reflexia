@@ -242,9 +242,8 @@ export function SupportTherapistsPage() {
             <ul className="patient-list">
               {supportTherapists.map((supportTherapist) => (
                 <li
-                  className="patient-item compact-list-item"
+                  className="compact-list-item"
                   key={supportTherapist.support_id}
-                  style={{ padding: 0, overflow: 'hidden' }}
                 >
                   <div
                     style={{

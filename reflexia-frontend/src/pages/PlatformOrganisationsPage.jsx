@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FaEdit, FaTrash, FaArrowLeft } from 'react-icons/fa'
+import { FaEdit, FaTrash, FaArrowLeft, FaPlus } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Navigate } from 'react-router-dom'
 
@@ -110,7 +110,7 @@ export function PlatformOrganisationsPage() {
             <div>
               <h1>{isEdit ? 'Editar Organització' : 'Registrar Organització'}</h1>
             </div>
-             <button className="button-ghost" onClick={() => setView('list')} title="Tornar">
+             <button className="button-ghost button--icon" onClick={() => setView('list')} title="Tornar" aria-label="Tornar">
               <FaArrowLeft />
             </button>
           </div>
@@ -175,6 +175,7 @@ export function PlatformOrganisationsPage() {
               <h1 className="section-title">Organitzacions</h1>
             </div>
             <button className="button" onClick={openCreateView}>
+              <FaPlus />
               Nova Organització
             </button>
           </div>
@@ -201,10 +202,10 @@ export function PlatformOrganisationsPage() {
                   <div className="entity-card__footer">
                     <span className="tiny muted">ID: {org.id}</span>
                      <div className="button-row entity-actions">
-                       <button className="button-ghost" type="button" onClick={() => openEditView(org)} title="Editar" aria-label="Editar">
+                       <button className="button-ghost button--icon" type="button" onClick={() => openEditView(org)} title="Editar" aria-label="Editar">
                         <FaEdit />
                       </button>
-                      <button className="button-danger" type="button" onClick={() => handleDeleteOrganisation(org)} title="Eliminar" aria-label="Eliminar">
+                      <button className="button-danger button--icon" type="button" onClick={() => handleDeleteOrganisation(org)} title="Eliminar" aria-label="Eliminar">
                         <FaTrash />
                       </button>
                     </div>

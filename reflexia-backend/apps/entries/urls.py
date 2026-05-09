@@ -14,6 +14,7 @@ from apps.entries.views import (
     TherapistPatientEntryNotesView,
     TherapistPatientQuestionsView,
     TherapistPatientQuestionDetailView,
+    TherapistAllQuestionsView,
 )
 
 urlpatterns = [
@@ -32,4 +33,5 @@ urlpatterns = [
     path("auth/patients/<uuid:patient_id>/entries/<uuid:entry_id>/export/", TherapistPatientEntryExportView.as_view(), name="therapist-patient-entry-export"),
     path("auth/patients/<uuid:patient_id>/questions/", TherapistPatientQuestionsView.as_view(), name="therapist-patient-question-list"),
     path("auth/patients/<uuid:patient_id>/questions/<uuid:question_id>/", TherapistPatientQuestionDetailView.as_view(), name="therapist-patient-question-detail"),
+    path("auth/questions/", TherapistAllQuestionsView.as_view(), name="therapist-question-list-all"),
 ]

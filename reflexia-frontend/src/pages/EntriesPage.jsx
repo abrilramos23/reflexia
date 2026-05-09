@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { FaEdit, FaTrash, FaEye } from 'react-icons/fa'
+import { FaEdit, FaTrash, FaEye, FaPlus } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext.jsx'
 import {
   buildEntryPreview,
@@ -115,6 +115,7 @@ export function EntriesPage() {
 
           <div className="section-toolbar" style={{ gap: '4px' }}>
             <Link className="button" style={{ textDecoration: 'none' }} to="/entries/new">
+              <FaPlus />
               Escriure nova entrada
             </Link>
             <button className="button-secondary" type="button" disabled={isExporting || isLoading || !entries.length} onClick={handleExportHistory}>
@@ -132,43 +133,57 @@ export function EntriesPage() {
             ) : (
               <ul className="patient-list">
                 {entries.map((entry) => (
-                  <li className="patient-item compact-list-item" key={entry.id}>
-                    <div className="entries-list-copy">
-                      <div className="item-heading-row">
-                        <strong>{formatEntryStatus(entry)}</strong>
-                        {entry.is_deleted ? (
-                          <span className="status-pill">Anonimitzada</span>
+                  <li className="compact-list-item" key={entry.id}>
+                    <Link 
+                      to={`/entries/${entry.id}`} 
+                      className="patient-item" 
+                      style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}
+                    >
+                      <div className="entries-list-copy">
+                        <div className="item-heading-row">
+                          <strong>{formatEntryStatus(entry)}</strong>
+                          {entry.is_deleted ? (
+                            <span className="status-pill">Anonimitzada</span>
+                          ) : null}
+                        </div>
+                        <p className="muted">Actualitzada: {formatEntryDate(entry.updated_at)}</p>
+                        <p className="muted">{buildEntryPreview(entry.content)}</p>
+                        <p className="muted">
+                          Risc: {formatRiskLevel(entry.analysis?.risk_level)}
+                        </p>
+                      </div>
+
+                      <div className="list-actions">
+                         {!entry.is_deleted ? (
+                          <Link 
+                            className="action-chip action-chip--icon" 
+                            style={{ textDecoration: 'none' }} 
+                            to={`/entries/${entry.id}/edit`} 
+                            title="Editar" 
+                            aria-label="Editar"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <FaEdit />
+                          </Link>
+                        ) : null}
+                         {!entry.is_deleted ? (
+                          <button
+                            className="action-chip action-chip--danger action-chip--icon"
+                            type="button"
+                            disabled={busyEntryId === entry.id}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleDeleteEntry(entry)
+                            }}
+                            title="Eliminar"
+                            aria-label="Eliminar"
+                          >
+                            {busyEntryId === entry.id ? '...' : <FaTrash />}
+                          </button>
                         ) : null}
                       </div>
-                      <p className="muted">Actualitzada: {formatEntryDate(entry.updated_at)}</p>
-                      <p className="muted">{buildEntryPreview(entry.content)}</p>
-                      <p className="muted">
-                        Risc: {formatRiskLevel(entry.analysis?.risk_level)}
-                      </p>
-                    </div>
-
-                     <div className="list-actions">
-                      <Link className="action-chip action-chip--accent" style={{ textDecoration: 'none' }} to={`/entries/${entry.id}`} title="Veure detall" aria-label="Veure detall">
-                        <FaEye />
-                      </Link>
-                       {!entry.is_deleted ? (
-                        <Link className="action-chip" style={{ textDecoration: 'none' }} to={`/entries/${entry.id}/edit`} title="Editar" aria-label="Editar">
-                          <FaEdit />
-                        </Link>
-                      ) : null}
-                       {!entry.is_deleted ? (
-                        <button
-                          className="action-chip action-chip--danger"
-                          type="button"
-                          disabled={busyEntryId === entry.id}
-                          onClick={() => handleDeleteEntry(entry)}
-                          title="Eliminar"
-                          aria-label="Eliminar"
-                        >
-                          {busyEntryId === entry.id ? '...' : <FaTrash />}
-                        </button>
-                      ) : null}
-                    </div>
+                    </Link>
                   </li>
                 ))}
               </ul>

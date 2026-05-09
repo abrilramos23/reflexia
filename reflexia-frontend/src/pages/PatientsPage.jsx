@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { FaUserSlash } from 'react-icons/fa'
+import { FaPlus, FaUserSlash } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext.jsx'
 
 function firstErrorMessage(error) {
@@ -165,7 +165,7 @@ export function PatientsPage() {
               <h2>Registrar un nou pacient</h2>
             </div>
             <span className={`section-toggle-indicator ${isRegisterSectionOpen ? 'section-toggle-indicator--open' : ''}`}>
-              <span aria-hidden="true">▾</span>
+              <FaPlus />
             </span>
           </button>
 
@@ -267,7 +267,7 @@ export function PatientsPage() {
           ) : (
             <ul className="patient-list">
               {therapistPatients.map((patient) => (
-                <li className="patient-item compact-list-item" key={patient.id} style={{ padding: 0, overflow: 'hidden' }}>
+                <li className="compact-list-item" key={patient.id}>
                   <Link
                     to={`/patients/${patient.id}`}
                     style={{ textDecoration: 'none', color: 'inherit', display: 'flex', padding: '14px 16px', width: '100%', alignItems: 'center', transition: 'background-color 0.2s' }}
@@ -290,7 +290,7 @@ export function PatientsPage() {
 
                     <div className="list-actions" style={{ marginLeft: '1rem' }}>
                        <button
-                        className="action-chip action-chip--danger"
+                        className="action-chip action-chip--danger action-chip--icon"
                         type="button"
                         disabled={!patient.is_active || busyPatientId === patient.id}
                         onClick={(e) => {

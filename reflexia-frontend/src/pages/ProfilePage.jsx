@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { FaUserSlash } from 'react-icons/fa'
 import { Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -519,13 +520,15 @@ export function ProfilePage() {
                       </div>
                       <p className="muted">{patient.email}</p>
                     </div>
-                    <button
-                      className="button-danger"
+                     <button
+                      className="button-danger button--icon"
                       type="button"
                       disabled={busyPatientId === patient.id}
                       onClick={() => handleDeactivatePatient(patient.id)}
+                      title="Donar de baixa"
+                      aria-label="Donar de baixa"
                     >
-                      {busyPatientId === patient.id ? 'Donant de baixa...' : 'Donar de baixa'}
+                      {busyPatientId === patient.id ? '...' : <FaUserSlash />}
                     </button>
                   </li>
                 ))}

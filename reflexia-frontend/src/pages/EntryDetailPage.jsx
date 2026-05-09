@@ -94,19 +94,20 @@ export function EntryDetailPage() {
     <div className="screen-shell">
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
-          <div className="button-row">
+          <div className="button-row" style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
              <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/entries" title="Tornar">
               <FaArrowLeft />
             </Link>
             {entry && !entry.is_deleted ? (
-              <>
+              <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
+                <Link className="button" style={{ textDecoration: 'none' }} to={`/entries/${entry.id}/edit`} title="Editar entrada">
+                  <FaEdit />
+                  Editar
+                </Link>
                 <button className="button-secondary" type="button" disabled={isExporting} onClick={handleExport}>
                   {isExporting ? 'Generant PDF...' : 'Exportar PDF'}
                 </button>
-                 <Link className="button" style={{ textDecoration: 'none' }} to={`/entries/${entry.id}/edit`} title="Editar entrada">
-                  <FaEdit />
-                </Link>
-              </>
+              </div>
             ) : null}
           </div>
         </section>

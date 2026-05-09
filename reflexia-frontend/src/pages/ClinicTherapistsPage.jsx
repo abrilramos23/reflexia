@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FaEdit, FaTrash, FaArrowLeft } from 'react-icons/fa'
+import { FaEdit, FaTrash, FaArrowLeft, FaPlus } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Navigate } from 'react-router-dom'
 
@@ -151,7 +151,7 @@ export function ClinicTherapistsPage() {
               <p className="eyebrow">{organisation?.name || 'La teva clínica'}</p>
               <h1>{isEdit ? 'Editar Professional' : 'Nou Professional'}</h1>
             </div>
-             <button className="button-ghost" onClick={() => setView('list')} title="Tornar">
+             <button className="button-ghost button--icon" onClick={() => setView('list')} title="Tornar" aria-label="Tornar">
               <FaArrowLeft />
             </button>
           </div>
@@ -263,7 +263,9 @@ export function ClinicTherapistsPage() {
               <p className="eyebrow">{organisation?.name || 'La teva clínica'}</p>
               <h1 className="section-title">Terapeutes</h1>
             </div>
-            <button className="button" onClick={openCreateView} icon="+"/>
+            <button className="button button--icon" onClick={openCreateView} title="Afegir terapeuta" aria-label="Afegir terapeuta">
+              <FaPlus />
+            </button>
           </div>
 
           {error && <div className="error-banner">{error}</div>}
@@ -301,10 +303,10 @@ export function ClinicTherapistsPage() {
                   <div className="entity-card__footer">
                     <span className="tiny muted">Alta: {new Date(t.registration_date).toLocaleDateString()}</span>
                      <div className="button-row entity-actions">
-                       <button className="button-ghost" type="button" onClick={() => openEditView(t)} title="Editar" aria-label="Editar">
+                       <button className="button-ghost button--icon action-chip--icon" type="button" onClick={() => openEditView(t)} title="Editar" aria-label="Editar">
                         <FaEdit />
                       </button>
-                      <button className="button-danger" type="button" onClick={() => handleDelete(t)} title="Eliminar" aria-label="Eliminar">
+                      <button className="button-danger button--icon action-chip--icon" type="button" onClick={() => handleDelete(t)} title="Eliminar" aria-label="Eliminar">
                         <FaTrash />
                       </button>
                     </div>

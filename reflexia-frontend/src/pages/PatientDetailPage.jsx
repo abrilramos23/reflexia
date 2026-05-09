@@ -131,14 +131,18 @@ export function PatientDetailPage() {
   return (
     <div className="screen-shell">
       <div className="profile-grid">
-        {/* Patient Header Card */}
         <section className="screen-card dashboard-panel profile-card--wide">
-          {error ? <div className="error-banner">{error}</div> : null}
-           <div className="button-row" style={{ marginBottom: '1rem' }}>
+          <div className="button-row" style={{ display: 'flex', justifyContent: 'space-between' }}>
             <Link to="/patients" className="button-ghost" style={{ textDecoration: 'none' }} title="Tornar" aria-label="Tornar">
               <FaArrowLeft />
             </Link>
+            <button className="button-secondary" type="button" disabled={isExportingEntries} onClick={handleExportEntries}>
+              {isExportingEntries ? 'Generant PDF...' : 'Exportar historial PDF'}
+            </button>
           </div>
+        </section>
+        <section className="screen-card dashboard-panel profile-card--wide">
+          {error ? <div className="error-banner">{error}</div> : null}
           <div className="panel-heading">
             <p className="eyebrow">Detall del Pacient</p>
             <h1 className="section-title">{patient.first_name} {patient.last_name}</h1>
@@ -147,19 +151,14 @@ export function PatientDetailPage() {
                 {patient.is_active ? 'Compte actiu' : 'Compte inactiu'}
               </span>
               <span className={`status-pill ${patient.consent_accepted ? 'dashboard-status-pill--active' : 'dashboard-status-pill--pending'}`}>
-                Consentiment: {patient.consent_accepted ? 'Acceptat' : 'Pendent'}
+                Consentiment {patient.consent_accepted ? 'acceptat' : 'pendent'}
               </span>
             </div>
             <p className="muted" style={{ marginTop: '1rem' }}>
               <strong>Email:</strong> {patient.email} <br />
-              <strong>Data de naixement:</strong> {patient.birth_date} <br />
+              <strong>Data de naixement:</strong> {patient.birth_date ? new Date(patient.birth_date).toLocaleDateString() : 'No disponible'} <br />
               <strong>Data de registre:</strong> {new Date(patient.registration_date).toLocaleDateString()}
             </p>
-          </div>
-          <div className="button-row" style={{ marginTop: '1rem' }}>
-            <button className="button-secondary" type="button" disabled={isExportingEntries} onClick={handleExportEntries}>
-              {isExportingEntries ? 'Generant PDF...' : 'Exportar historial PDF'}
-            </button>
           </div>
         </section>
 
@@ -167,14 +166,13 @@ export function PatientDetailPage() {
           <div className="panel-heading">
             <p className="eyebrow">Evolució emocional</p>
             <h3>Gràfics de seguiment</h3>
-            <p className="muted">Dades construides amb les analisis de les entrades del pacient, ordenades cronologicament.</p>
+            <p className="muted">Dades construïdes amb les anàlisis de les entrades del pacient, ordenades cronològicament.</p>
           </div>
           <EmotionalEvolutionPanel evolution={evolution} />
         </section>
 
-        {/* Tabs Control */}
-        <section className="screen-card dashboard-panel profile-card--wide" style={{ paddingBottom: 0 }}>
-          <div className="entries-toolbar" style={{ borderBottom: '1px solid rgba(0,0,0,0.1)', gap: '2rem' }}>
+        <section className="screen-card dashboard-panel profile-card--wide" style={{ gap: '0' }}>
+          <div className="entries-toolbar" style={{ borderBottom: '1px solid rgba(0,0,0,0.1)', gap: '2rem', display: 'flex', marginBottom: '1rem' }}>
             <button 
               className={`text-link ${activeTab === 'entries' ? '' : 'muted'}`} 
               onClick={() => setActiveTab('entries')}
@@ -190,10 +188,7 @@ export function PatientDetailPage() {
               Preguntes ({questions.length})
             </button>
           </div>
-        </section>
 
-        {/* Tab Content */}
-        <section className="screen-card dashboard-panel profile-card--wide">
           {questionMessage ? <div className="message">{questionMessage}</div> : null}
           {activeTab === 'entries' ? (
             <div className="page-stack">
@@ -225,25 +220,6 @@ export function PatientDetailPage() {
             </div>
           ) : (
             <div className="page-stack">
-              <form className="content-card section-stack" onSubmit={handleCreateQuestion}>
-                <h3>Nova pregunta</h3>
-                <div className="field-group">
-                  <label htmlFor="new-patient-question">Pregunta per al pacient</label>
-                  <textarea
-                    id="new-patient-question"
-                    value={newQuestionText}
-                    onChange={(event) => setNewQuestionText(event.target.value)}
-                    rows={3}
-                    placeholder="Escriu una pregunta de seguiment..."
-                  />
-                </div>
-                <div className="button-row">
-                  <button className="button" type="submit" disabled={isCreatingQuestion || !newQuestionText.trim()}>
-                    {isCreatingQuestion ? 'Creant pregunta...' : 'Crear pregunta'}
-                  </button>
-                </div>
-              </form>
-
               {questions.length === 0 ? (
                 <p className="muted">No s&apos;han assignat preguntes a aquest pacient.</p>
               ) : (

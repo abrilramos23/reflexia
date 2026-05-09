@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FaEdit, FaTrash, FaArrowLeft } from 'react-icons/fa'
+import { FaEdit, FaTrash, FaArrowLeft, FaPlus } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Navigate } from 'react-router-dom'
 
@@ -154,7 +154,7 @@ export function PlatformClinicAdminsPage() {
             <div>
               <h1>{isEdit ? 'Editar Admin de Clínica' : 'Assignar Admin de Clínica'}</h1>
             </div>
-             <button className="button-ghost" onClick={() => setView('list')} title="Tornar">
+             <button className="button-ghost button--icon" onClick={() => setView('list')} title="Tornar" aria-label="Tornar">
               <FaArrowLeft />
             </button>
           </div>
@@ -262,6 +262,7 @@ export function PlatformClinicAdminsPage() {
               <h1 className="section-title">Admins de Clínica</h1>
             </div>
             <button className="button" onClick={openCreateView}>
+              <FaPlus />
               Assignar Admin
             </button>
           </div>
@@ -303,17 +304,17 @@ export function PlatformClinicAdminsPage() {
                         <strong>Tipus:</strong> {admin.organisation?.type === 'clinic' ? 'Clínica / Centre' : 'Independent'}
                       </p>
                       <p className="entity-card__meta">
-                        <strong>Estat org.:</strong> {admin.organisation?.is_active ? 'Activa' : 'Inactiva'}
+                        <strong>Estat:</strong> {admin.organisation?.is_active ? 'Activa' : 'Inactiva'}
                       </p>
                     </section>
                   </div>
                   <div className="entity-card__footer">
                     <span className="tiny muted">Alta: {new Date(admin.registration_date).toLocaleDateString()}</span>
                      <div className="button-row entity-actions">
-                       <button className="button-ghost" type="button" onClick={() => openEditView(admin)} title="Editar" aria-label="Editar">
+                       <button className="button-ghost button--icon" type="button" onClick={() => openEditView(admin)} title="Editar" aria-label="Editar">
                         <FaEdit />
                       </button>
-                      <button className="button-danger" type="button" onClick={() => handleDelete(admin)} title="Eliminar" aria-label="Eliminar">
+                      <button className="button-danger button--icon" type="button" onClick={() => handleDelete(admin)} title="Eliminar" aria-label="Eliminar">
                         <FaTrash />
                       </button>
                     </div>

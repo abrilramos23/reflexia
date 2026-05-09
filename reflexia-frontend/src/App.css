@@ -271,16 +271,38 @@
 .button,
 .button-secondary,
 .button-ghost,
-.button-danger {
+.button-danger,
+.action-chip {
   appearance: none;
   border: none;
   cursor: pointer;
   border-radius: 999px;
   font: inherit;
   font-weight: 700;
-  padding: 13px 20px;
+  padding: 10px 18px; /* Slightly reduced padding for a simpler look */
   transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
   width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1.2; /* Better vertical alignment for icons */
+}
+
+.button--icon,
+.action-chip--icon {
+  padding: 0 !important;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.button--icon svg,
+.action-chip--icon svg {
+  font-size: 1.25rem;
 }
 
 .button:hover,
@@ -315,10 +337,6 @@
   background: rgba(255, 255, 255, 0.78);
   color: var(--ink);
   border: 1px solid rgba(61, 102, 89, 0.16);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
 }
 
 /* Global Icon Support via [icon] attribute */
@@ -451,7 +469,14 @@
   padding: 14px 16px;
   font: inherit;
   color: var(--ink);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.2s ease;
+}
+
+.compact-list-item:hover {
+  border-color: rgba(61, 102, 89, 0.3);
+  background: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(43, 88, 71, 0.08);
 }
 
 .item-heading-row {
@@ -463,22 +488,16 @@
 }
 
 .action-chip {
-  appearance: none;
-  border: 1px solid rgba(61, 102, 89, 0.16);
-  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(61, 102, 89, 0.12);
+  background: rgba(255, 255, 255, 0.6);
   color: var(--ink);
-  cursor: pointer;
-  border-radius: 999px;
-  font: inherit;
   font-size: 0.88rem;
-  font-weight: 700;
-  padding: 9px 14px;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  padding: 6px 10px;
+  box-shadow: none;
 }
 
 .action-chip:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 18px rgba(43, 88, 71, 0.1);
 }
 
 .action-chip--accent {
@@ -1201,7 +1220,6 @@
 
 .entity-actions .button-ghost,
 .entity-actions .button-danger {
-  padding: 9px 14px;
   font-size: 0.88rem;
 }
 

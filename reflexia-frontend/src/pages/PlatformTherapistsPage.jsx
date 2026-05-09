@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FaEdit, FaTrash, FaArrowLeft } from 'react-icons/fa'
+import { FaEdit, FaTrash, FaArrowLeft, FaPlus } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Navigate } from 'react-router-dom'
 
@@ -162,7 +162,7 @@ export function PlatformTherapistsPage() {
               <p className="eyebrow">{isEdit ? 'Gestió de Terapeuta' : 'Nou Terapeuta'}</p>
               <h1>{isEdit ? 'Editar Professional' : 'Registrar Professional'}</h1>
             </div>
-            <button className="button-ghost" onClick={() => setView('list')} title="Tornar">
+            <button className="button-ghost button--icon" onClick={() => setView('list')} title="Tornar" aria-label="Tornar">
               <FaArrowLeft />
             </button>
           </div>
@@ -289,7 +289,7 @@ export function PlatformTherapistsPage() {
               <h1 className="section-title">Terapeutes</h1>
             </div>
             <button className="button" onClick={openCreateView}>
-              Nou Terapeuta
+              <FaPlus />
             </button>
           </div>
 
@@ -331,10 +331,10 @@ export function PlatformTherapistsPage() {
                   <div className="entity-card__footer">
                     <span className="tiny muted">Registrat: {new Date(t.registration_date).toLocaleDateString()}</span>
                     <div className="button-row entity-actions">
-                      <button className="button-ghost" type="button" onClick={() => openEditView(t)} title="Editar" aria-label="Editar">
+                      <button className="button-ghost button--icon" type="button" onClick={() => openEditView(t)} title="Editar" aria-label="Editar">
                         <FaEdit />
                       </button>
-                      <button className="button-danger" type="button" onClick={() => handleDelete(t)} title="Eliminar" aria-label="Eliminar">
+                      <button className="button-danger button--icon" type="button" onClick={() => handleDelete(t)} title="Eliminar" aria-label="Eliminar">
                         <FaTrash />
                       </button>
                     </div>

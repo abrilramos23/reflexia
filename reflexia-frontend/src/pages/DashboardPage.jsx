@@ -1,5 +1,6 @@
 import { Link, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { FaPlus } from 'react-icons/fa'
 import { EmotionalEvolutionPanel } from '../components/EmotionalEvolutionPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { consentDocumentUrl } from '../lib/api.js'
@@ -274,26 +275,20 @@ export function DashboardPage() {
                     </p>
                   </>
                 )}
-                <div className="button-row">
-                  <Link
-                    className="button-secondary"
-                    style={{ marginBlockStart: '1rem', textDecoration: 'none' }}
-                    to="/entries/new"
-                  >
-                    Obrir editor
-                  </Link>
-                </div>
               </div>
             </section>
 
             <section className="screen-card dashboard-panel profile-card--wide">
               <div className="panel-heading">
                 <p className="eyebrow">Entrades recents</p>
-                <h2>El teu historial més recent</h2>
-                <div className="button-row" style={{ marginBlockStart: '1rem' }}>
-                  <Link className="button" style={{ textDecoration: 'none' }} to="/entries/new">
-                    Escriure
-                  </Link>
+                <div style={{ display: 'flex', flexDirection: 'row', gap: '10px', justifyContent: 'space-between' }}>
+                  <h2 style={{ marginBlockEnd: '0' }}>El teu historial més recent</h2>
+                  <div className="button-row">
+                    <Link className="button" style={{ textDecoration: 'none' }} to="/entries/new">
+                      <FaPlus />
+                      Escriure
+                    </Link>
+                  </div>
                 </div>
               </div>
 
@@ -341,10 +336,10 @@ export function DashboardPage() {
                 </div>
                 <div className="button-row">
                   <Link className="button-secondary" style={{ textDecoration: 'none' }} to="/clinic">
-                    Panell d&apos;Administrador
+                    Gestionar clínica
                   </Link>
                   <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/admin/therapists">
-                    Gestionar Equip
+                    Gestionar equip
                   </Link>
                 </div>
               </section>

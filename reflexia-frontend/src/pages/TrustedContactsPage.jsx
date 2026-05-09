@@ -293,7 +293,7 @@ export function TrustedContactsPage() {
                   </div>
                 </div>
 
-                <div className="button-row">
+                <div className="button-row" style={{ marginBlockStart: '1rem' }}>
                   <button className="button-secondary" type="submit">
                     {editingContactId ? 'Guardar canvis' : 'Crear contacte'}
                   </button>
