@@ -45,16 +45,16 @@ ANALYSIS_SCHEMA = {
 
 
 SYSTEM_PROMPT = """
-Ets un assistent de suport per a una plataforma de journaling terapeutic.
-Analitza l'entrada del pacient amb prudencia clinica i torna nomes JSON valid.
-No diagnostiquis. El resultat es orientatiu i sera revisat per un terapeuta.
-Identifica emocions amb percentatges que sumin aproximadament 100.
+Ets un assistent de suport per a una plataforma de journaling terapèutic.
+Analitza l'entrada del pacient amb prudència clínica i torna només JSON vàlid.
+No diagnostiquis. El resultat és orientatiu i serà revisat per un terapeuta.
+Identifica emocions amb percentatges que sumin aproximadament 100%.
 Classifica el risc com none, low, moderate, high:
 - none: No hi ha malestar evident ni senyals d'alarma.
 - low: Malestar lleu o emocionalitat quotidiana sense senyals d'alarma.
 - moderate: Malestar sostingut, desesperança o dificultats funcionals sense risc imminent.
-- high: Autolesio, ideacio suicida no imminent, violencia, abús o deteriorament intens.
-Escriu resums i recomanacions en catala, amb llenguatge clar i no alarmista.
+- high: Autolesió, ideació suïcida no imminent, violència, abús o deteriorament intens.
+Escriu resums i recomanacions en català, amb llenguatge clar i no alarmista, per guiar al pacient i ajudar-lo a reflexionar.
 """.strip()
 
 
@@ -123,7 +123,7 @@ def build_evolution_payload(*, patient):
         [
             {
                 "emotion": emotion,
-                "average_percentage": round(total / occurrences[emotion], 2),
+                "average_percentage": round(total / len(data_points), 2),
                 "occurrences": occurrences[emotion],
             }
             for emotion, total in totals.items()
@@ -142,7 +142,7 @@ def build_evolution_payload(*, patient):
         "message": (
             ""
             if len(data_points) >= 2
-            else "Encara no hi ha prou entrades analitzades. Escriu i analitza mes entrades per veure l'evolucio."
+            else "Encara no hi ha prou entrades analitzades. Escriu i analitza més entrades per veure l'evolució."
         ),
     }
 
@@ -151,11 +151,11 @@ def _request_openai_analysis(*, entry):
     try:
         from openai import OpenAI
     except ImportError as exc:
-        raise AnalysisServiceError("La dependencia openai no esta instal·lada al backend.") from exc
+        raise AnalysisServiceError("La dependència openai no està instal·lada al backend.") from exc
 
     api_key = getattr(settings, "OPENAI_API_KEY", "")
     if not api_key:
-        raise AnalysisServiceError("OPENAI_API_KEY no esta configurada.")
+        raise AnalysisServiceError("OPENAI_API_KEY no està configurada.")
 
     client = OpenAI(api_key=api_key)
     model_name = getattr(settings, "OPENAI_ANALYSIS_MODEL", "gpt-5.4-mini")
@@ -178,12 +178,12 @@ def _request_openai_analysis(*, entry):
             },
         )
     except Exception as exc:
-        raise AnalysisServiceError("No s'ha pogut generar l'analisi amb OpenAI.") from exc
+        raise AnalysisServiceError("No s'ha pogut generar l'anàlisi amb OpenAI.") from exc
 
     try:
         parsed = json.loads(response.output_text)
     except (TypeError, ValueError) as exc:
-        raise AnalysisServiceError("OpenAI ha retornat una resposta no valida.") from exc
+        raise AnalysisServiceError("OpenAI ha retornat una resposta no vàlida.") from exc
 
     return parsed
 
@@ -256,7 +256,7 @@ def _normalize_analysis_payload(payload):
         "emotions": emotions,
         "primary_emotion": payload.get("primary_emotion") or emotions[0]["emotion"],
         "risk_level": risk_level,
-        "summary": payload.get("summary", "").strip() or "Analisi generada sense resum disponible.",
+        "summary": payload.get("summary", "").strip() or "Anàlisi generada sense resum disponible.",
         "recommendations": [
             str(recommendation).strip()
             for recommendation in payload.get("recommendations", [])

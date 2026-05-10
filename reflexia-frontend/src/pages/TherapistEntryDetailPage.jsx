@@ -105,7 +105,7 @@ export function TherapistEntryDetailPage() {
     <div className="screen-shell">
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
-          <div className="button-row">
+          <div className="button-row" style={{justifyContent: 'space-between'}}>
              <Link to={`/patients/${patientId}`} className="button-ghost" style={{ textDecoration: 'none' }} title="Tornar" aria-label="Tornar">
               <FaArrowLeft />
             </Link>
@@ -124,14 +124,13 @@ export function TherapistEntryDetailPage() {
             <>
               <div className="panel-heading">
                 <p className="eyebrow">Entrada de Journaling</p>
-                <h1 className="section-title">Detall de l&apos;entrada</h1>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h1 className="section-title">Detall de l&apos;entrada</h1>
+                  <span className="status-pill" style={{ justifySelf: 'flex-end' }}>{formatEntryStatus(entry)}</span>
+                </div>
                 <p className="muted">
-                  Creada el {formatEntryDate(entry.created_at)} i actualitzada el {formatEntryDate(entry.updated_at)}.
+                  Creada el {formatEntryDate(entry.created_at)}. Actualitzada el {formatEntryDate(entry.updated_at)}.
                 </p>
-              </div>
-
-              <div className="entries-toolbar" style={{ margin: '1.5rem 0' }}>
-                <span className="status-pill">{formatEntryStatus(entry)}</span>
               </div>
 
               {entry.therapist_question && (

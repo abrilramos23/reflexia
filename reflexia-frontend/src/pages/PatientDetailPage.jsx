@@ -165,8 +165,6 @@ export function PatientDetailPage() {
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
             <p className="eyebrow">Evolució emocional</p>
-            <h3>Gràfics de seguiment</h3>
-            <p className="muted">Dades construïdes amb les anàlisis de les entrades del pacient, ordenades cronològicament.</p>
           </div>
           <EmotionalEvolutionPanel evolution={evolution} />
         </section>

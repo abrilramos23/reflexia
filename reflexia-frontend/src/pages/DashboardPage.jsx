@@ -348,33 +348,29 @@ export function DashboardPage() {
             <section className="screen-card dashboard-panel profile-card--wide">
               <div className="panel-heading">
                 <p className="eyebrow">Visió clínica</p>
-                <h2>Panell d&apos;activitat del terapeuta</h2>
-                <p className="muted">
-                  Aquí tens una lectura ràpida de l&apos;estat actual dels teus pacients assignats i dels espais que requeriran revisió.
-                </p>
               </div>
 
               <div className="dashboard-metrics-grid">
                 <div className="dashboard-metric-card dashboard-metric-card--active">
-                  <span>Pacients actius</span>
+                  <span style={{ fontWeight: 'bold' }}>Pacients actius</span>
                   <strong>{therapistDashboardData?.metrics.active_patients ?? '-'}</strong>
                   <p>Total de pacients assignats amb accés actiu a la plataforma.</p>
                 </div>
 
                 <div className="dashboard-metric-card">
-                  <span>Total d&apos;entrades</span>
+                  <span style={{ fontWeight: 'bold' }}>Total d&apos;entrades</span>
                   <strong>{therapistDashboardData?.metrics.total_entries ?? '-'}</strong>
                   <p>Nombre total d&apos;entrades registrades pels teus pacients.</p>
                 </div>
 
                 <div className="dashboard-metric-card">
-                  <span>Entrades d&apos;avui</span>
+                  <span style={{ fontWeight: 'bold' }}>Entrades d&apos;avui</span>
                   <strong>{therapistDashboardData?.metrics.entries_today ?? '-'}</strong>
                   <p>Entrades de journaling realitzades durant el dia d&apos;avui.</p>
                 </div>
 
                 <div className="dashboard-metric-card dashboard-metric-card--pending">
-                  <span>Anàlisis pendents</span>
+                  <span style={{ fontWeight: 'bold' }}>Anàlisis pendents</span>
                   <strong>{therapistDashboardData?.metrics.pending_analyses ?? '-'}</strong>
                   <p>Entrades que encara no has revisat o corregit.</p>
                 </div>
@@ -388,12 +384,8 @@ export function DashboardPage() {
             </section>
 
             <section className="screen-card dashboard-panel profile-card--wide">
-              <div className="panel-heading">
-                <p className="eyebrow">Activitat recent</p>
-                <h2>Últimes entrades dels teus pacients</h2>
-                <p className="muted">
-                  Segueix de prop l&apos;activitat més recent per detectar canvis d&apos;estat o riscos en temps real.
-                </p>
+              <div className="panel-heading" style={{ marginBottom: '0rem' }}>
+                <p className="eyebrow">Activitat recent dels pacients</p>
               </div>
 
               <div className="content-card section-stack">

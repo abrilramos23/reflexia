@@ -1,4 +1,5 @@
 import {
+  BarElement,
   CategoryScale,
   Chart as ChartJS,
   Legend,
@@ -7,9 +8,9 @@ import {
   PointElement,
   Tooltip,
 } from 'chart.js'
-import { Line } from 'react-chartjs-2'
+import { Bar } from 'react-chartjs-2'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend)
 
 const palette = ['#2f6e58', '#7f6721', '#a03939', '#2f7e7a', '#53675f']
 
@@ -33,12 +34,9 @@ function buildChartData(evolution) {
     datasets: emotions.map((emotion, index) => ({
       label: emotion,
       data: evolution.data_points.map((point) => point.emotions[emotion] || 0),
+      backgroundColor: palette[index % palette.length] + 'cc',
       borderColor: palette[index % palette.length],
-      backgroundColor: palette[index % palette.length],
-      borderWidth: 2,
-      tension: 0.32,
-      pointRadius: 4,
-      pointHoverRadius: 6,
+      borderWidth: 1,
     })),
   }
 }
@@ -46,10 +44,17 @@ function buildChartData(evolution) {
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
+  interaction: {
+    mode: 'index',
+    intersect: false,
+  },
   scales: {
+    x: {
+      stacked: true,
+      grid: { display: false },
+    },
     y: {
-      min: 0,
-      max: 100,
+      stacked: true,
       ticks: {
         callback: (value) => `${value}%`,
       },
@@ -60,7 +65,23 @@ const chartOptions = {
       position: 'bottom',
       labels: {
         usePointStyle: true,
-        boxWidth: 8,
+        pointStyle: 'rect',
+        boxWidth: 10,
+      },
+      onClick: (e, legendItem, legend) => {
+        const index = legendItem.datasetIndex
+        const ci = legend.chart
+        const isIsolated = ci.data.datasets.every((_, i) =>
+          i === index ? ci.isDatasetVisible(i) : !ci.isDatasetVisible(i)
+        )
+        if (isIsolated) {
+          ci.data.datasets.forEach((_, i) => ci.show(i))
+        } else {
+          ci.data.datasets.forEach((_, i) => {
+            if (i === index) ci.show(i)
+            else ci.hide(i)
+          })
+        }
       },
     },
     tooltip: {
@@ -88,6 +109,10 @@ export function EmotionalEvolutionPanel({ evolution, isLoading = false }) {
   }
 
   const chartData = buildChartData(evolution)
+  const topEmotion = evolution.frequent_emotions.reduce(
+    (best, item) => (item.average_percentage > best.average_percentage ? item : best),
+    evolution.frequent_emotions[0]
+  )
 
   return (
     <div className="section-stack">
@@ -98,7 +123,7 @@ export function EmotionalEvolutionPanel({ evolution, isLoading = false }) {
         </div>
         <div className="stat-card">
           <span>Emoció principal</span>
-          <strong>{evolution.frequent_emotions[0]?.emotion || 'Sense dades'}</strong>
+          <strong>{topEmotion?.emotion || 'Sense dades'}</strong>
         </div>
         <div className="stat-card">
           <span>Risc alt</span>
@@ -107,7 +132,7 @@ export function EmotionalEvolutionPanel({ evolution, isLoading = false }) {
       </div>
 
       <div className="analysis-chart-panel">
-        <Line data={chartData} options={chartOptions} />
+        <Bar data={chartData} options={chartOptions} />
       </div>
 
       <div className="analysis-inline-list">
