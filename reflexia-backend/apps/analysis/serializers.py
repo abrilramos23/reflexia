@@ -62,17 +62,10 @@ class AnalysisCorrectionSerializer(serializers.ModelSerializer):
         fields = ("therapist_correction",)
 
     def validate_therapist_correction(self, value):
-        if not value or not value.strip():
-            raise serializers.ValidationError("La correcció no pot estar buida.")
-        return value.strip()
-
-    def validate(self, attrs):
-        if not attrs.get("therapist_correction"):
-            raise serializers.ValidationError({"therapist_correction": "La correcció no pot estar buida."})
-        return attrs
+        return value.strip() if value else ""
 
     def update(self, instance, validated_data):
-        instance.therapist_correction = validated_data["therapist_correction"]
+        instance.therapist_correction = validated_data.get("therapist_correction", "")
         instance.reviewed_by_therapist = True
         instance.save(update_fields=["therapist_correction", "reviewed_by_therapist"])
         return instance

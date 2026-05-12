@@ -97,7 +97,7 @@ export function EntryAnalysisPanel({
               placeholder="Afegeix una lectura alternativa o una matisació clínica..."
             />
           </div>
-          <button className="button-secondary" type="submit" disabled={isSavingCorrection || !correction.trim()}>
+          <button className="button-secondary" type="submit" disabled={isSavingCorrection}>
             {isSavingCorrection ? 'Guardant correcció...' : 'Guardar correcció'}
           </button>
         </form>

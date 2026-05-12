@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FaArrowLeft } from 'react-icons/fa'
+import { FaArrowLeft, FaStickyNote, FaCheckCircle } from 'react-icons/fa'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { EntryAnalysisPanel } from '../components/EntryAnalysisPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -20,6 +20,8 @@ export function TherapistEntryDetailPage() {
   const [notesMessage, setNotesMessage] = useState('')
   const [isSavingNote, setIsSavingNote] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [isAddingNote, setIsAddingNote] = useState(false)
+  const [isMarkingReviewed, setIsMarkingReviewed] = useState(false)
 
   useEffect(() => {
     let isCancelled = false
@@ -80,6 +82,7 @@ export function TherapistEntryDetailPage() {
       setNotes((currentNotes) => [response.note, ...currentNotes])
       setNewNote('')
       setNotesMessage(response.message)
+      setIsAddingNote(false)
     } catch (err) {
       setNotesError(firstErrorMessage(err.response?.data || err))
     } finally {
@@ -101,6 +104,20 @@ export function TherapistEntryDetailPage() {
     }
   }
 
+  async function handleMarkAsReviewed() {
+    setIsMarkingReviewed(true)
+    try {
+      const analysis = await updatePatientEntryAnalysisCorrection(patientId, entryId, {
+        therapist_correction: entry.analysis?.therapist_correction ?? '',
+      })
+      setEntry((current) => ({ ...current, analysis }))
+    } catch (err) {
+      setError(firstErrorMessage(err.response?.data || err))
+    } finally {
+      setIsMarkingReviewed(false)
+    }
+  }
+
   return (
     <div className="screen-shell">
       <div className="profile-grid">
@@ -109,9 +126,30 @@ export function TherapistEntryDetailPage() {
              <Link to={`/patients/${patientId}`} className="button-ghost" style={{ textDecoration: 'none' }} title="Tornar" aria-label="Tornar">
               <FaArrowLeft />
             </Link>
-            <button className="button-secondary" type="button" disabled={isExporting} onClick={handleExport}>
-              {isExporting ? 'Generant PDF...' : 'Exportar PDF'}
-            </button>
+            <div style={{ display: 'flex', gap: '10px'}}>
+                <button className="button-secondary" type="button" disabled={isExporting} onClick={handleExport}>
+                  {isExporting ? 'Generant PDF...' : 'Exportar PDF'}
+                </button>
+                <button
+                  style={{ justifySelf: 'flex-end' }}
+                  type="button"
+                  className="button"
+                  onClick={() => { setIsAddingNote((v) => !v); setNotesError(''); setNotesMessage('') }}
+                >
+                  <FaStickyNote /> Afegir Nota
+                </button>
+                {entry?.analysis && !entry.analysis.reviewed_by_therapist && (
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={isMarkingReviewed}
+                    onClick={handleMarkAsReviewed}
+                  >
+                    <FaCheckCircle /> {isMarkingReviewed ? 'Marcant...' : 'Marcar com revisada'}
+                  </button>
+                )}
+            </div>
+            
           </div>
         </section>
 
@@ -158,25 +196,42 @@ export function TherapistEntryDetailPage() {
               />
 
               <div className="content-card section-stack">
-                <h3>Notes privades</h3>
-                <form className="section-stack" onSubmit={handleSaveNote}>
-                  {notesMessage ? <div className="message">{notesMessage}</div> : null}
-                  {notesError ? <div className="error-banner">{notesError}</div> : null}
-                  <div className="field-group">
-                    <textarea
-                      id="private-note"
-                      value={newNote}
-                      onChange={(event) => setNewNote(event.target.value)}
-                      rows={4}
-                      placeholder="Afegeix una observació clínica privada..."
-                    />
-                  </div>
-                  <div className="button-row">
-                    <button className="button" type="submit" disabled={isSavingNote || !newNote.trim()}>
-                      {isSavingNote ? 'Guardant nota...' : 'Guardar nota privada'}
-                    </button>
-                  </div>
-                </form>
+                <div className="item-heading-row" style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ margin: 0 }}>Notes privades</h3>
+                  {!isAddingNote ? <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => { setIsAddingNote((v) => !v); setNotesError(''); setNotesMessage('') }}
+                  >
+                    <FaStickyNote />
+                  </button> : null}
+                </div>
+
+                {notesMessage ? <div className="message">{notesMessage}</div> : null}
+
+                {isAddingNote && (
+                  <form className="section-stack" onSubmit={handleSaveNote}>
+                    {notesError ? <div className="error-banner">{notesError}</div> : null}
+                    <div className="field-group">
+                      <textarea
+                        id="private-note"
+                        value={newNote}
+                        onChange={(event) => setNewNote(event.target.value)}
+                        rows={4}
+                        placeholder="Afegeix una observació clínica privada..."
+                        autoFocus
+                      />
+                    </div>
+                    <div className="button-row">
+                      <button className="button" type="submit" disabled={isSavingNote || !newNote.trim()}>
+                        {isSavingNote ? 'Guardant nota...' : 'Guardar nota privada'}
+                      </button>
+                      <button className="button-ghost" type="button" onClick={() => { setIsAddingNote(false); setNotesError(''); setNotesMessage('') }}>
+                        Cancel·lar
+                      </button>
+                    </div>
+                  </form>
+                )}
 
                 {notes.length ? (
                   <ul className="patient-list">
