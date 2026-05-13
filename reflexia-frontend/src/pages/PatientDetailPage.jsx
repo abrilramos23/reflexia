@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react'
+import { FaArrowLeft } from 'react-icons/fa'
 import { Link, Navigate, useParams } from 'react-router-dom'
+import { EmotionalEvolutionPanel } from '../components/EmotionalEvolutionPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { firstErrorMessage, formatEntryDate, formatEntryStatus } from '../lib/entries.js'
+import { firstErrorMessage, formatEntryDate, formatEntryStatus, formatRiskLevel } from '../lib/entries.js'
 
 export function PatientDetailPage() {
-  const { user, getPatient, listPatientEntries, listPatientQuestions } = useAuth()
+  const { user, getPatient, getPatientEvolution, listPatientEntries, listPatientQuestions, createPatientQuestion, exportPatientEntriesPdf } = useAuth()
   const { patientId } = useParams()
   
   const [patient, setPatient] = useState(null)
   const [entries, setEntries] = useState([])
   const [questions, setQuestions] = useState([])
+  const [evolution, setEvolution] = useState(null)
   const [activeTab, setActiveTab] = useState('entries') // 'entries' | 'questions'
+  const [newQuestionText, setNewQuestionText] = useState('')
+  const [questionMessage, setQuestionMessage] = useState('')
+  const [isCreatingQuestion, setIsCreatingQuestion] = useState(false)
+  const [isExportingEntries, setIsExportingEntries] = useState(false)
   
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -22,16 +29,18 @@ export function PatientDetailPage() {
       setIsLoading(true)
       setError('')
       try {
-        const [patientData, entriesData, questionsData] = await Promise.all([
+        const [patientData, entriesData, questionsData, evolutionData] = await Promise.all([
           getPatient(patientId),
           listPatientEntries(patientId),
-          listPatientQuestions(patientId)
+          listPatientQuestions(patientId),
+          getPatientEvolution(patientId),
         ])
 
         if (!isCancelled) {
           setPatient(patientData)
           setEntries(entriesData)
           setQuestions(questionsData)
+          setEvolution(evolutionData)
         }
       } catch (err) {
         if (!isCancelled) {
@@ -49,7 +58,7 @@ export function PatientDetailPage() {
     return () => {
       isCancelled = true
     }
-  }, [patientId, getPatient, listPatientEntries, listPatientQuestions])
+  }, [patientId, getPatient, getPatientEvolution, listPatientEntries, listPatientQuestions])
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -57,6 +66,40 @@ export function PatientDetailPage() {
 
   if (user.role !== 'therapist') {
     return <Navigate to="/dashboard" replace />
+  }
+
+  async function handleCreateQuestion(event) {
+    event.preventDefault()
+    setQuestionMessage('')
+    setError('')
+    setIsCreatingQuestion(true)
+
+    try {
+      const response = await createPatientQuestion(patientId, { text: newQuestionText })
+      setQuestions((currentQuestions) => [response.question, ...currentQuestions.map((question) => ({ ...question, is_active: false, resolved: true }))])
+      setNewQuestionText('')
+      setQuestionMessage(response.message)
+      setActiveTab('questions')
+    } catch (err) {
+      setError(firstErrorMessage(err.response?.data || err))
+    } finally {
+      setIsCreatingQuestion(false)
+    }
+  }
+
+  async function handleExportEntries() {
+    setQuestionMessage('')
+    setError('')
+    setIsExportingEntries(true)
+
+    try {
+      const { blob, filename } = await exportPatientEntriesPdf(patientId)
+      triggerBrowserDownload(blob, filename)
+    } catch (err) {
+      setError(firstErrorMessage(err.response?.data || err))
+    } finally {
+      setIsExportingEntries(false)
+    }
   }
 
   if (isLoading) {
@@ -71,14 +114,13 @@ export function PatientDetailPage() {
     )
   }
 
-  if (error) {
+  if (error && !patient) {
     return (
       <div className="screen-shell">
         <div className="profile-grid">
           <section className="screen-card dashboard-panel profile-card--wide">
             <div className="error-banner">{error}</div>
-            <Link to="/patients" className="button-ghost" style={{ textDecoration: 'none' }}>
-              Tornar a la llista
+            <Link to="/patients" className="button-ghost" style={{ textDecoration: 'none' }} icon="arrow-left">
             </Link>
           </section>
         </div>
@@ -89,13 +131,18 @@ export function PatientDetailPage() {
   return (
     <div className="screen-shell">
       <div className="profile-grid">
-        {/* Patient Header Card */}
         <section className="screen-card dashboard-panel profile-card--wide">
-          <div className="button-row" style={{ marginBottom: '1rem' }}>
-            <Link to="/patients" className="button-ghost" style={{ textDecoration: 'none' }}>
-              ← Tornar
+          <div className="button-row" style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Link to="/patients" className="button-ghost" style={{ textDecoration: 'none' }} title="Tornar" aria-label="Tornar">
+              <FaArrowLeft />
             </Link>
+            <button className="button-secondary" type="button" disabled={isExportingEntries} onClick={handleExportEntries}>
+              {isExportingEntries ? 'Generant PDF...' : 'Exportar historial PDF'}
+            </button>
           </div>
+        </section>
+        <section className="screen-card dashboard-panel profile-card--wide">
+          {error ? <div className="error-banner">{error}</div> : null}
           <div className="panel-heading">
             <p className="eyebrow">Detall del Pacient</p>
             <h1 className="section-title">{patient.first_name} {patient.last_name}</h1>
@@ -104,32 +151,26 @@ export function PatientDetailPage() {
                 {patient.is_active ? 'Compte actiu' : 'Compte inactiu'}
               </span>
               <span className={`status-pill ${patient.consent_accepted ? 'dashboard-status-pill--active' : 'dashboard-status-pill--pending'}`}>
-                Consentiment: {patient.consent_accepted ? 'Acceptat' : 'Pendent'}
+                Consentiment {patient.consent_accepted ? 'acceptat' : 'pendent'}
               </span>
             </div>
             <p className="muted" style={{ marginTop: '1rem' }}>
               <strong>Email:</strong> {patient.email} <br />
-              <strong>Data de naixement:</strong> {patient.birth_date} <br />
+              <strong>Data de naixement:</strong> {patient.birth_date ? new Date(patient.birth_date).toLocaleDateString() : 'No disponible'} <br />
               <strong>Data de registre:</strong> {new Date(patient.registration_date).toLocaleDateString()}
             </p>
           </div>
         </section>
 
-        {/* Emotional Evolution Placeholder */}
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
             <p className="eyebrow">Evolució emocional</p>
-            <h3>Gràfics de seguiment</h3>
-            <p className="muted">L&apos;evolució emocional estarà disponible properament.</p>
           </div>
-          <div style={{ height: '100px', display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.03)', borderRadius: '16px', border: '1px dashed rgba(0,0,0,0.1)' }}>
-             <p className="muted">Evolució emocional (Pròximament)</p>
-          </div>
+          <EmotionalEvolutionPanel evolution={evolution} />
         </section>
 
-        {/* Tabs Control */}
-        <section className="screen-card dashboard-panel profile-card--wide" style={{ paddingBottom: 0 }}>
-          <div className="entries-toolbar" style={{ borderBottom: '1px solid rgba(0,0,0,0.1)', gap: '2rem' }}>
+        <section className="screen-card dashboard-panel profile-card--wide" style={{ gap: '0' }}>
+          <div className="entries-toolbar" style={{ borderBottom: '1px solid rgba(0,0,0,0.1)', gap: '2rem', display: 'flex', marginBottom: '1rem' }}>
             <button 
               className={`text-link ${activeTab === 'entries' ? '' : 'muted'}`} 
               onClick={() => setActiveTab('entries')}
@@ -145,10 +186,8 @@ export function PatientDetailPage() {
               Preguntes ({questions.length})
             </button>
           </div>
-        </section>
 
-        {/* Tab Content */}
-        <section className="screen-card dashboard-panel profile-card--wide">
+          {questionMessage ? <div className="message">{questionMessage}</div> : null}
           {activeTab === 'entries' ? (
             <div className="page-stack">
               {entries.length === 0 ? (
@@ -163,6 +202,9 @@ export function PatientDetailPage() {
                           <span className="status-pill">{formatEntryStatus(entry)}</span>
                         </div>
                         <p className="muted" style={{ margin: '0.5rem 0' }}>{entry.preview}</p>
+                        <span className="status-pill" style={{ fontSize: '0.75rem' }}>
+                          {formatRiskLevel(entry.analysis?.risk_level)}
+                        </span>
                         {entry.therapist_question && (
                           <span className="status-pill dashboard-status-pill--active" style={{ fontSize: '0.75rem' }}>
                             Respondre a: {entry.therapist_question.question.substring(0, 30)}...
@@ -185,7 +227,7 @@ export function PatientDetailPage() {
                       <Link to={`/patients/${patientId}/questions/${q.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', width: '100%' }}>
                         <div className="item-heading-row">
                           <span className={`status-pill ${q.is_active ? 'dashboard-status-pill--active' : 'dashboard-status-pill--muted'}`}>
-                            {q.is_active ? 'Activa' : 'Inactiva'}
+                            {q.is_active ? 'Activa' : 'Resolta'}
                           </span>
                           <span className="muted" style={{ fontSize: '0.85rem' }}>{formatEntryDate(q.created_at)}</span>
                         </div>
@@ -201,4 +243,15 @@ export function PatientDetailPage() {
       </div>
     </div>
   )
+}
+
+function triggerBrowserDownload(blob, filename) {
+  const fileUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = fileUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(fileUrl)
 }

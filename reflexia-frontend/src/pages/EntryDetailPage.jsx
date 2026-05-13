@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { FaEdit, FaArrowLeft } from 'react-icons/fa'
 import { Link, Navigate, useParams } from 'react-router-dom'
+import { EntryAnalysisPanel } from '../components/EntryAnalysisPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import {
   firstErrorMessage,
@@ -9,11 +11,14 @@ import {
 } from '../lib/entries.js'
 
 export function EntryDetailPage() {
-  const { user, getEntry } = useAuth()
+  const { user, getEntry, analyzeEntry, exportEntryPdf } = useAuth()
   const { entryId } = useParams()
   const [entry, setEntry] = useState(null)
   const [pageError, setPageError] = useState('')
+  const [pageMessage, setPageMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   useEffect(() => {
     let isCancelled = false
@@ -53,24 +58,63 @@ export function EntryDetailPage() {
     return <Navigate to="/dashboard" replace />
   }
 
+  async function handleAnalyzeEntry() {
+    setPageError('')
+    setPageMessage('')
+    setIsAnalyzing(true)
+
+    try {
+      const response = await analyzeEntry(entry.id)
+      setEntry(response.entry)
+      setPageMessage(response.message)
+    } catch (error) {
+      setPageError(firstErrorMessage(error.response?.data || error))
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
+  async function handleExport() {
+    setPageError('')
+    setPageMessage('')
+    setIsExporting(true)
+
+    try {
+      const { blob, filename } = await exportEntryPdf(entry.id)
+      triggerBrowserDownload(blob, filename)
+      setPageMessage('S’ha generat el PDF de l’entrada.')
+    } catch (error) {
+      setPageError(firstErrorMessage(error.response?.data || error))
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <div className="screen-shell">
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
-          <div className="button-row">
-            <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/entries">
-              Tornar al llistat
+          <div className="button-row" style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+             <Link className="button-ghost" style={{ textDecoration: 'none' }} to="/entries" title="Tornar">
+              <FaArrowLeft />
             </Link>
             {entry && !entry.is_deleted ? (
-              <Link className="button" style={{ textDecoration: 'none' }} to={`/entries/${entry.id}/edit`}>
-                Editar entrada
-              </Link>
+              <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
+                <Link className="button" style={{ textDecoration: 'none' }} to={`/entries/${entry.id}/edit`} title="Editar entrada">
+                  <FaEdit />
+                  Editar
+                </Link>
+                <button className="button-secondary" type="button" disabled={isExporting} onClick={handleExport}>
+                  {isExporting ? 'Generant PDF...' : 'Exportar PDF'}
+                </button>
+              </div>
             ) : null}
           </div>
         </section>
 
         <section className="screen-card dashboard-panel profile-card--wide">
           {pageError ? <div className="error-banner">{pageError}</div> : null}
+          {pageMessage ? <div className="message">{pageMessage}</div> : null}
 
           {isLoading ? (
             <p className="muted">Carregant detall...</p>
@@ -80,14 +124,15 @@ export function EntryDetailPage() {
                 <p className="eyebrow">Detall</p>
                 <h1 className="section-title">Detall de l’entrada</h1>
                 <p className="muted">
-                  Creada el {formatEntryDate(entry.created_at)} i actualitzada el {formatEntryDate(entry.updated_at)}.
+                  Creada el {formatEntryDate(entry.creation_date || entry.created_at)}
+                  {entry.modification_date ? ` i modificada el ${formatEntryDate(entry.modification_date)}.` : '.'}
                 </p>
               </div>
 
               <div className="entries-toolbar">
                 <span className="status-pill">{formatEntryStatus(entry)}</span>
-                {entry.last_analyzed_at ? (
-                  <span className="status-pill">Analitzada {formatEntryDate(entry.last_analyzed_at)}</span>
+                {entry.analysis ? (
+                  <span className="status-pill">Analitzada {formatEntryDate(entry.analysis.analyzed_at)}</span>
                 ) : null}
               </div>
 
@@ -116,21 +161,33 @@ export function EntryDetailPage() {
               </div>
 
               {entry.analysis ? (
+                <EntryAnalysisPanel analysis={entry.analysis} />
+              ) : (
                 <div className="content-card section-stack entries-analysis-card">
-                  <div className="item-heading-row" style={{ marginBottom: 0 }}>
-                    <h3>Lectura emocional orientativa</h3>
-                    <span className="status-pill">{entry.analysis.primary_emotion}</span>
-                  </div>
-                  <p>{entry.analysis.summary}</p>
+                  <h3>Analisi emocional</h3>
                   <p className="muted">
-                    To detectat: {entry.analysis.tone}. {entry.analysis.disclaimer}
+                    L&apos;analisi encara no s&apos;ha generat. Pots generar-la ara per consultar les emocions detectades i el nivell de risc orientatiu.
                   </p>
+                  <button className="button" type="button" disabled={isAnalyzing} onClick={handleAnalyzeEntry}>
+                    {isAnalyzing ? 'Generant analisi...' : 'Generar analisi'}
+                  </button>
                 </div>
-              ) : null}
+              )}
             </>
           ) : null}
         </section>
       </div>
     </div>
   )
+}
+
+function triggerBrowserDownload(blob, filename) {
+  const fileUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = fileUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(fileUrl)
 }

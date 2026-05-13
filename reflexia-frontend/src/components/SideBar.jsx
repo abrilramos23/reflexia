@@ -24,13 +24,22 @@ export function Sidebar() {
     const roleMatch = item.roles.includes(user.role)
     if (!roleMatch) return false
 
-    // If it's an admin path and user is a therapist, they must be a clinic admin
-    if (item.path.startsWith('/admin/') && user.role === 'therapist' && !isClinicAdmin) {
+    // Clinic-only sections for therapist users require clinic admin rights.
+    if ((item.path === '/clinic' || item.path.startsWith('/admin/')) && user.role === 'therapist' && !isClinicAdmin) {
       return false
     }
 
     return true
   })
+
+  const groupedItems = filteredItems.reduce((groups, item) => {
+    const section = item.section || 'General'
+    if (!groups[section]) {
+      groups[section] = []
+    }
+    groups[section].push(item)
+    return groups
+  }, {})
 
   async function handleLogout() {
     await logout()
@@ -48,22 +57,27 @@ export function Sidebar() {
       </button>
 
       <nav className="sidebar-nav">
-        {filteredItems.map(item => {
-          const Icon = item.icon
-          const isActive = location.pathname.startsWith(item.path)
+        {Object.entries(groupedItems).map(([section, items]) => (
+          <div className="sidebar-section" key={section}>
+            {!collapsed ? <p className="sidebar-section-title">{section}</p> : null}
+            {items.map(item => {
+              const Icon = item.icon
+              const isActive = location.pathname.startsWith(item.path)
 
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`sidebar-link ${isActive ? 'active' : ''}`}
-              title={collapsed ? item.label : ''}
-            >
-              <Icon />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          )
-        })}
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`sidebar-link ${isActive ? 'active' : ''}`}
+                  title={collapsed ? item.label : ''}
+                >
+                  <Icon />
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+              )
+            })}
+          </div>
+        ))}
 
         <button
           onClick={handleLogout}

@@ -25,10 +25,14 @@ from apps.users.views import (
     PlatformStatsView,
     ClinicStatsView,
     OrganisationListCreateView,
+    OrganisationDetailView,
     ClinicAdminRegistrationView,
     GlobalClinicAdminListView,
+    ClinicAdminDetailView,
     GlobalTherapistListView,
+    TherapistAdminDetailView,
     ClinicTherapistListView,
+    TherapistDashboardView,
 )
 
 def index(request):
@@ -51,6 +55,7 @@ urlpatterns = [
     path('auth/patients/<uuid:patient_id>/', TherapistPatientDetailView.as_view(), name='patient-detail'),
     path('auth/patients/deactivate/', TherapistPatientDeactivateView.as_view(), name='patient-deactivate'),
     path('auth/activate/account/', AccountActivationView.as_view(), name='account-activate'),
+    path('auth/dashboard/therapist/', TherapistDashboardView.as_view(), name='therapist-dashboard'),
     path('auth/consent/accept/', PatientConsentAcceptView.as_view(), name='patient-consent-accept'),
     path('auth/consent/reject/', PatientConsentRejectView.as_view(), name='patient-consent-reject'),
     path('auth/2fa/setup/', TwoFactorSetupView.as_view(), name='two-factor-setup'),
@@ -60,8 +65,11 @@ urlpatterns = [
     path('admin/stats/platform/', PlatformStatsView.as_view(), name='platform-stats'),
     path('admin/stats/clinic/', ClinicStatsView.as_view(), name='clinic-stats'),
     path('admin/organisations/', OrganisationListCreateView.as_view(), name='organisation-list-create'),
+    path('admin/organisations/<uuid:organisation_id>/', OrganisationDetailView.as_view(), name='organisation-detail'),
     path('admin/register/clinic-admin/', ClinicAdminRegistrationView.as_view(), name='clinic-admin-register'),
     path('admin/users/clinic-admins/', GlobalClinicAdminListView.as_view(), name='global-clinic-admin-list'),
+    path('admin/users/clinic-admins/<uuid:user_id>/', ClinicAdminDetailView.as_view(), name='clinic-admin-detail'),
     path('admin/users/therapists/', GlobalTherapistListView.as_view(), name='global-therapist-list'),
+    path('admin/users/therapists/<uuid:user_id>/', TherapistAdminDetailView.as_view(), name='therapist-admin-detail'),
     path('admin/users/clinic/therapists/', ClinicTherapistListView.as_view(), name='clinic-therapist-list'),
 ]

@@ -3,13 +3,13 @@ import { AppHeader } from './AppHeader'
 import '../App.css'
 import { ProtectedRoute } from './ProtectedRoute'
 
-export function ProtectedLayout({ children }) {
+export function ProtectedLayout({ children, hideSidebar = false }) {
   return (
     <ProtectedRoute>
       <div className="app-shell">
         <AppHeader />
         <div className="app-body">
-          <Sidebar />
+          {!hideSidebar && <Sidebar />}
           <main className="app-content">
             {children}
           </main>

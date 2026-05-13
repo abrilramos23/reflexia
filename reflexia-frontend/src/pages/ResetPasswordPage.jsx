@@ -109,8 +109,7 @@ export function ResetPasswordPage() {
               <button className="button" type="submit" disabled={isSubmitting || !uid || !token}>
                 {isSubmitting ? 'Guardant...' : 'Guardar contrasenya'}
               </button>
-              <Link style={{ textDecoration: 'none' }} className="text-link" to="/login">
-                Tornar al login
+              <Link style={{ textDecoration: 'none' }} className="text-link" to="/login" icon="arrow-left">
               </Link>
             </div>
           </form>

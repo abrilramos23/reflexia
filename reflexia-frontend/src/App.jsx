@@ -21,7 +21,11 @@ import { TherapistQuestionDetailPage } from './pages/TherapistQuestionDetailPage
 import { PlatformOrganisationsPage } from './pages/PlatformOrganisationsPage.jsx'
 import { PlatformClinicAdminsPage } from './pages/PlatformClinicAdminsPage.jsx'
 import { PlatformTherapistsPage } from './pages/PlatformTherapistsPage.jsx'
+import { ClinicAdminDashboard } from './pages/ClinicAdminDashboard.jsx'
 import { ClinicTherapistsPage } from './pages/ClinicTherapistsPage.jsx'
+import { SupportTherapistsPage } from './pages/SupportTherapistsPage.jsx'
+import { TrustedContactsPage } from './pages/TrustedContactsPage.jsx'
+import { TherapistQuestionsPage } from './pages/TherapistQuestionsPage.jsx'
 
 function LoadingScreen() {
   return (
@@ -66,7 +70,7 @@ function App() {
       <Route
         path="/consent"
         element={
-          <ProtectedLayout>
+          <ProtectedLayout hideSidebar={true}>
             <ConsentPage />
           </ProtectedLayout>
         }
@@ -120,6 +124,22 @@ function App() {
         }
       />
       <Route
+        path="/support"
+        element={
+          <ProtectedLayout>
+            <SupportTherapistsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/contacts"
+        element={
+          <ProtectedLayout>
+            <TrustedContactsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
         path="/patients"
         element={
           <ProtectedLayout>
@@ -148,6 +168,14 @@ function App() {
         element={
           <ProtectedLayout>
             <TherapistQuestionDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/questions"
+        element={
+          <ProtectedLayout>
+            <TherapistQuestionsPage />
           </ProtectedLayout>
         }
       />
@@ -181,6 +209,14 @@ function App() {
             ) : (
               <Navigate to="/dashboard" replace />
             )}
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/clinic"
+        element={
+          <ProtectedLayout>
+            {isClinicAdmin ? <ClinicAdminDashboard /> : <Navigate to="/dashboard" replace />}
           </ProtectedLayout>
         }
       />

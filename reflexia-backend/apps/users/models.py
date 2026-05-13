@@ -168,9 +168,9 @@ class OrganisationMember(models.Model):
         verbose_name_plural = 'organisation members'
 
     def clean(self):
-        if self.user.role != User.Role.THERAPIST:
+        if self.user.role == User.Role.PATIENT:
             raise ValidationError(
-                "Només els usuaris amb el rol de terapeuta poden ser membres d'una organització."
+                "Els pacients no poden ser membres d'una organització."
             )
         if self.pk:
             old_instance = OrganisationMember.objects.get(pk=self.pk)
@@ -216,6 +216,11 @@ class Therapist(User):
     specialty      = models.CharField(max_length=150)
 
     objects = TherapistManager()
+    
+    def save(self, *args, **kwargs):
+        if self.role == User.Role.PATIENT:
+            self.role = User.Role.THERAPIST
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'therapist'
@@ -236,6 +241,10 @@ class Patient(User):
     consent_date     = models.DateTimeField(null=True, blank=True)
 
     objects = PatientManager()
+
+    def save(self, *args, **kwargs):
+        self.role = User.Role.PATIENT
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'patient'

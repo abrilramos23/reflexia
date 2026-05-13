@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { FaUserSlash } from 'react-icons/fa'
 import { Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -6,7 +7,7 @@ import { consentDocumentUrl } from '../lib/api.js'
 
 function firstErrorMessage(error) {
   if (!error) {
-    return 'S’ha produït un error inesperat.'
+    return 'S`ha produït un error inesperat.'
   }
 
   if (typeof error === 'string') {
@@ -23,32 +24,15 @@ function firstErrorMessage(error) {
     return firstEntry
   }
 
-  return 'S’ha produït un error inesperat.'
+  return 'S`ha produït un error inesperat.'
 }
 
-function sortContacts(contacts) {
-  return [...contacts].sort((left, right) => {
-    if (left.is_default !== right.is_default) {
-      return left.is_default ? -1 : 1
-    }
-
-    return left.name.localeCompare(right.name)
-  })
-}
 
 export function ProfilePage() {
   const {
     user,
     updateProfile,
     changePassword,
-    listAssociatedContacts,
-    createAssociatedContact,
-    updateAssociatedContact,
-    deleteAssociatedContact,
-    listSupportTherapists,
-    listAvailableSupportTherapists,
-    createSupportTherapist,
-    deleteSupportTherapist,
     setupTwoFactor,
     enableTwoFactor,
     disableTwoFactor,
@@ -82,26 +66,6 @@ export function ProfilePage() {
   const [deleteMessage, setDeleteMessage] = useState('')
   const [busyPatientId, setBusyPatientId] = useState('')
   const [soleAdminOrgs, setSoleAdminOrgs] = useState([])
-  const [associatedContacts, setAssociatedContacts] = useState([])
-  const [contactForm, setContactForm] = useState({
-    name: '',
-    relation: '',
-    email: '',
-    phone: '',
-    is_default: false,
-  })
-  const [showContactForm, setShowContactForm] = useState(false)
-  const [editingContactId, setEditingContactId] = useState('')
-  const [contactMessage, setContactMessage] = useState('')
-  const [contactError, setContactError] = useState('')
-  const [supportTherapists, setSupportTherapists] = useState([])
-  const [availableSupportTherapists, setAvailableSupportTherapists] = useState([])
-  const [selectedSupportId, setSelectedSupportId] = useState('')
-  const [showSupportForm, setShowSupportForm] = useState(false)
-  const [supportMessage, setSupportMessage] = useState('')
-  const [supportError, setSupportError] = useState('')
-
-  const canHaveSupport = user?.role === 'therapist' && user?.memberships?.some(m => m.organisation.type === 'clinic')
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -147,56 +111,6 @@ export function ProfilePage() {
     setEmail(user?.email || '')
     setSpecialty(user?.role === 'therapist' ? (user.specialty || '') : '')
   }, [user?.email, user?.role, user?.specialty])
-
-  useEffect(() => {
-    let isCancelled = false
-
-    async function loadRoleData() {
-      try {
-        if (user.role === 'patient') {
-          const contacts = await listAssociatedContacts()
-          if (!isCancelled) {
-            setAssociatedContacts(sortContacts(contacts))
-          }
-        }
-
-        if (user.role === 'therapist') {
-          const [currentSupportTherapists, availableTherapists] = await Promise.all([
-            listSupportTherapists(),
-            listAvailableSupportTherapists(),
-          ])
-
-          if (!isCancelled) {
-            setSupportTherapists(currentSupportTherapists)
-            setAvailableSupportTherapists(availableTherapists)
-          }
-        }
-      } catch {
-        if (!isCancelled) {
-          setContactError(user.role === 'patient' ? 'No s’han pogut carregar els contactes associats.' : '')
-          setSupportError(user.role === 'therapist' ? 'No s’han pogut carregar els terapeutes de suport.' : '')
-        }
-      }
-    }
-
-    loadRoleData()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [user.role])
-
-  function resetContactForm() {
-    setContactForm({
-      name: '',
-      relation: '',
-      email: '',
-      phone: '',
-      is_default: false,
-    })
-    setEditingContactId('')
-    setShowContactForm(false)
-  }
 
   async function handleProfileSubmit(event) {
     event.preventDefault()
@@ -246,7 +160,7 @@ export function ProfilePage() {
     try {
       const response = await setupTwoFactor()
       setTwoFactorSetup(response)
-      setTwoFactorMessage('Configuració generada. Copia el secret o obre l’enllaç a l’aplicació autenticadora.')
+      setTwoFactorMessage('Configuració generada. Copia el secret o obre l\'enllaç a l\'aplicació autenticadora.')
     } catch (error) {
       setTwoFactorError(firstErrorMessage(error.response?.data || error))
     }
@@ -305,163 +219,6 @@ export function ProfilePage() {
     }
   }
 
-  async function handleContactSubmit(event) {
-    event.preventDefault()
-    setContactError('')
-    setContactMessage('')
-
-    try {
-      const payload = {
-        name: contactForm.name,
-        relation: contactForm.relation,
-        email: contactForm.email || null,
-        phone: contactForm.phone || null,
-        is_default: contactForm.is_default,
-      }
-
-      if (editingContactId) {
-        const updatedContact = await updateAssociatedContact(editingContactId, payload)
-        setAssociatedContacts((currentContacts) =>
-          sortContacts(
-            currentContacts.map((contact) =>
-              contact.id === editingContactId ? updatedContact : contact,
-            ),
-          ),
-        )
-        setContactMessage('Contacte actualitzat correctament.')
-      } else {
-        const createdContact = await createAssociatedContact(payload)
-        setAssociatedContacts((currentContacts) => sortContacts([...currentContacts, createdContact]))
-        setContactMessage('Contacte afegit correctament.')
-      }
-
-      resetContactForm()
-    } catch (error) {
-      setContactError(firstErrorMessage(error.response?.data || error))
-    }
-  }
-
-  function handleEditContact(contact) {
-    setShowContactForm(true)
-    setEditingContactId(contact.id)
-    setContactForm({
-      name: contact.name,
-      relation: contact.relation,
-      email: contact.email || '',
-      phone: contact.phone || '',
-      is_default: Boolean(contact.is_default),
-    })
-    setContactMessage('')
-    setContactError('')
-  }
-
-  async function handleDeleteContact(contact) {
-    const confirmed = window.confirm(`Vols eliminar el contacte ${contact.name}?`)
-
-    if (!confirmed) {
-      return
-    }
-
-    setContactError('')
-    setContactMessage('')
-
-    try {
-      await deleteAssociatedContact(contact.id)
-      setAssociatedContacts((currentContacts) =>
-        currentContacts.filter((currentContact) => currentContact.id !== contact.id),
-      )
-
-      if (editingContactId === contact.id) {
-        resetContactForm()
-      }
-
-      setContactMessage('Contacte eliminat correctament.')
-    } catch (error) {
-      setContactError(firstErrorMessage(error.response?.data || error))
-    }
-  }
-
-  async function handleToggleDefaultContact(contact) {
-    setContactError('')
-    setContactMessage('')
-
-    try {
-      const updatedContact = await updateAssociatedContact(contact.id, {
-        is_default: !contact.is_default,
-      })
-
-      setAssociatedContacts((currentContacts) =>
-        sortContacts(
-          currentContacts.map((currentContact) =>
-            currentContact.id === contact.id ? updatedContact : currentContact,
-          ),
-        ),
-      )
-      setContactMessage('Contacte actualitzat correctament.')
-    } catch (error) {
-      setContactError(firstErrorMessage(error.response?.data || error))
-    }
-  }
-
-  async function handleSupportTherapistSubmit(event) {
-    event.preventDefault()
-    setSupportError('')
-    setSupportMessage('')
-
-    try {
-      const createdSupportTherapist = await createSupportTherapist({
-        support_id: selectedSupportId,
-      })
-
-      setSupportTherapists((currentTherapists) => [...currentTherapists, createdSupportTherapist])
-      setAvailableSupportTherapists((currentTherapists) =>
-        currentTherapists.filter((therapist) => therapist.id !== selectedSupportId),
-      )
-      setSelectedSupportId('')
-      setShowSupportForm(false)
-      setSupportMessage('Terapeuta de suport afegit correctament.')
-    } catch (error) {
-      setSupportError(firstErrorMessage(error.response?.data || error))
-    }
-  }
-
-  async function handleDeleteSupportTherapist(supportTherapist) {
-    const confirmed = window.confirm(
-      `Vols eliminar ${supportTherapist.first_name} ${supportTherapist.last_name} com a terapeuta de suport?`,
-    )
-
-    if (!confirmed) {
-      return
-    }
-
-    setSupportError('')
-    setSupportMessage('')
-
-    try {
-      await deleteSupportTherapist(supportTherapist.support_id)
-      setSupportTherapists((currentTherapists) =>
-        currentTherapists.filter(
-          (currentTherapist) => currentTherapist.support_id !== supportTherapist.support_id,
-        ),
-      )
-      setAvailableSupportTherapists((currentTherapists) =>
-        [...currentTherapists, {
-          id: supportTherapist.support_id,
-          first_name: supportTherapist.first_name,
-          last_name: supportTherapist.last_name,
-          email: supportTherapist.email,
-          license_number: supportTherapist.license_number,
-          specialty: supportTherapist.specialty,
-        }].sort((left, right) =>
-          `${left.first_name} ${left.last_name}`.localeCompare(`${right.first_name} ${right.last_name}`),
-        ),
-      )
-      setSupportMessage('Terapeuta de suport eliminat correctament.')
-    } catch (error) {
-      setSupportError(firstErrorMessage(error.response?.data || error))
-    }
-  }
-
   async function handleDeactivatePatient(patientId) {
     setDeleteError('')
     setDeleteMessage('')
@@ -472,7 +229,7 @@ export function ProfilePage() {
       setAssignedPatients((currentPatients) =>
         currentPatients.filter((patient) => patient.id !== patientId),
       )
-      setDeleteMessage('Pacient donat de baixa correctament. Ja pots tornar a provar l’eliminació del compte.')
+      setDeleteMessage('Pacient donat de baixa correctament. Ja pots tornar a provar l\'eliminació del compte.')
     } catch (error) {
       setDeleteError(firstErrorMessage(error.response?.data || error))
     } finally {
@@ -615,255 +372,6 @@ export function ProfilePage() {
           ) : null}
         </section>
 
-        {user.role === 'patient' ? (
-          <section className="screen-card profile-card profile-card--wide">
-            <div className="panel-heading">
-              <p className="eyebrow">Contactes associats</p>
-              {contactMessage ? <div className="message" style={{ marginBottom: '1rem' }}>{contactMessage}</div> : null}
-              {contactError ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{contactError}</div> : null}
-              <h3>Gestionar persones de confiança</h3>
-            </div>
-
-            {!showContactForm ? (
-              <div className="section-toolbar">
-                <button
-                  className="button"
-                  type="button"
-                  onClick={() => {
-                    setShowContactForm(true)
-                    setEditingContactId('')
-                  }}
-                >
-                  Afegir contacte
-                </button>
-              </div>
-            ) : null}
-
-            {showContactForm ? (
-              <form className="form-stack collapsible-form-card" onSubmit={handleContactSubmit}>
-                <div className="inline-fields">
-                  <div className="field-group">
-                    <label htmlFor="contact-name">Nom</label>
-                    <input
-                      id="contact-name"
-                      type="text"
-                      value={contactForm.name}
-                      onChange={(event) =>
-                        setContactForm((currentForm) => ({
-                          ...currentForm,
-                          name: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div className="field-group">
-                    <label htmlFor="contact-relation">Relació</label>
-                    <input
-                      id="contact-relation"
-                      type="text"
-                      value={contactForm.relation}
-                      onChange={(event) =>
-                        setContactForm((currentForm) => ({
-                          ...currentForm,
-                          relation: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="inline-fields">
-                  <div className="field-group">
-                    <label htmlFor="contact-email">Correu electrònic</label>
-                    <input
-                      id="contact-email"
-                      type="email"
-                      value={contactForm.email}
-                      onChange={(event) =>
-                        setContactForm((currentForm) => ({
-                          ...currentForm,
-                          email: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div className="field-group">
-                    <label htmlFor="contact-phone">Telèfon</label>
-                    <input
-                      id="contact-phone"
-                      type="text"
-                      value={contactForm.phone}
-                      onChange={(event) =>
-                        setContactForm((currentForm) => ({
-                          ...currentForm,
-                          phone: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="button-row">
-                  <button className="button" type="submit">
-                    {editingContactId ? 'Guardar contacte' : 'Crear contacte'}
-                  </button>
-                  <button className="button-ghost" type="button" onClick={resetContactForm}>
-                    Cancel·lar
-                  </button>
-                </div>
-              </form>
-            ) : null}
-
-            <div className="content-card section-stack" style={{ marginTop: '2rem' }}>
-              <h3>Llista de contactes</h3>
-
-              {associatedContacts.length === 0 ? (
-                <p className="muted">Encara no tens contactes associats registrats.</p>
-              ) : (
-                <ul className="patient-list">
-                  {associatedContacts.map((contact) => (
-                    <li className="patient-item compact-list-item" key={contact.id}>
-                      <div>
-                        <div className="item-heading-row">
-                          <strong>{contact.name}</strong>
-                          {contact.is_default ? (
-                            <span className="status-pill">Contacte per defecte</span>
-                          ) : null}
-                        </div>
-                        <p className="muted">{contact.relation}</p>
-                        <p className="muted">
-                          {[contact.email, contact.phone].filter(Boolean).join(' · ')}
-                        </p>
-                      </div>
-
-                      <div className="list-actions">
-                        <button className="action-chip" type="button" onClick={() => handleEditContact(contact)}>
-                          Editar
-                        </button>
-                        <button className="action-chip action-chip--accent" type="button" onClick={() => handleToggleDefaultContact(contact)}>
-                          {contact.is_default ? 'Treure per defecte' : 'Marcar per defecte'}
-                        </button>
-                        <button className="action-chip action-chip--danger" type="button" onClick={() => handleDeleteContact(contact)}>
-                          Eliminar
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </section>
-        ) : null}
-
-        {user.role === 'therapist' ? (
-          <section className="screen-card profile-card profile-card--wide">
-            <div className="panel-heading">
-              <p className="eyebrow">Terapeutes de suport</p>
-              {supportMessage ? <div className="message" style={{ marginBottom: '1rem' }}>{supportMessage}</div> : null}
-              {supportError ? <div className="error-banner" style={{ marginBottom: '1rem' }}>{supportError}</div> : null}
-              <h3>Gestionar cobertura d’alertes</h3>
-            </div>
-
-            {!canHaveSupport ? (
-              <div className="content-card section-stack" style={{ borderLeft: '4px solid var(--accent-color)', backgroundColor: 'var(--bg-card-alt)' }}>
-                <p className="muted">
-                  <strong>Aquest servei només està disponible per a professionals que pertanyen a una clínica.</strong>
-                </p>
-                <p className="muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                  Com a professional independent, actualment no disposes d&apos;un equip clínic assignat per gestionar la cobertura de suport d&apos;alertes.
-                </p>
-              </div>
-            ) : null}
-
-            {canHaveSupport && !showSupportForm ? (
-              <div className="section-toolbar">
-                <button
-                  className="button"
-                  type="button"
-                  onClick={() => {
-                    setShowSupportForm(true)
-                  }}
-                >
-                  Afegir terapeuta de suport
-                </button>
-              </div>
-            ) : null}
-
-            {showSupportForm ? (
-              <form className="form-stack collapsible-form-card" onSubmit={handleSupportTherapistSubmit}>
-                <div className="field-group">
-                  <label htmlFor="support-therapist">Selecciona un terapeuta</label>
-                  <select
-                    id="support-therapist"
-                    value={selectedSupportId}
-                    onChange={(event) => setSelectedSupportId(event.target.value)}
-                  >
-                    <option value="">Selecciona un terapeuta del sistema</option>
-                    {availableSupportTherapists.map((therapist) => (
-                      <option key={therapist.id} value={therapist.id}>
-                        {therapist.first_name} {therapist.last_name} · {therapist.specialty}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="button-row">
-                  <button className="button" type="submit" disabled={!selectedSupportId}>
-                    Afegir terapeuta
-                  </button>
-                  <button
-                    className="button-ghost"
-                    type="button"
-                    onClick={() => {
-                      setShowSupportForm(false)
-                      setSelectedSupportId('')
-                    }}
-                  >
-                    Cancel·lar
-                  </button>
-                </div>
-              </form>
-            ) : null}
-
-            <div className="content-card section-stack">
-              <h3>Llista actual</h3>
-
-              {supportTherapists.length === 0 ? (
-                <p className="muted">Encara no tens terapeutes de suport assignats.</p>
-              ) : (
-                <ul className="patient-list">
-                  {supportTherapists.map((supportTherapist) => (
-                    <li className="patient-item compact-list-item" key={supportTherapist.support_id}>
-                      <div>
-                        <div className="item-heading-row">
-                          <strong>
-                            {supportTherapist.first_name} {supportTherapist.last_name}
-                          </strong>
-                          <span className="status-pill">Suport actiu</span>
-                        </div>
-                        <p className="muted">{supportTherapist.specialty}</p>
-                        <p className="muted">{supportTherapist.email}</p>
-                      </div>
-
-                      <div className="list-actions">
-                        <button
-                          className="action-chip action-chip--danger"
-                          type="button"
-                          onClick={() => handleDeleteSupportTherapist(supportTherapist)}
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </section>
-        ) : null}
-
         <section className="screen-card profile-card">
           <div className="panel-heading">
             <p className="eyebrow">Doble factor</p>
@@ -972,8 +480,7 @@ export function ProfilePage() {
 
           <div className="content-card section-stack" style={{ textDecoration: 'none', backgroundColor: 'transparent', border: 'none', padding: '0',  }}>
             <p className="muted" style={{ textDecoration: 'none', backgroundColor: 'transparent', border: 'none' }}>
-              Si estàs en un ordinador compartit o simplement vols acabar l’activitat, pots tancar la sessió des d’aquí.
-              El sistema invalidarà el token actiu i et retornarà a la pantalla d’inici de sessió.
+              Si vols acabar l&apos;activitat, pots tancar la sessió des d&apos;aquí.
             </p>
           </div>
 
@@ -995,7 +502,7 @@ export function ProfilePage() {
 
           <div className="content-card section-stack" style={{ textDecoration: 'none', backgroundColor: 'transparent', border: 'none', padding: '0',  }}>
             <p className="muted" style={{ textDecoration: 'none', backgroundColor: 'transparent', border: 'none', paddingBottom: '10px' }}>
-              Les dades no clíniques s’eliminaran immediatament. Les dades clíniques es conservaran internament durant
+              Les dades no clíniques s&apos;eliminaran. Es conservaran internament durant
               el període legal mínim i ja no seran accessibles un cop el compte quedi tancat.
             </p>
           </div>
@@ -1013,13 +520,15 @@ export function ProfilePage() {
                       </div>
                       <p className="muted">{patient.email}</p>
                     </div>
-                    <button
-                      className="button-danger"
+                     <button
+                      className="button-danger button--icon"
                       type="button"
                       disabled={busyPatientId === patient.id}
                       onClick={() => handleDeactivatePatient(patient.id)}
+                      title="Donar de baixa"
+                      aria-label="Donar de baixa"
                     >
-                      {busyPatientId === patient.id ? 'Donant de baixa...' : 'Donar de baixa'}
+                      {busyPatientId === patient.id ? '...' : <FaUserSlash />}
                     </button>
                   </li>
                 ))}
@@ -1031,8 +540,8 @@ export function ProfilePage() {
             <div className="content-card section-stack">
               <h3 style={{ marginTop: '1rem' }}>Administració obligatòria d&apos;organitzacions</h3>
               <p className="muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
-                No pots tancar el compte perquè ets l&apos;únic administrador de les següents organitzacions. 
-                Has de promoure un altre membre a administrador o donar de baixa l&apos;entitat abans de marxar.
+                No pots tancar el compte perquè ets l&apos;únic administrador d&apos;aquesta organització. 
+                Has de designar una altra persona com a administrador o donar de baixa l&apos;entitat abans de continuar.
               </p>
               <ul className="patient-list">
                 {soleAdminOrgs.map((org) => (

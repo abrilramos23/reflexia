@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { FaArrowLeft } from 'react-icons/fa'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { firstErrorMessage, formatEntryDate } from '../lib/entries.js'
@@ -40,9 +41,9 @@ export function TherapistQuestionDetailPage() {
     <div className="screen-shell">
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
-          <div className="button-row">
-            <Link to={`/patients/${patientId}`} className="button-ghost" style={{ textDecoration: 'none' }}>
-              ← Tornar al detall
+           <div className="button-row">
+            <Link to={`/patients/${patientId}`} className="button-ghost" title="Tornar" aria-label="Tornar">
+              <FaArrowLeft />
             </Link>
           </div>
         </section>
@@ -64,7 +65,7 @@ export function TherapistQuestionDetailPage() {
 
               <div className="entries-toolbar" style={{ margin: '1.5rem 0' }}>
                 <span className={`status-pill ${question.is_active ? 'dashboard-status-pill--active' : 'dashboard-status-pill--muted'}`}>
-                  {question.is_active ? 'Pregunta activa' : 'Pregunta inactiva'}
+                  {question.is_active ? 'Pregunta activa' : 'Pregunta resolta'}
                 </span>
               </div>
 

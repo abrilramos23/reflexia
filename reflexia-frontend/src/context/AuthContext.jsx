@@ -321,6 +321,27 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function exportEntryPdf(entryId) {
+    const response = await api.get(`/entries/${entryId}/export/`, { responseType: 'blob' })
+    return {
+      blob: response.data,
+      filename: readDownloadFilename(response.headers['content-disposition']) || `entry-${entryId}.pdf`,
+    }
+  }
+
+  async function exportEntriesPdf() {
+    const response = await api.get('/entries/export/', { responseType: 'blob' })
+    return {
+      blob: response.data,
+      filename: readDownloadFilename(response.headers['content-disposition']) || 'entries-history.pdf',
+    }
+  }
+
+  async function getMyEvolution() {
+    const response = await api.get('/analysis/evolution/')
+    return response.data
+  }
+
   async function deleteEntry(entryId) {
     const response = await api.delete(`/entries/${entryId}/`)
     return response.data
@@ -387,6 +408,11 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function getTherapistDashboardData() {
+    const response = await api.get('/auth/dashboard/therapist/')
+    return response.data
+  }
+
   async function listOrganisations() {
     const response = await api.get('/admin/organisations/')
     return response.data
@@ -394,6 +420,16 @@ export function AuthProvider({ children }) {
 
   async function createOrganisation(payload) {
     const response = await api.post('/admin/organisations/', payload)
+    return response.data
+  }
+
+  async function updateOrganisation(organisationId, payload) {
+    const response = await api.patch(`/admin/organisations/${organisationId}/`, payload)
+    return response.data
+  }
+
+  async function deleteOrganisation(organisationId) {
+    const response = await api.delete(`/admin/organisations/${organisationId}/`)
     return response.data
   }
 
@@ -407,6 +443,16 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function updateClinicAdmin(adminId, payload) {
+    const response = await api.patch(`/admin/users/clinic-admins/${adminId}/`, payload)
+    return response.data
+  }
+
+  async function deleteClinicAdmin(adminId) {
+    const response = await api.delete(`/admin/users/clinic-admins/${adminId}/`)
+    return response.data
+  }
+
   async function listAllTherapists() {
     const response = await api.get('/admin/users/therapists/')
     return response.data
@@ -414,6 +460,16 @@ export function AuthProvider({ children }) {
 
   async function listClinicTherapists() {
     const response = await api.get('/admin/users/clinic/therapists/')
+    return response.data
+  }
+
+  async function updateTherapist(therapistId, payload) {
+    const response = await api.patch(`/admin/users/therapists/${therapistId}/`, payload)
+    return response.data
+  }
+
+  async function deleteTherapist(therapistId) {
+    const response = await api.delete(`/admin/users/therapists/${therapistId}/`)
     return response.data
   }
 
@@ -427,13 +483,59 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function exportPatientEntryPdf(patientId, entryId) {
+    const response = await api.get(`/auth/patients/${patientId}/entries/${entryId}/export/`, { responseType: 'blob' })
+    return {
+      blob: response.data,
+      filename: readDownloadFilename(response.headers['content-disposition']) || `patient-entry-${entryId}.pdf`,
+    }
+  }
+
+  async function exportPatientEntriesPdf(patientId) {
+    const response = await api.get(`/auth/patients/${patientId}/entries/export/`, { responseType: 'blob' })
+    return {
+      blob: response.data,
+      filename: readDownloadFilename(response.headers['content-disposition']) || `patient-history-${patientId}.pdf`,
+    }
+  }
+
+  async function getPatientEvolution(patientId) {
+    const response = await api.get(`/auth/patients/${patientId}/analysis/evolution/`)
+    return response.data
+  }
+
+  async function updatePatientEntryAnalysisCorrection(patientId, entryId, payload) {
+    const response = await api.patch(`/auth/patients/${patientId}/entries/${entryId}/analysis/`, payload)
+    return response.data
+  }
+
   async function listPatientQuestions(patientId) {
     const response = await api.get(`/auth/patients/${patientId}/questions/`)
     return response.data
   }
 
+  async function createPatientQuestion(patientId, payload) {
+    const response = await api.post(`/auth/patients/${patientId}/questions/`, payload)
+    return response.data
+  }
+
   async function getPatientQuestion(patientId, questionId) {
     const response = await api.get(`/auth/patients/${patientId}/questions/${questionId}/`)
+    return response.data
+  }
+
+  async function listAllTherapistQuestions() {
+    const response = await api.get('/auth/questions/')
+    return response.data
+  }
+
+  async function listPatientEntryNotes(patientId, entryId) {
+    const response = await api.get(`/auth/patients/${patientId}/entries/${entryId}/notes/`)
+    return response.data
+  }
+
+  async function createPatientEntryNote(patientId, entryId, payload) {
+    const response = await api.post(`/auth/patients/${patientId}/entries/${entryId}/notes/`, payload)
     return response.data
   }
 
@@ -472,6 +574,9 @@ export function AuthProvider({ children }) {
     createEntryDraft,
     updateEntryDraft,
     analyzeEntry,
+    exportEntryPdf,
+    exportEntriesPdf,
+    getMyEvolution,
     deleteEntry,
     setupTwoFactor,
     enableTwoFactor,
@@ -480,19 +585,43 @@ export function AuthProvider({ children }) {
     deactivatePatient,
     listPatientEntries,
     getPatientEntry,
+    exportPatientEntryPdf,
+    exportPatientEntriesPdf,
+    getPatientEvolution,
+    updatePatientEntryAnalysisCorrection,
     listPatientQuestions,
+    createPatientQuestion,
     getPatientQuestion,
+    listAllTherapistQuestions,
+    listPatientEntryNotes,
+    createPatientEntryNote,
     getPlatformStats,
     getClinicStats,
+    getTherapistDashboardData,
     listOrganisations,
     createOrganisation,
+    updateOrganisation,
+    deleteOrganisation,
     registerClinicAdmin,
     listAllClinicAdmins,
+    updateClinicAdmin,
+    deleteClinicAdmin,
     listAllTherapists,
     listClinicTherapists,
+    updateTherapist,
+    deleteTherapist,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+function readDownloadFilename(contentDisposition) {
+  if (!contentDisposition) {
+    return ''
+  }
+
+  const match = /filename=\"?([^\";]+)\"?/i.exec(contentDisposition)
+  return match ? match[1] : ''
 }
 
 export function useAuth() {

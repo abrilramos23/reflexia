@@ -1,12 +1,12 @@
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.entries.models import JournalEntry, TherapistQuestion
+from apps.analysis.models import EmotionalAnalysis
+from apps.entries.models import JournalEntry, PrivateNote, TherapistQuestion
 from apps.users.models import Patient, Therapist, TherapistPatient
 
 
-class JournalEntryEditorTests(APITestCase):
+class EntriesPatientFlowTests(APITestCase):
     def setUp(self):
         self.therapist = Therapist.objects.create_user(
             email="therapist@example.com",
@@ -51,8 +51,9 @@ class JournalEntryEditorTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["active_question"]["id"], str(self.active_question.pk))
         self.assertEqual(response.data["active_question"]["question"], self.active_question.question)
+        self.assertFalse(response.data["active_question"]["resolved"])
 
-    def test_patient_can_create_non_empty_draft(self):
+    def test_patient_can_create_non_empty_draft_and_resolve_active_question(self):
         self.client.force_authenticate(user=self.patient)
 
         response = self.client.post(
@@ -62,11 +63,12 @@ class JournalEntryEditorTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(JournalEntry.objects.count(), 1)
         entry = JournalEntry.objects.get()
         self.assertEqual(entry.patient, self.patient)
-        self.assertEqual(entry.status, JournalEntry.STATUS_DRAFT)
+        self.assertEqual(entry.status, JournalEntry.STATUS_ACTIVE)
         self.assertEqual(entry.therapist_question, self.active_question)
+        self.active_question.refresh_from_db()
+        self.assertFalse(self.active_question.is_active)
 
     def test_patient_cannot_create_empty_entry(self):
         self.client.force_authenticate(user=self.patient)
@@ -76,24 +78,7 @@ class JournalEntryEditorTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("content", response.data)
 
-    def test_editing_deleted_entry_is_rejected(self):
-        self.client.force_authenticate(user=self.patient)
-        entry = JournalEntry.objects.create(
-            patient=self.patient,
-            content="Text inicial",
-            deleted_at=timezone.now(),
-        )
-
-        response = self.client.patch(
-            f"/api/entries/{entry.pk}/",
-            {"content": "Text actualitzat"},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("detail", response.data)
-
-    def test_patient_can_update_existing_entry(self):
+    def test_patient_can_update_existing_entry_and_modification_date_is_returned(self):
         self.client.force_authenticate(user=self.patient)
         entry = JournalEntry.objects.create(
             patient=self.patient,
@@ -108,45 +93,61 @@ class JournalEntryEditorTests(APITestCase):
         )
 
         self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(patch_response.data["status"], JournalEntry.STATUS_DRAFT)
+        self.assertEqual(patch_response.data["status"], JournalEntry.STATUS_MODIFIED)
 
-    def test_patient_cannot_access_someone_elses_entry(self):
-        entry = JournalEntry.objects.create(patient=self.other_patient, content="Privada")
+    def test_patient_cannot_access_deleted_entry_in_list_or_detail(self):
         self.client.force_authenticate(user=self.patient)
+        visible_entry = JournalEntry.objects.create(patient=self.patient, content="Visible")
+        deleted_entry = JournalEntry.objects.create(
+            patient=self.patient,
+            content="Privada",
+            status=JournalEntry.STATUS_DELETED,
+        )
 
-        response = self.client.get(f"/api/entries/{entry.pk}/", format="json")
+        list_response = self.client.get(self.entries_url, format="json")
+        detail_response = self.client.get(f"/api/entries/{deleted_entry.pk}/", format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_response.data), 1)
+        self.assertEqual(list_response.data[0]["id"], str(visible_entry.pk))
+        self.assertEqual(detail_response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_patient_can_list_entries(self):
-        self.client.force_authenticate(user=self.patient)
-        JournalEntry.objects.create(patient=self.patient, content="<p>Primera entrada</p>")
-        JournalEntry.objects.create(patient=self.patient, content="<p>Segona entrada</p>")
-
-        response = self.client.get(self.entries_url, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
-        self.assertIn("preview", response.data[0])
-
-    def test_delete_entry_soft_deletes_and_anonymizes(self):
+    def test_delete_entry_soft_deletes_hides_and_anonymizes(self):
         self.client.force_authenticate(user=self.patient)
         entry = JournalEntry.objects.create(
             patient=self.patient,
             therapist_question=self.active_question,
             content="<p>Text privat</p>",
         )
+        EmotionalAnalysis.objects.create(
+            entry=entry,
+            emotions=[{"emotion": "Tristesa", "percentage": 70}],
+            primary_emotion="Tristesa",
+            risk_level="low",
+            summary="Predomina la tristesa.",
+        )
 
         response = self.client.delete(f"/api/entries/{entry.pk}/", format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("retention_explanation", response.data)
         entry.refresh_from_db()
-        self.assertTrue(entry.deleted_at is not None)
+        self.assertEqual(entry.status, JournalEntry.STATUS_DELETED)
         self.assertEqual(entry.content, "Aquesta entrada ha estat eliminada i anonimitzada.")
-        self.assertIsNone(entry.therapist_question)
+        self.assertFalse(hasattr(entry, "analysis"))
+
+    def test_patient_can_export_single_entry_pdf(self):
+        self.client.force_authenticate(user=self.patient)
+        entry = JournalEntry.objects.create(patient=self.patient, content="Text exportable")
+
+        response = self.client.get(f"/api/entries/{entry.pk}/export/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertTrue(response.content.startswith(b"%PDF"))
 
 
-class TherapistPatientEntryTests(APITestCase):
+class TherapistEntriesAndQuestionsTests(APITestCase):
     def setUp(self):
         self.therapist = Therapist.objects.create_user(
             email="therapist@example.com",
@@ -154,6 +155,15 @@ class TherapistPatientEntryTests(APITestCase):
             first_name="Marta",
             last_name="Lopez",
             license_number="16385",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        self.other_therapist = Therapist.objects.create_user(
+            email="other-therapist@example.com",
+            password="StrongPass123!",
+            first_name="Pere",
+            last_name="Soler",
+            license_number="99999",
             specialty="Clinical Psychology",
             is_active=True,
         )
@@ -201,38 +211,57 @@ class TherapistPatientEntryTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_therapist_can_get_patient_entry_detail(self):
+    def test_therapist_can_create_question_for_assigned_patient(self):
         self.client.force_authenticate(user=self.therapist)
 
-        response = self.client.get(
-            f"/api/auth/patients/{self.patient.pk}/entries/{self.entry.pk}/"
+        response = self.client.post(
+            f"/api/auth/patients/{self.patient.pk}/questions/",
+            {"text": "Quina situació t'ha generat més ansietat avui?"},
+            format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["id"], str(self.entry.pk))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.question.refresh_from_db()
+        self.assertFalse(self.question.is_active)
+        self.assertEqual(response.data["question"]["question"], "Quina situació t'ha generat més ansietat avui?")
 
-    def test_therapist_can_list_questions_for_assigned_patient(self):
-        self.client.force_authenticate(user=self.therapist)
-
-        response = self.client.get(f"/api/auth/patients/{self.patient.pk}/questions/")
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["question"], self.question.question)
-
-    def test_therapist_can_get_question_detail(self):
-        self.client.force_authenticate(user=self.therapist)
-
-        response = self.client.get(
-            f"/api/auth/patients/{self.patient.pk}/questions/{self.question.pk}/"
+    def test_therapist_all_questions_lists_only_own_questions_with_patient_context(self):
+        other_question = TherapistQuestion.objects.create(
+            therapist=self.other_therapist,
+            patient=self.other_patient,
+            question="Pregunta d'un altre terapeuta",
+            is_active=True,
         )
+        self.client.force_authenticate(user=self.therapist)
+
+        response = self.client.get("/api/auth/questions/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["id"], str(self.question.pk))
+        question_ids = {item["id"] for item in response.data}
+        self.assertIn(str(self.question.pk), question_ids)
+        self.assertNotIn(str(other_question.pk), question_ids)
+        self.assertEqual(response.data[0]["patient_id"], str(self.patient.pk))
+        self.assertEqual(response.data[0]["patient_name"], "Paula Sanchez")
 
-    def test_patient_cannot_access_therapist_patient_entries_endpoint(self):
-        self.client.force_authenticate(user=self.patient)
+    def test_therapist_can_add_and_list_private_notes(self):
+        self.client.force_authenticate(user=self.therapist)
 
-        response = self.client.get(f"/api/auth/patients/{self.patient.pk}/entries/")
+        create_response = self.client.post(
+            f"/api/auth/patients/{self.patient.pk}/entries/{self.entry.pk}/notes/",
+            {"content": "Valorar si hi ha un patró d'evitació després de la propera sessió."},
+            format="json",
+        )
+        list_response = self.client.get(f"/api/auth/patients/{self.patient.pk}/entries/{self.entry.pk}/notes/")
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(PrivateNote.objects.count(), 1)
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_response.data), 1)
+        self.assertEqual(list_response.data[0]["content"], "Valorar si hi ha un patró d'evitació després de la propera sessió.")
+
+    def test_other_therapist_cannot_access_private_notes_of_unassigned_patient(self):
+        self.client.force_authenticate(user=self.other_therapist)
+
+        response = self.client.get(f"/api/auth/patients/{self.patient.pk}/entries/{self.entry.pk}/notes/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

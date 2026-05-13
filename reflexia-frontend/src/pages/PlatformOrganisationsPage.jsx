@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
+import { FaEdit, FaTrash, FaArrowLeft, FaPlus } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Navigate } from 'react-router-dom'
 
 export function PlatformOrganisationsPage() {
-  const { user, listOrganisations, createOrganisation } = useAuth()
+  const { user, listOrganisations, createOrganisation, updateOrganisation, deleteOrganisation } = useAuth()
   const [organisations, setOrganisations] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [view, setView] = useState('list') // 'list' | 'create'
+  const [view, setView] = useState('list') // 'list' | 'create' | 'edit'
+  const [selectedOrganisation, setSelectedOrganisation] = useState(null)
 
-  const [orgForm, setOrgForm] = useState({ name: '', type: 'clinic' })
+  const [orgForm, setOrgForm] = useState({ name: '', type: 'clinic', is_active: true })
   const [orgMessage, setOrgMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -37,9 +39,10 @@ export function PlatformOrganisationsPage() {
     setIsSubmitting(true)
     setOrgMessage('')
     try {
-      await createOrganisation(orgForm)
+      const { is_active, ...createPayload } = orgForm
+      await createOrganisation(createPayload)
       setOrgMessage('Organització creada correctament.')
-      setOrgForm({ name: '', type: 'clinic' })
+      setOrgForm({ name: '', type: 'clinic', is_active: true })
       await loadOrganisations()
       setTimeout(() => setView('list'), 1500)
     } catch (err) {
@@ -49,16 +52,66 @@ export function PlatformOrganisationsPage() {
     }
   }
 
-  if (view === 'create') {
+  function openCreateView() {
+    setSelectedOrganisation(null)
+    setOrgForm({ name: '', type: 'clinic', is_active: true })
+    setOrgMessage('')
+    setView('create')
+  }
+
+  function openEditView(organisation) {
+    setSelectedOrganisation(organisation)
+    setOrgForm({
+      name: organisation.name,
+      type: organisation.type,
+      is_active: organisation.is_active,
+    })
+    setOrgMessage('')
+    setView('edit')
+  }
+
+  async function handleOrgUpdate(e) {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setOrgMessage('')
+
+    try {
+      await updateOrganisation(selectedOrganisation.id, orgForm)
+      setOrgMessage('Organització actualitzada correctament.')
+      await loadOrganisations()
+      setTimeout(() => setView('list'), 1000)
+    } catch (err) {
+      setOrgMessage('Error actualitzant l\'organització.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleDeleteOrganisation(organisation) {
+    if (!window.confirm(`Vols eliminar ${organisation.name}? L'organització quedarà inactiva.`)) {
+      return
+    }
+
+    try {
+      await deleteOrganisation(organisation.id)
+      await loadOrganisations()
+    } catch (err) {
+      setError('Error eliminant l\'organització.')
+    }
+  }
+
+  if (view === 'create' || view === 'edit') {
+    const isEdit = view === 'edit'
+
     return (
       <div className="screen-shell">
         <div className="full-screen-form-shell">
           <div className="form-header">
             <div>
-              <h1>Registrar Organització</h1>
+              <h1>{isEdit ? 'Editar Organització' : 'Registrar Organització'}</h1>
             </div>
-            <button className="button-ghost" onClick={() => setView('list')}>
-              Tornar a la llista
+             <button className="button-ghost button--icon" onClick={() => setView('list')} title="Tornar" aria-label="Tornar">
+              <FaArrowLeft />
             </button>
           </div>
 
@@ -68,7 +121,7 @@ export function PlatformOrganisationsPage() {
                 {orgMessage}
               </div>
             )}
-            <form className="form-stack" onSubmit={handleOrgSubmit}>
+            <form className="form-stack" onSubmit={isEdit ? handleOrgUpdate : handleOrgSubmit}>
               <div className="field-group">
                 <label>Nom de l&apos;Organització</label>
                 <input 
@@ -87,9 +140,19 @@ export function PlatformOrganisationsPage() {
                     <option value="clinic">Clínica / Centre</option>
                   </select>
                 </div>
+              {isEdit ? (
+                <label className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={orgForm.is_active}
+                    onChange={e => setOrgForm({...orgForm, is_active: e.target.checked})}
+                  />
+                  <span>Organització activa</span>
+                </label>
+              ) : null}
               <div className="button-row" style={{ marginTop: '2rem' }}>
                 <button className="button" type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Creant...' : 'Confirmar i Crear'}
+                  {isSubmitting ? 'Desant...' : isEdit ? 'Guardar canvis' : 'Confirmar i Crear'}
                 </button>
                 <button className="button-ghost" type="button" onClick={() => setView('list')}>
                   Cancel·lar
@@ -111,7 +174,8 @@ export function PlatformOrganisationsPage() {
               <p className="eyebrow">Administració</p>
               <h1 className="section-title">Organitzacions</h1>
             </div>
-            <button className="button" onClick={() => setView('create')}>
+            <button className="button" onClick={openCreateView}>
+              <FaPlus />
               Nova Organització
             </button>
           </div>
@@ -137,13 +201,20 @@ export function PlatformOrganisationsPage() {
                   </div>
                   <div className="entity-card__footer">
                     <span className="tiny muted">ID: {org.id}</span>
+                     <div className="button-row entity-actions">
+                       <button className="button-ghost button--icon" type="button" onClick={() => openEditView(org)} title="Editar" aria-label="Editar">
+                        <FaEdit />
+                      </button>
+                      <button className="button-danger button--icon" type="button" onClick={() => handleDeleteOrganisation(org)} title="Eliminar" aria-label="Eliminar">
+                        <FaTrash />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
               {organisations.length === 0 && (
                 <div className="screen-card dashboard-panel profile-card--wide" style={{ textAlign: 'center', padding: '4rem' }}>
                    <p className="muted">No hi ha organitzacions registrades encara.</p>
-                   <button className="button-ghost" onClick={() => setView('create')}>Crea la primera</button>
                 </div>
               )}
             </div>

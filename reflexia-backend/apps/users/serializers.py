@@ -48,6 +48,17 @@ class OrganisationCreateSerializer(serializers.ModelSerializer):
         return organisation
 
 
+class OrganisationUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organisation
+        fields = ("name", "type", "is_active")
+        extra_kwargs = {
+            "name": {"required": False},
+            "type": {"required": False},
+            "is_active": {"required": False},
+        }
+
+
 class OrganisationMemberSerializer(serializers.ModelSerializer):
     organisation = OrganisationSerializer(read_only=True)
 
@@ -63,6 +74,7 @@ class UserSummarySerializer(serializers.ModelSerializer):
     memberships = OrganisationMemberSerializer(source="organisation_memberships", many=True, read_only=True)
     consent_accepted = serializers.SerializerMethodField()
     specialty = serializers.SerializerMethodField()
+    license_number = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -76,9 +88,11 @@ class UserSummarySerializer(serializers.ModelSerializer):
             "organisation",
             "is_clinic_admin",
             "memberships",
+            "registration_date",
             "two_factor_enabled",
             "is_active",
             "consent_accepted",
+            "license_number",
             "specialty",
         )
 
@@ -98,9 +112,15 @@ class UserSummarySerializer(serializers.ModelSerializer):
             return obj.therapist_profile.specialty
         return None
 
+    def get_license_number(self, obj):
+        if hasattr(obj, "therapist_profile"):
+            return obj.therapist_profile.license_number
+        return None
+
 
 class TherapistRegistrationSerializer(serializers.ModelSerializer):
     organisation_id = serializers.UUIDField(required=False, write_only=True)
+    is_admin = serializers.BooleanField(required=False, default=False)
 
     class Meta:
         model = Therapist
@@ -112,6 +132,7 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
             "license_number",
             "specialty",
             "organisation_id",
+            "is_admin",
             "registration_date",
             "two_factor_enabled",
         )
@@ -131,8 +152,27 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This license number is already assigned to another therapist.")
         return normalized_value
 
+    def validate(self, attrs):
+        organisation = self.context.get("organisation")
+        organisation_id = attrs.get("organisation_id")
+        is_admin = attrs.get("is_admin", False)
+
+        if organisation_id and organisation is None:
+            try:
+                organisation = Organisation.objects.get(pk=organisation_id)
+            except Organisation.DoesNotExist as exc:
+                raise serializers.ValidationError({"organisation_id": "Organisation not found."}) from exc
+
+        if is_admin and organisation is None:
+            raise serializers.ValidationError(
+                {"is_admin": "A therapist can only be assigned as organisation admin when linked to an organisation."}
+            )
+
+        return attrs
+
     def create(self, validated_data):
         organisation_id = validated_data.pop("organisation_id", None)
+        is_admin = validated_data.pop("is_admin", False)
         organisation = self.context.get("organisation")
         
         # If PlatformAdmin provided an organisation_id, use it
@@ -142,41 +182,84 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
             except Organisation.DoesNotExist:
                 raise serializers.ValidationError({"organisation_id": "Organisation not found."})
 
-        therapist, activation_url = register_therapist(organisation=organisation, **validated_data)
+        therapist, activation_url = register_therapist(
+            organisation=organisation,
+            is_admin=is_admin,
+            **validated_data,
+        )
         self.context["activation_url"] = activation_url
         return therapist
 
 
-class ClinicAdminRegistrationSerializer(serializers.ModelSerializer):
-    organisation_id = serializers.UUIDField(write_only=True)
+class ClinicAdminRegistrationSerializer(serializers.Serializer):
+    organisation_id = serializers.UUIDField()
+    therapist_id = serializers.UUIDField()
 
-    class Meta:
-        model = User
-        fields = (
-            "id",
-            "first_name",
-            "last_name",
-            "email",
-            "organisation_id",
-            "registration_date",
-        )
-        read_only_fields = ("id", "registration_date")
+    def validate(self, attrs):
+        try:
+            organisation = Organisation.objects.get(pk=attrs["organisation_id"])
+        except Organisation.DoesNotExist as exc:
+            raise serializers.ValidationError({"organisation_id": "Organisation not found."}) from exc
+
+        try:
+            therapist = Therapist.objects.get(pk=attrs["therapist_id"])
+        except Therapist.DoesNotExist as exc:
+            raise serializers.ValidationError({"therapist_id": "Therapist not found."}) from exc
+
+        if therapist.organisation != organisation:
+            raise serializers.ValidationError(
+                {"therapist_id": "This therapist does not belong to the selected organisation."}
+            )
+
+        if therapist.is_clinic_admin:
+            raise serializers.ValidationError(
+                {"therapist_id": "This therapist is already a clinic administrator."}
+            )
+
+        attrs["organisation"] = organisation
+        attrs["therapist"] = therapist
+        return attrs
+
+    def create(self, validated_data):
+        organisation = validated_data["organisation"]
+        therapist = validated_data["therapist"]
+        return register_clinic_admin(therapist=therapist, organisation=organisation)
+
+
+class TherapistAdminUpdateSerializer(serializers.Serializer):
+    first_name = serializers.CharField(max_length=100, required=False)
+    last_name = serializers.CharField(max_length=150, required=False)
+    email = serializers.EmailField(required=False)
+    license_number = serializers.CharField(max_length=100, required=False)
+    specialty = serializers.CharField(max_length=150, required=False)
+    organisation_id = serializers.UUIDField(required=False, allow_null=True)
+    is_admin = serializers.BooleanField(required=False)
+    is_active = serializers.BooleanField(required=False)
 
     def validate_email(self, value):
-        if User.objects.filter(email__iexact=value).exists():
+        therapist = self.context["therapist"]
+        if User.objects.filter(email__iexact=value).exclude(pk=therapist.pk).exists():
             raise serializers.ValidationError("A user with this email already exists.")
         return value
 
-    def create(self, validated_data):
-        organisation_id = validated_data.pop("organisation_id")
-        try:
-            organisation = Organisation.objects.get(pk=organisation_id)
-        except Organisation.DoesNotExist:
-            raise serializers.ValidationError({"organisation_id": "Organisation not found."})
+    def validate_license_number(self, value):
+        therapist = self.context["therapist"]
+        normalized_value = value.strip().upper()
 
-        user, activation_url = register_clinic_admin(organisation=organisation, **validated_data)
-        self.context["activation_url"] = activation_url
-        return user
+        if not ProfessionalDirectoryEntry.objects.filter(license_number=normalized_value).exists():
+            raise serializers.ValidationError("This license number is not present in the Catalonia directory.")
+        if Therapist.objects.filter(license_number=normalized_value).exclude(pk=therapist.pk).exists():
+            raise serializers.ValidationError("This license number is already assigned to another therapist.")
+        return normalized_value
+
+    def validate_organisation_id(self, value):
+        if value is None:
+            return None
+
+        try:
+            return Organisation.objects.get(pk=value)
+        except Organisation.DoesNotExist as exc:
+            raise serializers.ValidationError("Organisation not found.") from exc
 
 
 class PatientRegistrationSerializer(serializers.ModelSerializer):
