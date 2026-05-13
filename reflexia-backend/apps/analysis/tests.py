@@ -104,6 +104,23 @@ class AnalysisEndpointTests(APITestCase):
         self.assertEqual(response.data["data_points"][0]["primary_emotion"], "Calma")
         self.assertEqual(response.data["data_points"][1]["primary_emotion"], "Tristesa")
 
+    def test_patient_evolution_includes_stacked_chart_aggregates(self):
+        older_entry = JournalEntry.objects.create(patient=self.patient, content="Primer text")
+        older_entry.created_at = timezone.now() - timezone.timedelta(days=3)
+        older_entry.save(update_fields=["created_at"])
+        self.create_analysis(entry=older_entry, primary_emotion="Calma", risk_level="none")
+        self.create_analysis(entry=self.entry, primary_emotion="Tristesa", risk_level="high")
+        self.client.force_authenticate(user=self.patient)
+
+        response = self.client.get("/api/analysis/evolution/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["analyzed_entries_count"], 2)
+        self.assertEqual(response.data["risk_counts"]["none"], 1)
+        self.assertEqual(response.data["risk_counts"]["high"], 1)
+        self.assertEqual(response.data["frequent_emotions"][0]["emotion"], "Esperanca")
+        self.assertIn("emotions", response.data["data_points"][0])
+
     def test_therapist_can_correct_analysis_for_assigned_patient(self):
         self.create_analysis()
         self.client.force_authenticate(user=self.therapist)
@@ -119,6 +136,23 @@ class AnalysisEndpointTests(APITestCase):
             response.data["therapist_correction"],
             "La lectura correcta es ansietat anticipatoria lleu.",
         )
+        self.assertTrue(response.data["reviewed_by_therapist"])
+
+    def test_therapist_can_mark_analysis_reviewed_with_empty_correction(self):
+        analysis = self.create_analysis()
+        analysis.therapist_correction = "Correccio previa"
+        analysis.save(update_fields=["therapist_correction"])
+        self.client.force_authenticate(user=self.therapist)
+
+        response = self.client.patch(
+            f"/api/auth/patients/{self.patient.pk}/entries/{self.entry.pk}/analysis/",
+            {"therapist_correction": "   "},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["therapist_correction"], "")
+        self.assertIsNone(response.data["manual_corrections"])
         self.assertTrue(response.data["reviewed_by_therapist"])
 
     def test_unassigned_therapist_cannot_consult_patient_analysis(self):

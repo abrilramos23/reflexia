@@ -134,11 +134,7 @@ export function EntriesPage() {
               <ul className="patient-list">
                 {entries.map((entry) => (
                   <li className="compact-list-item" key={entry.id}>
-                    <Link 
-                      to={`/entries/${entry.id}`} 
-                      className="patient-item" 
-                      style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}
-                    >
+                    <div className="patient-item">
                       <div className="entries-list-copy">
                         <div className="item-heading-row">
                           <strong>{formatEntryStatus(entry)}</strong>
@@ -154,26 +150,31 @@ export function EntriesPage() {
                       </div>
 
                       <div className="list-actions">
-                         {!entry.is_deleted ? (
+                        <Link
+                          className="action-chip"
+                          style={{ textDecoration: 'none' }}
+                          to={`/entries/${entry.id}`}
+                        >
+                          <FaEye />
+                          Veure detall
+                        </Link>
+                        {!entry.is_deleted ? (
                           <Link 
                             className="action-chip action-chip--icon" 
                             style={{ textDecoration: 'none' }} 
                             to={`/entries/${entry.id}/edit`} 
                             title="Editar" 
                             aria-label="Editar"
-                            onClick={(e) => e.stopPropagation()}
                           >
                             <FaEdit />
                           </Link>
                         ) : null}
-                         {!entry.is_deleted ? (
+                        {!entry.is_deleted ? (
                           <button
                             className="action-chip action-chip--danger action-chip--icon"
                             type="button"
                             disabled={busyEntryId === entry.id}
                             onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
                               handleDeleteEntry(entry)
                             }}
                             title="Eliminar"
@@ -183,7 +184,7 @@ export function EntriesPage() {
                           </button>
                         ) : null}
                       </div>
-                    </Link>
+                    </div>
                   </li>
                 ))}
               </ul>

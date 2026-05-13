@@ -225,6 +225,24 @@ class TherapistEntriesAndQuestionsTests(APITestCase):
         self.assertFalse(self.question.is_active)
         self.assertEqual(response.data["question"]["question"], "Quina situació t'ha generat més ansietat avui?")
 
+    def test_therapist_all_questions_lists_only_own_questions_with_patient_context(self):
+        other_question = TherapistQuestion.objects.create(
+            therapist=self.other_therapist,
+            patient=self.other_patient,
+            question="Pregunta d'un altre terapeuta",
+            is_active=True,
+        )
+        self.client.force_authenticate(user=self.therapist)
+
+        response = self.client.get("/api/auth/questions/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        question_ids = {item["id"] for item in response.data}
+        self.assertIn(str(self.question.pk), question_ids)
+        self.assertNotIn(str(other_question.pk), question_ids)
+        self.assertEqual(response.data[0]["patient_id"], str(self.patient.pk))
+        self.assertEqual(response.data[0]["patient_name"], "Paula Sanchez")
+
     def test_therapist_can_add_and_list_private_notes(self):
         self.client.force_authenticate(user=self.therapist)
 

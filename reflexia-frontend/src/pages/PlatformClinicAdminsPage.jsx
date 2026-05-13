@@ -18,7 +18,7 @@ export function PlatformClinicAdminsPage() {
   const [therapists, setTherapists] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [view, setView] = useState('list') // 'list' | 'create' | 'edit'
+  const [view, setView] = useState('list')
   const [selectedAdmin, setSelectedAdmin] = useState(null)
 
   const [form, setForm] = useState({ 
