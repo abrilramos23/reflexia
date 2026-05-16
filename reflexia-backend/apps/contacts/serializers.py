@@ -107,6 +107,7 @@ class SupportTherapistCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"support_id": "Aquest servei només està disponible per a professionals que pertanyen a una clínica."}
             )
+        organisation = therapist.organisation
 
         try:
             support_therapist = Therapist.objects.get(pk=attrs["support_id"])
@@ -124,6 +125,11 @@ class SupportTherapistCreateSerializer(serializers.Serializer):
         ).exists():
             raise serializers.ValidationError(
                 {"support_id": "This support therapist is already assigned."}
+            )
+
+        if support_therapist.organisation != organisation:
+            raise serializers.ValidationError(
+                {"support_id": "El terapeuta de suport ha de pertànyer a la mateixa clínica."}
             )
 
         attrs["support"] = support_therapist

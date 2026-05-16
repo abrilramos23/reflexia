@@ -267,5 +267,7 @@ class AvailableSupportTherapistListView(APIView):
             return Response([], status=status.HTTP_200_OK)
 
         assigned_ids = SupportTherapist.objects.filter(therapist=therapist).values_list("support_id", flat=True)
-        therapists = Therapist.objects.exclude(pk=therapist.pk).exclude(pk__in=assigned_ids)
+        therapists = Therapist.objects.filter(
+            organisation_memberships__organisation=therapist.organisation,
+        ).exclude(pk=therapist.pk).exclude(pk__in=assigned_ids)
         return Response(AvailableTherapistSerializer(therapists, many=True).data, status=status.HTTP_200_OK)

@@ -38,13 +38,15 @@ from apps.users.serializers import (
     OrganisationCreateSerializer,
     OrganisationUpdateSerializer,
     ClinicAdminRegistrationSerializer,
+    InvitacioOrganitzacioCreateSerializer,
+    InvitacioOrganitzacioSerializer,
     TherapistAdminUpdateSerializer,
 )
 from apps.users.services import delete_user_account
 
 
 class TherapistRegistrationView(APIView):
-    permission_classes = [IsPlatformAdminUser | IsClinicAdminUser]
+    permission_classes = [AllowAny]
 
     @extend_schema(
         tags=["auth"],
@@ -61,6 +63,7 @@ class TherapistRegistrationView(APIView):
                     "license_number": serializers.CharField(),
                     "specialty": serializers.CharField(),
                     "is_clinic_admin": serializers.BooleanField(),
+                    "organisation": OrganisationSerializer(),
                     "registration_date": serializers.DateTimeField(),
                     "two_factor_enabled": serializers.BooleanField(),
                     "activation_email_sent": serializers.BooleanField(),
@@ -77,23 +80,15 @@ class TherapistRegistrationView(APIView):
                     "email": "therapist@example.com",
                     "license_number": "21039",
                     "specialty": "Clinical Psychology",
-                    "organisation_id": "11111111-1111-1111-1111-111111111111",
-                    "is_admin": True,
+                    "registration_path": "create_clinic",
+                    "organisation_name": "Centre Reflexia",
                 },
                 request_only=True,
             )
         ],
     )
     def post(self, request):
-        context = {}
-        if request.user.is_clinic_admin:
-            membership = request.user.organisation_memberships.filter(is_admin=True).first()
-            if membership:
-                context["organisation"] = membership.organisation
-        # If PlatformAdmin, the organisation_id is handled inside the serializer's create method
-        # via the request data.
-
-        serializer = TherapistRegistrationSerializer(data=request.data, context=context)
+        serializer = TherapistRegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         therapist = serializer.save()
 
@@ -101,11 +96,34 @@ class TherapistRegistrationView(APIView):
         response_data = {
             **response_serializer.data,
             "is_clinic_admin": therapist.is_clinic_admin,
+            "organisation": OrganisationSerializer(therapist.organisation).data if therapist.organisation else None,
             "activation_email_sent": True,
         }
         if settings.DEBUG:
             response_data["activation_url"] = serializer.context.get("activation_url")
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+class InvitacioOrganitzacioCreateView(APIView):
+    permission_classes = [IsClinicAdminUser]
+
+    @extend_schema(
+        tags=["admin"],
+        summary="Crear una invitació d'organització",
+        request=InvitacioOrganitzacioCreateSerializer,
+        responses={201: InvitacioOrganitzacioSerializer},
+    )
+    def post(self, request):
+        serializer = InvitacioOrganitzacioCreateSerializer(
+            data=request.data,
+            context={"admin": request.user},
+        )
+        serializer.is_valid(raise_exception=True)
+        invitation = serializer.save()
+        return Response(
+            InvitacioOrganitzacioSerializer(invitation).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class PatientRegistrationView(APIView):

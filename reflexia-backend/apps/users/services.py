@@ -7,7 +7,15 @@ from django.db import transaction
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from apps.users.models import Patient, Therapist, TherapistPatient, User, Organisation, OrganisationMember
+from apps.users.models import (
+    InvitacioOrganitzacio,
+    Organisation,
+    OrganisationMember,
+    Patient,
+    Therapist,
+    TherapistPatient,
+    User,
+)
 
 
 @transaction.atomic
@@ -17,6 +25,28 @@ def create_organisation(*, name, type):
         type=type,
     )
     return organisation
+
+
+@transaction.atomic
+def create_organisation_invitation(*, admin, dataCaducitat=None):
+    membership = admin.organisation_memberships.select_related("organisation").filter(
+        is_admin=True,
+    ).first()
+    if membership is None:
+        raise DjangoValidationError(
+            {"detail": ["Només un terapeuta administrador pot generar invitacions."]}
+        )
+
+    organisation = membership.organisation
+    if organisation.type != Organisation.Type.CLINIC:
+        raise DjangoValidationError(
+            {"detail": ["Les organitzacions individuals no poden generar invitacions."]}
+        )
+
+    return InvitacioOrganitzacio.objects.create(
+        idOrganitzacio=organisation,
+        dataCaducitat=dataCaducitat,
+    )
 
 
 @transaction.atomic
@@ -49,9 +79,44 @@ def register_therapist(
     email,
     license_number,
     specialty,
-    organisation=None,
-    is_admin=False,
+    registration_path,
+    organisation_name=None,
+    invitation_token=None,
 ):
+    invitation = None
+    organisation = None
+    is_admin = False
+
+    if registration_path == "independent":
+        organisation = Organisation.objects.create(
+            name=organisation_name or f"{first_name} {last_name}",
+            type=Organisation.Type.INDIVIDUAL,
+        )
+    elif registration_path == "create_clinic":
+        organisation = Organisation.objects.create(
+            name=organisation_name,
+            type=Organisation.Type.CLINIC,
+        )
+        is_admin = True
+    elif registration_path == "join_organisation":
+        invitation = (
+            InvitacioOrganitzacio.objects.select_for_update()
+            .select_related("idOrganitzacio")
+            .filter(token=invitation_token)
+            .first()
+        )
+        if invitation is None or not invitation.is_usable:
+            raise DjangoValidationError(
+                {"invitation_token": ["La invitació no és vàlida, ja s'ha usat o ha caducat."]}
+            )
+        organisation = invitation.idOrganitzacio
+        if organisation.type != Organisation.Type.CLINIC:
+            raise DjangoValidationError(
+                {"invitation_token": ["La invitació no pertany a una organització clínica."]}
+            )
+    else:
+        raise DjangoValidationError({"registration_path": ["Camí de registre no vàlid."]})
+
     therapist = Therapist(
         email=email,
         first_name=first_name,
@@ -64,12 +129,15 @@ def register_therapist(
     therapist.set_unusable_password()
     therapist.save()
     
-    if organisation:
-        OrganisationMember.objects.create(
-            user=therapist,
-            organisation=organisation,
-            is_admin=is_admin,
-        )
+    OrganisationMember.objects.create(
+        user=therapist,
+        organisation=organisation,
+        is_admin=is_admin,
+    )
+
+    if invitation is not None:
+        invitation.usat = True
+        invitation.save(update_fields=["usat"])
         
     activation_url = build_account_activation_url(therapist)
     send_therapist_activation_email(therapist=therapist, activation_url=activation_url)

@@ -9,6 +9,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.models import (
+    InvitacioOrganitzacio,
     Organisation,
     OrganisationMember,
     Patient,
@@ -25,6 +26,7 @@ from apps.users.services import (
     register_clinic_admin,
     register_patient,
     register_therapist,
+    create_organisation_invitation,
     create_organisation,
     reset_user_password,
     send_password_reset_email,
@@ -119,8 +121,21 @@ class UserSummarySerializer(serializers.ModelSerializer):
 
 
 class TherapistRegistrationSerializer(serializers.ModelSerializer):
-    organisation_id = serializers.UUIDField(required=False, write_only=True)
-    is_admin = serializers.BooleanField(required=False, default=False)
+    class RegistrationPath:
+        INDEPENDENT = "independent"
+        CREATE_CLINIC = "create_clinic"
+        JOIN_ORGANISATION = "join_organisation"
+
+    registration_path = serializers.ChoiceField(
+        choices=(
+            RegistrationPath.INDEPENDENT,
+            RegistrationPath.CREATE_CLINIC,
+            RegistrationPath.JOIN_ORGANISATION,
+        ),
+        write_only=True,
+    )
+    organisation_name = serializers.CharField(max_length=255, required=False, write_only=True)
+    invitation_token = serializers.CharField(max_length=36, required=False, write_only=True)
 
     class Meta:
         model = Therapist
@@ -131,8 +146,9 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
             "email",
             "license_number",
             "specialty",
-            "organisation_id",
-            "is_admin",
+            "registration_path",
+            "organisation_name",
+            "invitation_token",
             "registration_date",
             "two_factor_enabled",
         )
@@ -153,42 +169,74 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
         return normalized_value
 
     def validate(self, attrs):
-        organisation = self.context.get("organisation")
-        organisation_id = attrs.get("organisation_id")
-        is_admin = attrs.get("is_admin", False)
+        registration_path = attrs.get("registration_path")
+        organisation_name = attrs.get("organisation_name", "").strip()
+        invitation_token = attrs.get("invitation_token", "").strip()
 
-        if organisation_id and organisation is None:
-            try:
-                organisation = Organisation.objects.get(pk=organisation_id)
-            except Organisation.DoesNotExist as exc:
-                raise serializers.ValidationError({"organisation_id": "Organisation not found."}) from exc
-
-        if is_admin and organisation is None:
+        if registration_path == self.RegistrationPath.CREATE_CLINIC and not organisation_name:
             raise serializers.ValidationError(
-                {"is_admin": "A therapist can only be assigned as organisation admin when linked to an organisation."}
+                {"organisation_name": "El nom de l'organització és obligatori per crear una clínica."}
             )
+
+        if registration_path == self.RegistrationPath.JOIN_ORGANISATION:
+            if not invitation_token:
+                raise serializers.ValidationError(
+                    {"invitation_token": "El token d'invitació és obligatori per unir-se a una organització."}
+                )
+            invitation = InvitacioOrganitzacio.objects.filter(token=invitation_token).first()
+            if invitation is None or not invitation.is_usable:
+                raise serializers.ValidationError(
+                    {"invitation_token": "La invitació no és vàlida, ja s'ha usat o ha caducat."}
+                )
+            if invitation.idOrganitzacio.type != Organisation.Type.CLINIC:
+                raise serializers.ValidationError(
+                    {"invitation_token": "La invitació no pertany a una organització clínica."}
+                )
+
+        if registration_path != self.RegistrationPath.JOIN_ORGANISATION and invitation_token:
+            raise serializers.ValidationError(
+                {"invitation_token": "El token només es pot usar en el camí d'unir-se a una organització."}
+            )
+
+        attrs["organisation_name"] = organisation_name
 
         return attrs
 
     def create(self, validated_data):
-        organisation_id = validated_data.pop("organisation_id", None)
-        is_admin = validated_data.pop("is_admin", False)
-        organisation = self.context.get("organisation")
-        
-        # If PlatformAdmin provided an organisation_id, use it
-        if organisation_id:
-            try:
-                organisation = Organisation.objects.get(pk=organisation_id)
-            except Organisation.DoesNotExist:
-                raise serializers.ValidationError({"organisation_id": "Organisation not found."})
-
-        therapist, activation_url = register_therapist(
-            organisation=organisation,
-            is_admin=is_admin,
-            **validated_data,
-        )
+        try:
+            therapist, activation_url = register_therapist(**validated_data)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages) from exc
         self.context["activation_url"] = activation_url
         return therapist
+
+
+class InvitacioOrganitzacioSerializer(serializers.ModelSerializer):
+    idOrganitzacio = serializers.UUIDField(source="idOrganitzacio.id", read_only=True)
+
+    class Meta:
+        model = InvitacioOrganitzacio
+        fields = ("token", "idOrganitzacio", "dataCreacio", "dataCaducitat", "usat")
+        read_only_fields = ("token", "idOrganitzacio", "dataCreacio", "usat")
+
+
+class InvitacioOrganitzacioCreateSerializer(serializers.Serializer):
+    dataCaducitat = serializers.DateTimeField(required=False, allow_null=True)
+
+    def validate_dataCaducitat(self, value):
+        if value is not None and value <= timezone.now():
+            raise serializers.ValidationError("La data de caducitat ha de ser futura.")
+        return value
+
+    def create(self, validated_data):
+        admin = self.context["admin"]
+        try:
+            return create_organisation_invitation(
+                admin=admin,
+                dataCaducitat=validated_data.get("dataCaducitat"),
+            )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages) from exc
 
 
 class ClinicAdminRegistrationSerializer(serializers.Serializer):

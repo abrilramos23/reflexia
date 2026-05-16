@@ -11,6 +11,7 @@ from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, Ou
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.models import (
+    InvitacioOrganitzacio,
     Organisation,
     Patient,
     ProfessionalDirectoryEntry,
@@ -27,39 +28,41 @@ from apps.users.models import (
 )
 class TherapistRegistrationTests(APITestCase):
     def setUp(self):
-        self.org = Organisation.objects.create(
-            name="Test Clinic",
-            type=Organisation.Type.CLINIC,
-        )
         ProfessionalDirectoryEntry.objects.create(
             license_number="30809",
             complete_name="LAURA GOMEZ",
         )
-        self.admin_user = User.objects.create_superuser(
-            email="admin@example.com",
-            password="AdminPass123!",
-            first_name="Admin",
-            last_name="User",
+        ProfessionalDirectoryEntry.objects.create(
+            license_number="21039",
+            complete_name="MARTA LOPEZ",
+        )
+        ProfessionalDirectoryEntry.objects.create(
+            license_number="17105",
+            complete_name="JOAN SERRA",
         )
         self.url = "/api/auth/register/therapist/"
 
-    def test_register_therapist_successfully_for_admin(self):
-        self.client.force_authenticate(user=self.admin_user)
+    def test_register_independent_therapist_creates_individual_organisation(self):
         payload = {
             "first_name": "Laura",
             "last_name": "Gomez",
             "email": "laura@example.com",
             "license_number": "30809",
             "specialty": "Clinical Psychology",
+            "registration_path": "independent",
         }
 
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Therapist.objects.count(), 1)
+        self.assertEqual(Organisation.objects.count(), 1)
         therapist = Therapist.objects.get(email="laura@example.com")
+        organisation = therapist.organisation
         self.assertEqual(therapist.first_name, "Laura")
         self.assertEqual(therapist.license_number, "30809")
+        self.assertEqual(organisation.type, Organisation.Type.INDIVIDUAL)
+        self.assertEqual(OrganisationMember.objects.get(user=therapist).is_admin, False)
         self.assertFalse(therapist.is_active)
         self.assertFalse(therapist.has_usable_password())
         self.assertEqual(len(mail.outbox), 1)
@@ -67,28 +70,99 @@ class TherapistRegistrationTests(APITestCase):
         self.assertEqual(mail.outbox[0].to, ["laura@example.com"])
         self.assertNotIn("password", response.data)
 
-    def test_register_therapist_requires_admin_user(self):
+    def test_register_therapist_can_create_clinic_as_admin(self):
         payload = {
-            "first_name": "Laura",
-            "last_name": "Gomez",
-            "email": "laura@example.com",
-            "license_number": "30809",
+            "first_name": "Marta",
+            "last_name": "Lopez",
+            "email": "marta@example.com",
+            "license_number": "21039",
             "specialty": "Clinical Psychology",
+            "registration_path": "create_clinic",
+            "organisation_name": "Centre Reflexia",
         }
 
         response = self.client.post(self.url, payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        therapist = Therapist.objects.get(email="marta@example.com")
+        organisation = therapist.organisation
+        self.assertEqual(organisation.name, "Centre Reflexia")
+        self.assertEqual(organisation.type, Organisation.Type.CLINIC)
+        self.assertTrue(
+            OrganisationMember.objects.filter(
+                user=therapist,
+                organisation=organisation,
+                is_admin=True,
+            ).exists()
+        )
+        self.assertTrue(response.data["is_clinic_admin"])
+
+    def test_register_therapist_can_join_existing_organisation_with_invitation(self):
+        admin = Therapist.objects.create_user(
+            email="admin-clinic@example.com",
+            password="StrongPass123!",
+            first_name="Admin",
+            last_name="Clinic",
+            license_number="21039",
+            specialty="Clinical Psychology",
+        )
+        org = Organisation.objects.create(name="Test Clinic", type=Organisation.Type.CLINIC)
+        OrganisationMember.objects.create(user=admin, organisation=org, is_admin=True)
+        invitation = InvitacioOrganitzacio.objects.create(idOrganitzacio=org)
+        payload = {
+            "first_name": "Joan",
+            "last_name": "Serra",
+            "email": "joan@example.com",
+            "license_number": "17105",
+            "specialty": "Trauma Therapy",
+            "registration_path": "join_organisation",
+            "invitation_token": invitation.token,
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        therapist = Therapist.objects.get(email="joan@example.com")
+        self.assertTrue(
+            OrganisationMember.objects.filter(
+                user=therapist,
+                organisation=org,
+                is_admin=False,
+            ).exists()
+        )
+        invitation.refresh_from_db()
+        self.assertTrue(invitation.usat)
+
+    def test_register_therapist_rejects_used_invitation(self):
+        org = Organisation.objects.create(name="Test Clinic", type=Organisation.Type.CLINIC)
+        invitation = InvitacioOrganitzacio.objects.create(idOrganitzacio=org, usat=True)
+
+        response = self.client.post(
+            self.url,
+            {
+                "first_name": "Laura",
+                "last_name": "Gomez",
+                "email": "laura@example.com",
+                "license_number": "30809",
+                "specialty": "Clinical Psychology",
+                "registration_path": "join_organisation",
+                "invitation_token": invitation.token,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("invitation_token", response.data)
         self.assertEqual(Therapist.objects.count(), 0)
 
     def test_register_therapist_rejects_unknown_license_number(self):
-        self.client.force_authenticate(user=self.admin_user)
         payload = {
             "first_name": "Laura",
             "last_name": "Gomez",
             "email": "laura@example.com",
             "license_number": "99999",
             "specialty": "Clinical Psychology",
+            "registration_path": "independent",
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -97,30 +171,134 @@ class TherapistRegistrationTests(APITestCase):
         self.assertIn("license_number", response.data)
         self.assertEqual(Therapist.objects.count(), 0)
 
-    def test_register_therapist_can_assign_organisation_admin_role(self):
-        self.client.force_authenticate(user=self.admin_user)
-        payload = {
-            "first_name": "Laura",
-            "last_name": "Gomez",
-            "email": "laura-admin@example.com",
-            "license_number": "30809",
-            "specialty": "Clinical Psychology",
-            "organisation_id": str(self.org.id),
-            "is_admin": True,
-        }
 
-        response = self.client.post(self.url, payload, format="json")
+class OrganisationInvitationTests(APITestCase):
+    def setUp(self):
+        self.url = "/api/admin/organisations/invitations/"
+        self.clinic = Organisation.objects.create(
+            name="Test Clinic",
+            type=Organisation.Type.CLINIC,
+        )
+        self.individual = Organisation.objects.create(
+            name="Independent",
+            type=Organisation.Type.INDIVIDUAL,
+        )
+        self.admin = Therapist.objects.create_user(
+            email="clinic-admin@example.com",
+            password="StrongPass123!",
+            first_name="Marta",
+            last_name="Lopez",
+            license_number="16385",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        OrganisationMember.objects.create(user=self.admin, organisation=self.clinic, is_admin=True)
+        self.member = Therapist.objects.create_user(
+            email="member@example.com",
+            password="StrongPass123!",
+            first_name="Joan",
+            last_name="Serra",
+            license_number="17105",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        OrganisationMember.objects.create(user=self.member, organisation=self.clinic, is_admin=False)
+        self.independent_therapist = Therapist.objects.create_user(
+            email="solo@example.com",
+            password="StrongPass123!",
+            first_name="Solo",
+            last_name="Therapist",
+            license_number="21039",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        OrganisationMember.objects.create(
+            user=self.independent_therapist,
+            organisation=self.individual,
+            is_admin=False,
+        )
+
+    def test_clinic_admin_can_create_invitation_for_their_organisation(self):
+        self.client.force_authenticate(user=self.admin)
+
+        response = self.client.post(self.url, {}, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        therapist = Therapist.objects.get(email="laura-admin@example.com")
-        self.assertTrue(
-            OrganisationMember.objects.filter(
-                user=therapist,
-                organisation=self.org,
-                is_admin=True,
-            ).exists()
+        invitation = InvitacioOrganitzacio.objects.get(token=response.data["token"])
+        self.assertEqual(invitation.idOrganitzacio, self.clinic)
+        self.assertFalse(invitation.usat)
+
+    def test_non_admin_cannot_create_invitation(self):
+        self.client.force_authenticate(user=self.member)
+
+        response = self.client.post(self.url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(InvitacioOrganitzacio.objects.count(), 0)
+
+    def test_individual_organisation_cannot_create_invitation(self):
+        self.client.force_authenticate(user=self.independent_therapist)
+
+        response = self.client.post(self.url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(InvitacioOrganitzacio.objects.count(), 0)
+
+
+class OrganisationMembershipConstraintTests(APITestCase):
+    def setUp(self):
+        self.individual = Organisation.objects.create(
+            name="Individual",
+            type=Organisation.Type.INDIVIDUAL,
         )
-        self.assertTrue(response.data["is_clinic_admin"])
+        self.clinic = Organisation.objects.create(
+            name="Clinic",
+            type=Organisation.Type.CLINIC,
+        )
+        self.therapist = Therapist.objects.create_user(
+            email="therapist-constraint@example.com",
+            password="StrongPass123!",
+            first_name="Marta",
+            last_name="Lopez",
+            license_number="16385",
+            specialty="Clinical Psychology",
+        )
+        self.other_therapist = Therapist.objects.create_user(
+            email="other-constraint@example.com",
+            password="StrongPass123!",
+            first_name="Joan",
+            last_name="Serra",
+            license_number="17105",
+            specialty="Clinical Psychology",
+        )
+
+    def test_individual_organisation_accepts_only_one_member(self):
+        OrganisationMember.objects.create(
+            user=self.therapist,
+            organisation=self.individual,
+            is_admin=False,
+        )
+
+        with self.assertRaises(ValidationError):
+            OrganisationMember.objects.create(
+                user=self.other_therapist,
+                organisation=self.individual,
+                is_admin=False,
+            )
+
+    def test_therapist_can_only_belong_to_one_organisation(self):
+        OrganisationMember.objects.create(
+            user=self.therapist,
+            organisation=self.individual,
+            is_admin=False,
+        )
+
+        with self.assertRaises(ValidationError):
+            OrganisationMember.objects.create(
+                user=self.therapist,
+                organisation=self.clinic,
+                is_admin=False,
+            )
 
 
 @override_settings(

@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from apps.users.models import (
+    InvitacioOrganitzacio,
     Organisation,
     OrganisationMember,
     # Subscription,
@@ -33,6 +34,13 @@ class OrganisationMemberAdmin(admin.ModelAdmin):
     list_display = ("user", "organisation", "is_admin", "joined_at")
     list_filter = ("is_admin", "organisation")
     search_fields = ("user__email", "organisation__name")
+
+
+@admin.register(InvitacioOrganitzacio)
+class InvitacioOrganitzacioAdmin(admin.ModelAdmin):
+    list_display = ("token", "idOrganitzacio", "dataCreacio", "dataCaducitat", "usat")
+    list_filter = ("usat", "idOrganitzacio")
+    search_fields = ("token", "idOrganitzacio__name")
 
 
 @admin.register(User)

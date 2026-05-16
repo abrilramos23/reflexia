@@ -23,6 +23,18 @@ class Organisation(models.Model):
     def __str__(self):
         return f"{self.name} ({self.type})"
 
+    def clean(self):
+        if self.pk and self.type == self.Type.INDIVIDUAL:
+            member_count = self.user_memberships.count()
+            if member_count > 1:
+                raise ValidationError(
+                    "Una organització individual només pot tenir un membre."
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
 
 """
 class Subscription(models.Model):
@@ -134,7 +146,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     @property
     def is_clinic_admin(self):
-        return self.organisation_memberships.filter(is_admin=True).exists()
+        return self.organisation_memberships.filter(
+            is_admin=True,
+            organisation__type=Organisation.Type.CLINIC,
+        ).exists()
 
     @property
     def organisation(self):
@@ -172,6 +187,26 @@ class OrganisationMember(models.Model):
             raise ValidationError(
                 "Els pacients no poden ser membres d'una organització."
             )
+
+        existing_memberships = OrganisationMember.objects.filter(user=self.user)
+        if self.pk:
+            existing_memberships = existing_memberships.exclude(pk=self.pk)
+        if existing_memberships.exists():
+            raise ValidationError(
+                "Un terapeuta no pot pertànyer a més d'una organització."
+            )
+
+        if self.organisation.type == Organisation.Type.INDIVIDUAL:
+            existing_org_members = OrganisationMember.objects.filter(
+                organisation=self.organisation,
+            )
+            if self.pk:
+                existing_org_members = existing_org_members.exclude(pk=self.pk)
+            if existing_org_members.exists():
+                raise ValidationError(
+                    "Una organització individual només pot tenir un membre."
+                )
+
         if self.pk:
             old_instance = OrganisationMember.objects.get(pk=self.pk)
             if old_instance.is_admin and not self.is_admin:
@@ -201,6 +236,33 @@ class OrganisationMember(models.Model):
                         "No es pot eliminar aquest membre perquè és l'únic administrador de l'organització."
                     )
         super().delete(*args, **kwargs)
+
+
+class InvitacioOrganitzacio(models.Model):
+    token = models.CharField(max_length=36, unique=True, default=uuid.uuid4, editable=False)
+    idOrganitzacio = models.ForeignKey(
+        Organisation,
+        on_delete=models.CASCADE,
+        related_name="invitacions",
+    )
+    dataCreacio = models.DateTimeField(default=timezone.now)
+    dataCaducitat = models.DateTimeField(null=True, blank=True)
+    usat = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "invitació d'organització"
+        verbose_name_plural = "invitacions d'organització"
+
+    def __str__(self):
+        return f"Invitation {self.token} for {self.idOrganitzacio}"
+
+    @property
+    def is_expired(self):
+        return bool(self.dataCaducitat and self.dataCaducitat <= timezone.now())
+
+    @property
+    def is_usable(self):
+        return not self.usat and not self.is_expired
 
 
 class Therapist(User):
