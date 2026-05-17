@@ -5,13 +5,10 @@ import { EmotionalEvolutionPanel } from '../components/EmotionalEvolutionPanel.j
 import { useAuth } from '../context/AuthContext.jsx'
 import { consentDocumentUrl } from '../lib/api.js'
 import { formatEntryDate } from '../lib/entries.js'
-import { PlatformAdminDashboard } from './PlatformAdminDashboard.jsx'
-import { ClinicAdminDashboard } from './ClinicAdminDashboard.jsx'
 
 function formatRole(role) {
   if (role === 'therapist') return 'Terapeuta'
   if (role === 'patient') return 'Pacient'
-  if (role === 'platform_admin') return 'Admin Plataforma'
   return 'Usuari'
 }
 
@@ -196,14 +193,6 @@ export function DashboardPage() {
       setIsSubmittingInvite(false)
     }
   }
-
-  if (user.role === 'platform_admin') {
-    return <PlatformAdminDashboard />
-  }
-
-//   if (isClinicAdmin) {
-//     return <PlatformAdminDashboard />
-//   }
 
   return (
     <div className="screen-shell">

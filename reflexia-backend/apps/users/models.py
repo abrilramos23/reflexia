@@ -87,7 +87,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
-        extra_fields.setdefault("role", User.Role.PLATFORM_ADMIN)
+        extra_fields.setdefault("role", User.Role.THERAPIST)
         return self.create_user(email, password, **extra_fields)
 
 
@@ -105,7 +105,6 @@ class PatientManager(UserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     class Role(models.TextChoices):
-        PLATFORM_ADMIN = 'platform_admin', 'Platform Admin'
         THERAPIST      = 'therapist',      'Therapist'
         PATIENT        = 'patient',        'Patient'
 
@@ -139,10 +138,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} <{self.email}>"
-
-    @property
-    def is_platform_admin(self):
-        return self.role == self.Role.PLATFORM_ADMIN
 
     @property
     def is_clinic_admin(self):

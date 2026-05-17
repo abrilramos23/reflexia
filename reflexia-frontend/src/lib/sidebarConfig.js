@@ -1,10 +1,10 @@
-import { FaUser, FaUsers, FaBook, FaSignOutAlt, FaHome, FaBriefcase, FaBuilding, FaQuestionCircle } from 'react-icons/fa'
+import { FaUser, FaUsers, FaBook, FaHome, FaBuilding, FaQuestionCircle } from 'react-icons/fa'
 
 export const sidebarConfig = [
   {
     label: 'Dashboard',
     path: '/dashboard',
-    roles: ['therapist', 'patient', 'platform_admin'],
+    roles: ['therapist', 'patient'],
     icon: FaHome,
     section: 'General',
   },
@@ -16,23 +16,9 @@ export const sidebarConfig = [
     section: 'Organització',
   },
   {
-    label: 'Organitzacions',
-    path: '/admin/organisations',
-    roles: ['platform_admin'],
-    icon: FaBriefcase,
-    section: 'Administració',
-  },
-  {
-    label: 'Admins de Clínica',
-    path: '/admin/clinic-admins',
-    roles: ['platform_admin'],
-    icon: FaBuilding,
-    section: 'Administració',
-  },
-  {
     label: 'Terapeutes',
     path: '/admin/therapists',
-    roles: ['platform_admin', 'therapist'], 
+    roles: ['therapist'],
     icon: FaUsers,
     section: 'Organització',
   },
@@ -74,7 +60,7 @@ export const sidebarConfig = [
   {
     label: 'Perfil',
     path: '/profile',
-    roles: ['therapist', 'patient', 'platform_admin'],
+    roles: ['therapist', 'patient'],
     icon: FaUser,
     section: 'Compte',
   },

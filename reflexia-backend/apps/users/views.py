@@ -7,12 +7,12 @@ from django.http import FileResponse, Http404
 from rest_framework import status
 from django.conf import settings
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, inline_serializer
-from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import serializers
 
-from apps.users.permissions import IsTherapistUser, IsPlatformAdminUser, IsClinicAdminUser
+from apps.users.permissions import IsTherapistUser, IsClinicAdminUser
 from apps.users.models import User, Patient, Therapist, Organisation, OrganisationMember
 from apps.users.serializers import (
     AccountActivationSerializer,
@@ -35,9 +35,7 @@ from apps.users.serializers import (
     TwoFactorVerifySerializer,
     UserSummarySerializer,
     OrganisationSerializer,
-    OrganisationCreateSerializer,
     OrganisationUpdateSerializer,
-    ClinicAdminRegistrationSerializer,
     InvitacioOrganitzacioCreateSerializer,
     InvitacioOrganitzacioSerializer,
     TherapistAdminUpdateSerializer,
@@ -809,35 +807,6 @@ class ConsentDocumentView(APIView):
             content_type="application/pdf",
             filename="Reflexia_Consentiment_Informat.pdf",
         )
-class PlatformStatsView(APIView):
-    permission_classes = [IsPlatformAdminUser]
-
-    @extend_schema(
-        tags=["admin"],
-        summary="Obtenir estadístiques de la plataforma",
-        responses={200: inline_serializer(
-            name="PlatformStats",
-            fields={
-                "total_organisations": serializers.IntegerField(),
-                "total_users": serializers.IntegerField(),
-                "total_clinic_admins": serializers.IntegerField(),
-                "users_by_role": serializers.DictField(),
-            }
-        )}
-    )
-    def get(self, request):
-        stats = {
-            "total_organisations": Organisation.objects.count(),
-            "total_users": User.objects.count(),
-            "total_clinic_admins": User.objects.filter(
-                organisation_memberships__is_admin=True
-            ).distinct().count(),
-            "users_by_role": {
-                role: User.objects.filter(role=role).count()
-                for role, _ in User.Role.choices
-            }
-        }
-        return Response(stats)
 
 
 class ClinicStatsView(APIView):
@@ -875,29 +844,6 @@ class ClinicStatsView(APIView):
         return Response(stats)
 
 
-class OrganisationListCreateView(APIView):
-    permission_classes = [IsPlatformAdminUser]
-
-    @extend_schema(
-        tags=["admin"],
-        summary="Llistar i crear organitzacions",
-        request=OrganisationCreateSerializer,
-        responses={
-            200: OrganisationSerializer(many=True),
-            201: OrganisationSerializer,
-        },
-    )
-    def get(self, request):
-        organisations = Organisation.objects.all().order_by("name")
-        return Response(OrganisationSerializer(organisations, many=True).data)
-
-    def post(self, request):
-        serializer = OrganisationCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        organisation = serializer.save()
-        return Response(OrganisationSerializer(organisation).data, status=status.HTTP_201_CREATED)
-
-
 def _validation_detail(exc):
     if hasattr(exc, "message_dict"):
         return exc.message_dict
@@ -911,17 +857,11 @@ def _clinic_admin_membership(user):
 
 
 def _admin_can_manage_organisation(user, organisation):
-    if user.is_platform_admin:
-        return True
-
     membership = _clinic_admin_membership(user)
     return bool(membership and membership.organisation_id == organisation.id)
 
 
 def _admin_can_manage_therapist(user, therapist):
-    if user.is_platform_admin:
-        return True
-
     membership = _clinic_admin_membership(user)
     if not membership:
         return False
@@ -1031,7 +971,7 @@ def _update_therapist_by_admin(*, therapist, attrs, allow_organisation_change):
 
 
 class OrganisationDetailView(APIView):
-    permission_classes = [IsPlatformAdminUser | IsClinicAdminUser]
+    permission_classes = [IsClinicAdminUser]
 
     @extend_schema(
         tags=["admin"],
@@ -1065,144 +1005,8 @@ class OrganisationDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ClinicAdminRegistrationView(APIView):
-    permission_classes = [IsPlatformAdminUser]
-
-    @extend_schema(
-        tags=["admin"],
-        summary="Registrar un administrador de clínica",
-        request=ClinicAdminRegistrationSerializer,
-        responses={
-            201: inline_serializer(
-                name="ClinicAdminRegistrationResponse",
-                fields={
-                    "id": serializers.UUIDField(),
-                    "first_name": serializers.CharField(),
-                    "last_name": serializers.CharField(),
-                    "email": serializers.EmailField(),
-                    "license_number": serializers.CharField(),
-                    "specialty": serializers.CharField(),
-                    "is_clinic_admin": serializers.BooleanField(),
-                    "organisation": OrganisationSerializer(),
-                },
-            ),
-        },
-        examples=[
-            OpenApiExample(
-                "Assignar terapeuta existent com a admin de clínica",
-                value={
-                    "organisation_id": "11111111-1111-1111-1111-111111111111",
-                    "therapist_id": "22222222-2222-2222-2222-222222222222",
-                },
-                request_only=True,
-            )
-        ],
-    )
-    def post(self, request):
-        serializer = ClinicAdminRegistrationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        therapist = serializer.save()
-
-        response_data = {
-            "id": therapist.id,
-            "first_name": therapist.first_name,
-            "last_name": therapist.last_name,
-            "email": therapist.email,
-            "license_number": therapist.license_number,
-            "specialty": therapist.specialty,
-            "is_clinic_admin": therapist.is_clinic_admin,
-            "organisation": OrganisationSerializer(therapist.organisation).data if therapist.organisation else None,
-        }
-        return Response(response_data, status=status.HTTP_201_CREATED)
-
-
-class GlobalClinicAdminListView(APIView):
-    permission_classes = [IsPlatformAdminUser]
-
-    @extend_schema(
-        tags=["admin"],
-        summary="Llistar tots els administradors de clínica",
-        responses={200: UserSummarySerializer(many=True)},
-    )
-    def get(self, request):
-        users = User.objects.filter(
-            organisation_memberships__is_admin=True
-        ).distinct().order_by("first_name", "last_name")
-        return Response(UserSummarySerializer(users, many=True).data)
-
-
-class ClinicAdminDetailView(APIView):
-    permission_classes = [IsPlatformAdminUser]
-
-    @extend_schema(
-        tags=["admin"],
-        summary="Consultar, modificar o eliminar un administrador de clínica",
-        request=TherapistAdminUpdateSerializer,
-        responses={200: UserSummarySerializer, 204: None},
-    )
-    def get(self, request, user_id):
-        user = get_object_or_404(
-            User.objects.filter(organisation_memberships__is_admin=True).distinct(),
-            pk=user_id,
-        )
-        return Response(UserSummarySerializer(user).data)
-
-    def patch(self, request, user_id):
-        therapist = get_object_or_404(
-            Therapist.objects.filter(organisation_memberships__is_admin=True).distinct(),
-            pk=user_id,
-        )
-        serializer = TherapistAdminUpdateSerializer(
-            data=request.data,
-            partial=True,
-            context={"therapist": therapist},
-        )
-        serializer.is_valid(raise_exception=True)
-
-        try:
-            therapist = _update_therapist_by_admin(
-                therapist=therapist,
-                attrs={**serializer.validated_data, "is_admin": True},
-                allow_organisation_change=True,
-            )
-        except DjangoValidationError as exc:
-            return Response(_validation_detail(exc), status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(UserSummarySerializer(therapist).data)
-
-    def delete(self, request, user_id):
-        therapist = get_object_or_404(
-            Therapist.objects.filter(organisation_memberships__is_admin=True).distinct(),
-            pk=user_id,
-        )
-        membership = therapist.organisation_memberships.filter(is_admin=True).first()
-
-        if membership is None:
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
-        try:
-            _set_membership_admin(membership, False)
-        except DjangoValidationError as exc:
-            return Response(_validation_detail(exc), status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class GlobalTherapistListView(APIView):
-    permission_classes = [IsPlatformAdminUser]
-
-    @extend_schema(
-        tags=["admin"],
-        summary="Llistar tots els terapeutes globals",
-        responses={200: UserSummarySerializer(many=True)},
-    )
-    def get(self, request):
-        users = User.objects.filter(role=User.Role.THERAPIST).order_by("first_name", "last_name")
-        return Response(UserSummarySerializer(users, many=True).data)
-
-
 class TherapistAdminDetailView(APIView):
-    permission_classes = [IsPlatformAdminUser | IsClinicAdminUser]
+    permission_classes = [IsClinicAdminUser]
 
     @extend_schema(
         tags=["admin"],
@@ -1233,7 +1037,7 @@ class TherapistAdminDetailView(APIView):
             therapist = _update_therapist_by_admin(
                 therapist=therapist,
                 attrs=serializer.validated_data,
-                allow_organisation_change=request.user.is_platform_admin,
+                allow_organisation_change=False,
             )
         except DjangoValidationError as exc:
             return Response(_validation_detail(exc), status=status.HTTP_400_BAD_REQUEST)

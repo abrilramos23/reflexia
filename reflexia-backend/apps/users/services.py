@@ -20,15 +20,6 @@ from apps.users.models import (
 
 
 @transaction.atomic
-def create_organisation(*, name, type):
-    organisation = Organisation.objects.create(
-        name=name,
-        type=type,
-    )
-    return organisation
-
-
-@transaction.atomic
 def create_organisation_invitation(*, admin, email, dataCaducitat=None):
     membership = admin.organisation_memberships.select_related("organisation").filter(
         is_admin=True,
@@ -62,28 +53,6 @@ def create_organisation_invitation(*, admin, email, dataCaducitat=None):
         invitation_url=invitation_url,
     )
     return invitation
-
-
-@transaction.atomic
-def register_clinic_admin(*, therapist, organisation):
-    membership = OrganisationMember.objects.filter(
-        user=therapist,
-        organisation=organisation,
-    ).first()
-
-    if membership is None:
-        raise DjangoValidationError(
-            {"therapist_id": ["This therapist is not assigned to the selected organisation."]}
-        )
-
-    if membership.is_admin:
-        raise DjangoValidationError(
-            {"therapist_id": ["This therapist is already an administrator of the selected organisation."]}
-        )
-
-    membership.is_admin = True
-    membership.save(update_fields=["is_admin"])
-    return therapist
 
 
 @transaction.atomic

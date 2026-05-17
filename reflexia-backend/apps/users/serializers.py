@@ -23,11 +23,9 @@ from apps.users.services import (
     change_user_password,
     deactivate_patient_by_therapist,
     delete_user_account,
-    register_clinic_admin,
     register_patient,
     register_therapist,
     create_organisation_invitation,
-    create_organisation,
     reset_user_password,
     send_password_reset_email,
     update_user_profile,
@@ -38,16 +36,6 @@ class OrganisationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organisation
         fields = ("id", "name", "type", "is_active", "created_at")
-
-
-class OrganisationCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Organisation
-        fields = ("id", "name", "type")
-
-    def create(self, validated_data):
-        organisation = create_organisation(**validated_data)
-        return organisation
 
 
 class OrganisationUpdateSerializer(serializers.ModelSerializer):
@@ -249,41 +237,6 @@ class InvitacioOrganitzacioCreateSerializer(serializers.Serializer):
             )
         except DjangoValidationError as exc:
             raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages) from exc
-
-
-class ClinicAdminRegistrationSerializer(serializers.Serializer):
-    organisation_id = serializers.UUIDField()
-    therapist_id = serializers.UUIDField()
-
-    def validate(self, attrs):
-        try:
-            organisation = Organisation.objects.get(pk=attrs["organisation_id"])
-        except Organisation.DoesNotExist as exc:
-            raise serializers.ValidationError({"organisation_id": "Organisation not found."}) from exc
-
-        try:
-            therapist = Therapist.objects.get(pk=attrs["therapist_id"])
-        except Therapist.DoesNotExist as exc:
-            raise serializers.ValidationError({"therapist_id": "Therapist not found."}) from exc
-
-        if therapist.organisation != organisation:
-            raise serializers.ValidationError(
-                {"therapist_id": "This therapist does not belong to the selected organisation."}
-            )
-
-        if therapist.is_clinic_admin:
-            raise serializers.ValidationError(
-                {"therapist_id": "This therapist is already a clinic administrator."}
-            )
-
-        attrs["organisation"] = organisation
-        attrs["therapist"] = therapist
-        return attrs
-
-    def create(self, validated_data):
-        organisation = validated_data["organisation"]
-        therapist = validated_data["therapist"]
-        return register_clinic_admin(therapist=therapist, organisation=organisation)
 
 
 class TherapistAdminUpdateSerializer(serializers.Serializer):

@@ -1122,12 +1122,6 @@ class MultiTenancyAndAdminTests(APITestCase):
             name="Test Clinic",
             type=Organisation.Type.CLINIC,
         )
-        self.platform_admin = User.objects.create_superuser(
-            email="platform@example.com",
-            password="AdminPass123!",
-            first_name="Platform",
-            last_name="Admin",
-        )
         self.therapist = Therapist.objects.create_user(
             email="therapist@example.com",
             password="StrongPass123!",
@@ -1140,31 +1134,7 @@ class MultiTenancyAndAdminTests(APITestCase):
         OrganisationMember.objects.create(
             user=self.therapist, organisation=self.org, is_admin=True
         )
-        self.stats_platform_url = "/api/admin/stats/platform/"
         self.stats_clinic_url = "/api/admin/stats/clinic/"
-        self.organisations_url = "/api/admin/organisations/"
-        self.clinic_admins_url = "/api/admin/users/clinic-admins/"
-        self.register_clinic_admin_url = "/api/admin/register/clinic-admin/"
-        self.therapists_url = "/api/admin/users/therapists/"
-
-    def test_platform_admin_can_get_platform_stats(self):
-        self.client.force_authenticate(user=self.platform_admin)
-
-        response = self.client.get(self.stats_platform_url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("total_organisations", response.data)
-        self.assertIn("total_users", response.data)
-        self.assertEqual(response.data["total_clinic_admins"], 1)
-        self.assertEqual(response.data["users_by_role"]["therapist"], 1)
-        self.assertIn("users_by_role", response.data)
-
-    def test_therapist_cannot_access_platform_stats(self):
-        self.client.force_authenticate(user=self.therapist)
-
-        response = self.client.get(self.stats_platform_url)
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_clinic_admin_can_get_clinic_stats(self):
         active_patient = Patient.objects.create_user(
@@ -1220,49 +1190,8 @@ class MultiTenancyAndAdminTests(APITestCase):
         self.assertEqual(response.data["total_therapists"], 1)
         self.assertEqual(response.data["total_patients"], 1)
 
-    def test_platform_admin_can_list_organisations(self):
-        self.client.force_authenticate(user=self.platform_admin)
-
-        response = self.client.get(self.organisations_url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["name"], "Test Clinic")
-
-    def test_platform_admin_can_create_organisation(self):
-        self.client.force_authenticate(user=self.platform_admin)
-
-        response = self.client.post(
-            self.organisations_url,
-            {"name": "Nova Clínica", "type": Organisation.Type.CLINIC},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Organisation.objects.count(), 2)
-        self.assertEqual(response.data["name"], "Nova Clínica")
-
-    def test_therapist_cannot_access_organisation_list(self):
+    def test_clinic_admin_can_assign_existing_therapist_as_clinic_admin(self):
         self.client.force_authenticate(user=self.therapist)
-
-        response = self.client.get(self.organisations_url)
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_platform_admin_lists_include_flat_organisation_fields(self):
-        self.client.force_authenticate(user=self.platform_admin)
-
-        admins_response = self.client.get(self.clinic_admins_url)
-        therapists_response = self.client.get(self.therapists_url)
-
-        self.assertEqual(admins_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(therapists_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(admins_response.data[0]["organisation"]["name"], "Test Clinic")
-        self.assertTrue(admins_response.data[0]["is_clinic_admin"])
-        self.assertEqual(therapists_response.data[0]["organisation"]["name"], "Test Clinic")
-
-    def test_platform_admin_can_assign_existing_therapist_as_clinic_admin(self):
-        self.client.force_authenticate(user=self.platform_admin)
         therapist_to_assign = Therapist.objects.create_user(
             email="clinic-admin@example.com",
             password="StrongPass123!",
@@ -1278,16 +1207,13 @@ class MultiTenancyAndAdminTests(APITestCase):
             is_admin=False,
         )
 
-        response = self.client.post(
-            self.register_clinic_admin_url,
-            {
-                "organisation_id": str(self.org.id),
-                "therapist_id": str(therapist_to_assign.id),
-            },
+        response = self.client.patch(
+            f"/api/admin/users/therapists/{therapist_to_assign.id}/",
+            {"is_admin": True},
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         therapist_to_assign.refresh_from_db()
         self.assertEqual(therapist_to_assign.license_number, "17105")
         self.assertEqual(therapist_to_assign.specialty, "Psicologia Clínica")
@@ -1393,12 +1319,6 @@ class AdminEntityManagementTests(APITestCase):
             name="Other Clinic",
             type=Organisation.Type.CLINIC,
         )
-        self.platform_admin = User.objects.create_superuser(
-            email="platform@example.com",
-            password="StrongPass123!",
-            first_name="Platform",
-            last_name="Admin",
-        )
         self.clinic_admin = Therapist.objects.create_user(
             email="clinic-admin@example.com",
             password="StrongPass123!",
@@ -1488,8 +1408,8 @@ class AdminEntityManagementTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_platform_admin_can_soft_delete_organisation(self):
-        self.client.force_authenticate(user=self.platform_admin)
+    def test_clinic_admin_can_soft_delete_own_organisation(self):
+        self.client.force_authenticate(user=self.clinic_admin)
 
         response = self.client.delete(f"/api/admin/organisations/{self.org.pk}/")
 
@@ -1497,11 +1417,15 @@ class AdminEntityManagementTests(APITestCase):
         self.org.refresh_from_db()
         self.assertFalse(self.org.is_active)
 
-    def test_platform_admin_can_revoke_clinic_admin_role(self):
-        self.client.force_authenticate(user=self.platform_admin)
+    def test_clinic_admin_can_revoke_clinic_admin_role(self):
+        self.client.force_authenticate(user=self.clinic_admin)
 
-        response = self.client.delete(f"/api/admin/users/clinic-admins/{self.clinic_admin.pk}/")
+        response = self.client.patch(
+            f"/api/admin/users/therapists/{self.second_admin.pk}/",
+            {"is_admin": False},
+            format="json",
+        )
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        membership = OrganisationMember.objects.get(user=self.clinic_admin, organisation=self.org)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        membership = OrganisationMember.objects.get(user=self.second_admin, organisation=self.org)
         self.assertFalse(membership.is_admin)

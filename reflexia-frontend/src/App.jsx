@@ -19,9 +19,6 @@ import { ProtectedLayout } from './components/ProtectedLayout.jsx'
 import { PatientDetailPage } from './pages/PatientDetailPage.jsx'
 import { TherapistEntryDetailPage } from './pages/TherapistEntryDetailPage.jsx'
 import { TherapistQuestionDetailPage } from './pages/TherapistQuestionDetailPage.jsx'
-import { PlatformOrganisationsPage } from './pages/PlatformOrganisationsPage.jsx'
-import { PlatformClinicAdminsPage } from './pages/PlatformClinicAdminsPage.jsx'
-import { PlatformTherapistsPage } from './pages/PlatformTherapistsPage.jsx'
 import { ClinicAdminDashboard } from './pages/ClinicAdminDashboard.jsx'
 import { ClinicTherapistsPage } from './pages/ClinicTherapistsPage.jsx'
 import { SupportTherapistsPage } from './pages/SupportTherapistsPage.jsx'
@@ -188,36 +185,12 @@ function App() {
           </ProtectedLayout>
         }
       />
-      
-      {/* Platform Admin Routes */}
-      <Route
-        path="/admin/organisations"
-        element={
-          <ProtectedLayout>
-            <PlatformOrganisationsPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/admin/clinic-admins"
-        element={
-          <ProtectedLayout>
-            <PlatformClinicAdminsPage />
-          </ProtectedLayout>
-        }
-      />
       {/* Clinic Admin Specific Routes */}
       <Route
         path="/admin/therapists"
         element={
           <ProtectedLayout>
-            {user?.role === 'platform_admin' ? (
-              <PlatformTherapistsPage />
-            ) : isClinicAdmin ? (
-              <ClinicTherapistsPage />
-            ) : (
-              <Navigate to="/dashboard" replace />
-            )}
+            {isClinicAdmin ? <ClinicTherapistsPage /> : <Navigate to="/dashboard" replace />}
           </ProtectedLayout>
         }
       />

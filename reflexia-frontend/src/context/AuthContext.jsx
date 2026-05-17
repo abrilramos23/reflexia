@@ -403,11 +403,6 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
-  async function getPlatformStats() {
-    const response = await api.get('/admin/stats/platform/')
-    return response.data
-  }
-
   async function getClinicStats() {
     const response = await api.get('/admin/stats/clinic/')
     return response.data
@@ -418,16 +413,6 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
-  async function listOrganisations() {
-    const response = await api.get('/admin/organisations/')
-    return response.data
-  }
-
-  async function createOrganisation(payload) {
-    const response = await api.post('/admin/organisations/', payload)
-    return response.data
-  }
-
   async function updateOrganisation(organisationId, payload) {
     const response = await api.patch(`/admin/organisations/${organisationId}/`, payload)
     return response.data
@@ -435,31 +420,6 @@ export function AuthProvider({ children }) {
 
   async function deleteOrganisation(organisationId) {
     const response = await api.delete(`/admin/organisations/${organisationId}/`)
-    return response.data
-  }
-
-  async function registerClinicAdmin(payload) {
-    const response = await api.post('/admin/register/clinic-admin/', payload)
-    return response.data
-  }
-
-  async function listAllClinicAdmins() {
-    const response = await api.get('/admin/users/clinic-admins/')
-    return response.data
-  }
-
-  async function updateClinicAdmin(adminId, payload) {
-    const response = await api.patch(`/admin/users/clinic-admins/${adminId}/`, payload)
-    return response.data
-  }
-
-  async function deleteClinicAdmin(adminId) {
-    const response = await api.delete(`/admin/users/clinic-admins/${adminId}/`)
-    return response.data
-  }
-
-  async function listAllTherapists() {
-    const response = await api.get('/admin/users/therapists/')
     return response.data
   }
 
@@ -601,18 +561,10 @@ export function AuthProvider({ children }) {
     listAllTherapistQuestions,
     listPatientEntryNotes,
     createPatientEntryNote,
-    getPlatformStats,
     getClinicStats,
     getTherapistDashboardData,
-    listOrganisations,
-    createOrganisation,
     updateOrganisation,
     deleteOrganisation,
-    registerClinicAdmin,
-    listAllClinicAdmins,
-    updateClinicAdmin,
-    deleteClinicAdmin,
-    listAllTherapists,
     listClinicTherapists,
     updateTherapist,
     deleteTherapist,
