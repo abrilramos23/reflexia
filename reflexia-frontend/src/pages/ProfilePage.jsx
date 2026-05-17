@@ -478,12 +478,6 @@ export function ProfilePage() {
             <h3>Tancar sessió</h3>
           </div>
 
-          <div className="content-card section-stack" style={{ textDecoration: 'none', backgroundColor: 'transparent', border: 'none', padding: '0',  }}>
-            <p className="muted" style={{ textDecoration: 'none', backgroundColor: 'transparent', border: 'none' }}>
-              Si vols acabar l&apos;activitat, pots tancar la sessió des d&apos;aquí.
-            </p>
-          </div>
-
           <div className="button-row" style={{paddingTop: '10px'}}>
             <button className="button-ghost" type="button" onClick={handleLogout}>
               Tancar sessió
@@ -502,8 +496,7 @@ export function ProfilePage() {
 
           <div className="content-card section-stack" style={{ textDecoration: 'none', backgroundColor: 'transparent', border: 'none', padding: '0',  }}>
             <p className="muted" style={{ textDecoration: 'none', backgroundColor: 'transparent', border: 'none', paddingBottom: '10px' }}>
-              Les dades no clíniques s&apos;eliminaran. Es conservaran internament durant
-              el període legal mínim i ja no seran accessibles un cop el compte quedi tancat.
+              Les dades no clíniques s&apos;eliminaran i la resta quedarà subjecta al període legal de conservació.
             </p>
           </div>
 

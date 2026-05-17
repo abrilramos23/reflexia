@@ -60,7 +60,7 @@ export function EntriesPage() {
 
   async function handleDeleteEntry(entry) {
     const confirmed = window.confirm(
-      `Vols eliminar aquesta entrada?\n\nPer obligació legal (Llei 41/2002), el contingut es conservarà anonimitzat durant el període de retenció, però desapareixerà del teu historial visible.`,
+      `Vols eliminar aquesta entrada?\n\nEs conservarà anonimitzada durant el període legal de retenció.`,
     )
 
     if (!confirmed) {
@@ -105,9 +105,6 @@ export function EntriesPage() {
           <div className="panel-heading">
             <p className="eyebrow">Entrades</p>
             <h1 className="section-title">Les teves entrades de journaling</h1>
-            <p className="muted">
-              Consulta el detall de cada entrada, edita&apos;n el contingut o elimina-la amb anonimització.
-            </p>
           </div>
 
           {pageMessage ? <div className="message">{pageMessage}</div> : null}
@@ -193,9 +190,7 @@ export function EntriesPage() {
 
           <div className="content-card section-stack">
             <h3>Per què no s&apos;esborra del tot?</h3>
-            <p className="muted">
-              Quan elimines una entrada, deixa d&apos;aparèixer al teu historial visible, però la conservem anonimitzada per obligació legal de documentació clínica segons la Llei 41/2002. Si vols ampliar informació, pots exercir el teu dret d&apos;accés.
-            </p>
+            <p className="muted">Les entrades eliminades es conserven anonimitzades per obligació legal de documentació clínica.</p>
           </div>
         </section>
       </div>

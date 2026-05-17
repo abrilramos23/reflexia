@@ -85,10 +85,6 @@ export function TherapistQuestionsPage() {
           <div className="panel-heading">
             <p className="eyebrow">Gestió de Preguntes</p>
             <h1 className="section-title">Gestiona les teves preguntes</h1>
-            <p className="muted">
-              Envia preguntes personalitzades als teus pacients per guiar el seu procés de reflexió. 
-              Cada pacient només pot tenir una pregunta activa a la vegada.
-            </p>
           </div>
         </section>
 

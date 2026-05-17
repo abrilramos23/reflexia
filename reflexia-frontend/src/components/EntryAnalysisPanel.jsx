@@ -26,9 +26,7 @@ export function EntryAnalysisPanel({
     return (
       <div className="content-card section-stack entries-analysis-card">
         <h3>Anàlisi emocional</h3>
-        <p className="muted">
-          L&apos;anàlisi encara no s&apos;ha generat. Quan estigui disponible, es mostraran les emocions detectades i el nivell de risc associat.
-        </p>
+        <p className="muted">Anàlisi pendent.</p>
       </div>
     )
   }
@@ -94,7 +92,7 @@ export function EntryAnalysisPanel({
               value={correction}
               onChange={(event) => setCorrection(event.target.value)}
               rows={4}
-              placeholder="Afegeix una lectura alternativa o una matisació clínica..."
+              placeholder="Afegeix una correcció clínica..."
             />
           </div>
           <button className="button-secondary" type="submit" disabled={isSavingCorrection}>

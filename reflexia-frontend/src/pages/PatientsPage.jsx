@@ -148,9 +148,6 @@ export function PatientsPage() {
           <div className="panel-heading">
             <p className="eyebrow">Gestió de pacients</p>
             <h1 className="section-title">Pacients assignats</h1>
-            <p className="muted">
-              Des d’aquí pots donar d’alta nous pacients, consultar l’estat del seu accés i gestionar baixes quan sigui necessari.
-            </p>
           </div>
         </section>
 
@@ -171,10 +168,6 @@ export function PatientsPage() {
 
           {isRegisterSectionOpen ? (
             <div className="collapsible-section-body">
-              <p className="muted" style={{ marginBottom: '1.5rem' }}>
-                En crear el compte, s’envia un correu d’activació perquè el pacient estableixi la seva contrasenya i, al primer accés, accepti el consentiment informat.
-              </p>
-
               {patientMessage ? <div className="message">{patientMessage}</div> : null}
               {patientError ? <div className="error-banner">{patientError}</div> : null}
 

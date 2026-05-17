@@ -59,9 +59,9 @@ export function LoginPage() {
         <aside className="screen-card hero-panel">
           <div className="hero-copy">
             <p className="eyebrow">Reflexia</p>
-            <h1>Un únic accés per a terapeutes i pacients.</h1>
-            <p className="hero-lead">Inicia sessió per continuar el seguiment terapèutic.</p>
-            <p> Si ets pacient, no pots crear un compte des d&apos;aquesta pàgina. Contacta amb el teu terapeuta.</p>
+            <h1>Inicia sessió</h1>
+            <p className="hero-lead">Seguiment emocional entre pacient i terapeuta.</p>
+            <p>Si ets pacient, contacta amb el teu terapeuta per accedir-hi.</p>
           </div>
         </aside>
 

@@ -149,9 +149,6 @@ export function SupportTherapistsPage() {
           <div className="panel-heading">
             <p className="eyebrow">Terapeutes de suport</p>
             <h1 className="section-title">El teu equip de suport</h1>
-            <p className="muted">
-              Des d’aquí pots gestionar els terapeutes que et donaran suport en la gestió de les alertes dels teus pacients.
-            </p>
           </div>
         </section>
 
@@ -180,18 +177,11 @@ export function SupportTherapistsPage() {
                   style={{ borderLeft: '4px solid var(--accent-color)', backgroundColor: 'var(--bg-card-alt)' }}
                 >
                   <p className="muted">
-                    <strong>Aquest servei només està disponible per a professionals que pertanyen a una clínica.</strong>
-                  </p>
-                  <p className="muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                    Com a professional independent, actualment no disposes d&apos;un equip clínic assignat per gestionar la cobertura de suport d&apos;alertes.
+                    <strong>Disponible només per a professionals vinculats a una clínica.</strong>
                   </p>
                 </div>
               ) : (
                 <>
-                  <p className="muted" style={{ marginBottom: '1.5rem' }}>
-                    Selecciona un terapeuta de la teva organització per afegir-lo al teu equip de suport.
-                  </p>
-
                   {supportMessage ? <div className="message">{supportMessage}</div> : null}
                   {supportError ? <div className="error-banner">{supportError}</div> : null}
 

@@ -58,10 +58,7 @@ export function TwoFactorPage() {
         <aside className="screen-card hero-panel">
           <div className="hero-copy">
             <p className="eyebrow">Segon factor</p>
-            <h1>Verifica que ets tu.</h1>
-            <p className="hero-lead">
-              Introdueix el codi temporal de l’aplicació autenticadora per completar l’accés al teu compte.
-            </p>
+            <h1>Verifica l’accés</h1>
           </div>
         </aside>
 

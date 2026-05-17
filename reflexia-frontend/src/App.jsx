@@ -30,8 +30,7 @@ function LoadingScreen() {
     <div className="screen-shell">
       <div className="screen-card screen-card--centered">
         <p className="eyebrow">Reflexia</p>
-        <h1>Preparant la teva sessió</h1>
-        <p className="muted">Estem comprovant l’autenticació i carregant l’estat del compte.</p>
+        <h1>Carregant</h1>
       </div>
     </div>
   )
