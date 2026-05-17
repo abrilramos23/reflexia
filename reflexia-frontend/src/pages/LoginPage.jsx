@@ -61,17 +61,14 @@ export function LoginPage() {
             <p className="eyebrow">Reflexia</p>
             <h1>Un únic accés per a terapeutes i pacients.</h1>
             <p className="hero-lead">Inicia sessió per continuar el seguiment terapèutic.</p>
-          </div>
-          <div className="hero-footer">
-            <p className="muted">Si ets pacient, el teu terapeuta és qui t’ha creat el compte dins de la plataforma.</p>
+            <p> Si ets pacient, no pots crear un compte des d&apos;aquesta pàgina. Contacta amb el teu terapeuta.</p>
           </div>
         </aside>
 
-        <section className="screen-card form-panel">
+        <div style={{ display: "grid", gap: "20px" }}>
+            <section className="screen-card form-panel">
           <div className="panel-heading">
-            <p className="eyebrow">Iniciar sessió</p>
-            <h2>Benvingut/da de nou</h2>
-            <p className="muted">Accedeix amb el teu correu electrònic i la teva contrasenya.</p>
+            <p className="eyebrow" style={{ marginBottom: "0rem" }}>Iniciar sessió</p>
           </div>
 
           {successMessage ? <div className="message">{successMessage}</div> : null}
@@ -104,16 +101,26 @@ export function LoginPage() {
               />
             </div>
 
-            <div className="button-row">
+            <div className="button-row" style={{ marginTop: "15px" }}>
               <button className="button" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Entrant...' : 'Entrar'}
               </button>
               <Link className="text-link" to="/forgot-password">
                 He oblidat la contrasenya
-              </Link>
+              </Link>              
             </div>
           </form>
         </section>
+        <section className="screen-card form-panel">
+            <div className="panel-heading">
+              <p className="eyebrow" style={{ marginBottom: "0rem" }}>No tens un compte?</p>
+              <p style={{ margin: "0 0 1rem 0" }}>Registra&apos;t per accedir al teu compte.</p>
+              <Link className="button" style={{ justifySelf: "center", textDecoration: "none" }} to="/register/therapist">
+                Registre terapeuta
+              </Link>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   )

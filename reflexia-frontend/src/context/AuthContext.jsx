@@ -276,6 +276,11 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function createOrganisationInvitation(payload = {}) {
+    const response = await api.post('/admin/organisations/invitations/', payload)
+    return response.data
+  }
+
   async function registerPatient(payload) {
     const response = await api.post('/auth/register/patient/', payload)
     return response.data
@@ -565,6 +570,7 @@ export function AuthProvider({ children }) {
     createSupportTherapist,
     deleteSupportTherapist,
     registerTherapist,
+    createOrganisationInvitation,
     registerPatient,
     listTherapistPatients,
     getPatient,

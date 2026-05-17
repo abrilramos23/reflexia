@@ -13,6 +13,7 @@ import { LoginPage } from './pages/LoginPage.jsx'
 import { PatientsPage } from './pages/PatientsPage.jsx'
 import { ProfilePage } from './pages/ProfilePage.jsx'
 import { ResetPasswordPage } from './pages/ResetPasswordPage.jsx'
+import { TherapistRegisterPage } from './pages/TherapistRegisterPage.jsx'
 import { TwoFactorPage } from './pages/TwoFactorPage.jsx'
 import { ProtectedLayout } from './components/ProtectedLayout.jsx'
 import { PatientDetailPage } from './pages/PatientDetailPage.jsx'
@@ -57,6 +58,14 @@ function App() {
         }
       />
       <Route path="/activate-account" element={<ActivateAccountPage />} />
+      <Route
+        path="/register/therapist"
+        element={
+          <PublicRoute>
+            <TherapistRegisterPage />
+          </PublicRoute>
+        }
+      />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route

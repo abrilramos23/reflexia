@@ -13,7 +13,7 @@ export function PatientDetailPage() {
   const [entries, setEntries] = useState([])
   const [questions, setQuestions] = useState([])
   const [evolution, setEvolution] = useState(null)
-  const [activeTab, setActiveTab] = useState('entries') // 'entries' | 'questions'
+  const [activeTab, setActiveTab] = useState('entries') 
   const [newQuestionText, setNewQuestionText] = useState('')
   const [questionMessage, setQuestionMessage] = useState('')
   const [isCreatingQuestion, setIsCreatingQuestion] = useState(false)

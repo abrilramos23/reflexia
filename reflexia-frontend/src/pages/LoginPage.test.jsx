@@ -8,7 +8,6 @@ vi.mock('../context/AuthContext', () => ({
   useAuth: vi.fn(),
 }))
 
-// AppHeader also uses useAuth — give it a null user so it renders the brand only
 function renderLogin(initialEntries = ['/login'], state = undefined) {
   useAuth.mockReturnValue({ user: null, login: vi.fn() })
 
@@ -33,6 +32,7 @@ describe('LoginPage', () => {
     expect(screen.getByLabelText('Contrasenya')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'He oblidat la contrasenya' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Registre terapeuta' })).toBeInTheDocument()
   })
 
   it('shows a success message passed via route state', () => {

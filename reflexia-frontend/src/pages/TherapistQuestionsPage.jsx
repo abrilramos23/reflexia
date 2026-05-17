@@ -66,7 +66,6 @@ export function TherapistQuestionsPage() {
       setNewQuestion({ patientId: '', text: '' })
       setIsAddOpen(false)
       
-      // Refresh questions list
       const updatedQuestions = await listAllTherapistQuestions()
       setQuestions(updatedQuestions)
     } catch (err) {

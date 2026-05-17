@@ -5,6 +5,12 @@ import { sidebarConfig } from '../lib/sidebarConfig'
 import { FaBars, FaSignOutAlt } from 'react-icons/fa'
 import '../App.css'
 
+function hasClinicMembership(user) {
+  return user?.organisation?.type === 'clinic'
+    || user?.memberships?.some((membership) => membership?.organisation?.type === 'clinic')
+    || false
+}
+
 export function Sidebar() {
   const { user, isClinicAdmin, logout } = useAuth()
   const location = useLocation()
@@ -24,8 +30,11 @@ export function Sidebar() {
     const roleMatch = item.roles.includes(user.role)
     if (!roleMatch) return false
 
-    // Clinic-only sections for therapist users require clinic admin rights.
     if ((item.path === '/clinic' || item.path.startsWith('/admin/')) && user.role === 'therapist' && !isClinicAdmin) {
+      return false
+    }
+
+    if (item.path === '/support' && user.role === 'therapist' && !hasClinicMembership(user)) {
       return false
     }
 

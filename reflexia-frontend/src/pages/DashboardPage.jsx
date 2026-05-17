@@ -201,9 +201,9 @@ export function DashboardPage() {
     return <PlatformAdminDashboard />
   }
 
-  if (isClinicAdmin) {
-    // We fall through to show the unified therapist/admin dashboard
-  }
+//   if (isClinicAdmin) {
+//     return <PlatformAdminDashboard />
+//   }
 
   return (
     <div className="screen-shell">

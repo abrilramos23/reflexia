@@ -49,5 +49,32 @@ describe('Sidebar Component', () => {
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('Perfil')).toBeInTheDocument()
     expect(screen.queryByText('Entrades')).not.toBeInTheDocument()
+    expect(screen.queryByText('Suport')).not.toBeInTheDocument()
+  })
+
+  it('shows support for non-admin therapists assigned to a clinic', () => {
+    useAuth.mockReturnValue({
+      user: {
+        role: 'therapist',
+        memberships: [
+          {
+            organisation: { type: 'clinic' },
+            is_admin: false,
+          },
+        ],
+      },
+      isClinicAdmin: false,
+      logout: vi.fn(),
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Sidebar />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Suport')).toBeInTheDocument()
+    expect(screen.queryByText('Clínica')).not.toBeInTheDocument()
+    expect(screen.queryByText('Terapeutes')).not.toBeInTheDocument()
   })
 })

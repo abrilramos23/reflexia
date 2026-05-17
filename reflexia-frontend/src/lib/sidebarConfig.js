@@ -32,7 +32,7 @@ export const sidebarConfig = [
   {
     label: 'Terapeutes',
     path: '/admin/therapists',
-    roles: ['platform_admin', 'therapist'], // We will filter visibility for therapists in the SideBar component based on isAdmin flag
+    roles: ['platform_admin', 'therapist'], 
     icon: FaUsers,
     section: 'Organització',
   },

@@ -16,7 +16,7 @@ export function PlatformTherapistsPage() {
   const [therapists, setTherapists] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [view, setView] = useState('list') // 'list' | 'create' | 'edit'
+  const [view, setView] = useState('list')
   const [selectedTherapist, setSelectedTherapist] = useState(null)
 
   const [form, setForm] = useState({
@@ -73,7 +73,6 @@ export function PlatformTherapistsPage() {
         license_number: '', specialty: '', organisation_id: '', is_admin: false,
       })
       await loadData()
-      // Don't auto-redirect if there's a dev link
       if (!result.activation_url) {
         setTimeout(() => setView('list'), 1500)
       }

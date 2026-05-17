@@ -1,16 +1,56 @@
 import { useEffect, useState } from 'react'
-import { FaEdit, FaTrash, FaArrowLeft, FaPlus } from 'react-icons/fa'
-import { useAuth } from '../context/AuthContext.jsx'
+import { FaArrowLeft, FaCopy, FaEdit, FaPlus, FaTrash } from 'react-icons/fa'
 import { Navigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext.jsx'
+
+function firstErrorMessage(error) {
+  if (!error) {
+    return 'S’ha produït un error inesperat.'
+  }
+
+  if (typeof error === 'string') {
+    return error
+  }
+
+  const firstEntry = Object.values(error)[0]
+
+  if (Array.isArray(firstEntry)) {
+    return String(firstEntry[0])
+  }
+
+  if (typeof firstEntry === 'string') {
+    return firstEntry
+  }
+
+  return 'S’ha produït un error inesperat.'
+}
+
+function buildRegistrationLink(token, email) {
+  if (!token) {
+    return ''
+  }
+
+  const params = new URLSearchParams({ token })
+  if (email) {
+    params.set('email', email)
+  }
+  return `${window.location.origin}/register/therapist?${params.toString()}`
+}
 
 export function ClinicTherapistsPage() {
-  const { user, isClinicAdmin, listClinicTherapists, registerTherapist, updateTherapist, deleteTherapist } = useAuth()
+  const {
+    user,
+    isClinicAdmin,
+    listClinicTherapists,
+    createOrganisationInvitation,
+    updateTherapist,
+    deleteTherapist,
+  } = useAuth()
   const [therapists, setTherapists] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [view, setView] = useState('list') // 'list' | 'create' | 'edit'
+  const [view, setView] = useState('list')
   const [selectedTherapist, setSelectedTherapist] = useState(null)
-
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
@@ -18,9 +58,11 @@ export function ClinicTherapistsPage() {
     license_number: '',
     specialty: '',
     is_admin: false,
+    is_active: false,
   })
+  const [invitationForm, setInvitationForm] = useState({ email: '', dataCaducitat: '' })
+  const [invitation, setInvitation] = useState(null)
   const [message, setMessage] = useState('')
-  const [devLink, setDevLink] = useState('')
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -34,7 +76,7 @@ export function ClinicTherapistsPage() {
     try {
       const data = await listClinicTherapists()
       setTherapists(data)
-    } catch (err) {
+    } catch {
       setError('Error carregant els teus terapeutes.')
     } finally {
       setLoading(false)
@@ -45,52 +87,13 @@ export function ClinicTherapistsPage() {
     loadData()
   }, [])
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setMessage('')
-    setSubmitError('')
-    setDevLink('')
-    
-    try {
-      // Logic in backend automatically assigns to admin's clinic
-      const { is_active, ...createPayload } = form
-      const result = await registerTherapist(createPayload)
-      setMessage('Terapeuta registrat correctament a la clínica.')
-      
-      if (result.activation_url) {
-        setDevLink(result.activation_url)
-      }
-      
-      setForm({
-        first_name: '', last_name: '', email: '',
-        license_number: '', specialty: '', is_admin: false,
-      })
-      await loadData()
-      
-      if (!result.activation_url) {
-        setTimeout(() => setView('list'), 1500)
-      }
-    } catch (err) {
-      setSubmitError('Error registrant el terapeuta.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  function openCreateView() {
+  function openInviteView() {
     setSelectedTherapist(null)
-    setForm({
-      first_name: '',
-      last_name: '',
-      email: '',
-      license_number: '',
-      specialty: '',
-      is_admin: false,
-    })
+    setInvitation(null)
+    setInvitationForm({ email: '', dataCaducitat: '' })
     setMessage('')
     setSubmitError('')
-    setView('create')
+    setView('invite')
   }
 
   function openEditView(therapist) {
@@ -109,8 +112,43 @@ export function ClinicTherapistsPage() {
     setView('edit')
   }
 
-  async function handleUpdate(e) {
-    e.preventDefault()
+  async function handleInviteSubmit(event) {
+    event.preventDefault()
+    setIsSubmitting(true)
+    setMessage('')
+    setSubmitError('')
+    setInvitation(null)
+
+    try {
+      const payload = invitationForm.dataCaducitat
+        ? { email: invitationForm.email, dataCaducitat: new Date(invitationForm.dataCaducitat).toISOString() }
+        : { email: invitationForm.email }
+      const result = await createOrganisationInvitation(payload)
+      setInvitation(result)
+      setMessage(`Invitació enviada correctament a ${result.email}.`)
+      setInvitationForm({ email: '', dataCaducitat: '' })
+    } catch (err) {
+      setSubmitError(firstErrorMessage(err.response?.data || err))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function copyInvitationLink() {
+    if (!invitation?.token) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildRegistrationLink(invitation.token, invitation.email))
+      setMessage('Enllaç copiat al porta-retalls.')
+    } catch {
+      setSubmitError('No hem pogut copiar l’enllaç automàticament.')
+    }
+  }
+
+  async function handleUpdate(event) {
+    event.preventDefault()
     setIsSubmitting(true)
     setMessage('')
     setSubmitError('')
@@ -121,7 +159,7 @@ export function ClinicTherapistsPage() {
       await loadData()
       setTimeout(() => setView('list'), 1000)
     } catch (err) {
-      setSubmitError('Error actualitzant el terapeuta.')
+      setSubmitError(firstErrorMessage(err.response?.data || err))
     } finally {
       setIsSubmitting(false)
     }
@@ -135,13 +173,13 @@ export function ClinicTherapistsPage() {
     try {
       await deleteTherapist(therapist.id)
       await loadData()
-    } catch (err) {
+    } catch {
       setError('Error eliminant el terapeuta. Revisa si té pacients actius o si és l\'únic administrador de la clínica.')
     }
   }
 
-  if (view === 'create' || view === 'edit') {
-    const isEdit = view === 'edit'
+  if (view === 'invite') {
+    const registrationLink = buildRegistrationLink(invitation?.token, invitation?.email)
 
     return (
       <div className="screen-shell">
@@ -149,33 +187,94 @@ export function ClinicTherapistsPage() {
           <div className="form-header">
             <div>
               <p className="eyebrow">{organisation?.name || 'La teva clínica'}</p>
-              <h1>{isEdit ? 'Editar Professional' : 'Nou Professional'}</h1>
+              <h1>Nova invitació</h1>
             </div>
-             <button className="button-ghost button--icon" onClick={() => setView('list')} title="Tornar" aria-label="Tornar">
+            <button className="button-ghost button--icon" onClick={() => setView('list')} title="Tornar" aria-label="Tornar">
               <FaArrowLeft />
             </button>
           </div>
 
           <section className="screen-card dashboard-panel">
-            {message && (
-              <div className="message">
-                <p>{message}</p>
-                {devLink && (
-                  <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0,0,0,0.05)', borderRadius: '8px', border: '1px dashed var(--accent)' }}>
-                    <p className="tiny" style={{ marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>Sincronització de Desenvolupament (Email a la consola):</p>
-                    <a href={devLink} className="text-link" style={{ wordBreak: 'break-all' }}>{devLink}</a>
-                  </div>
-                )}
+            {message ? <div className="message">{message}</div> : null}
+            {submitError ? <div className="error-banner">{submitError}</div> : null}
+
+            <form className="form-stack" onSubmit={handleInviteSubmit}>
+              <div className="field-group">
+                <label htmlFor="invitationEmail">Correu electrònic del terapeuta</label>
+                <input
+                  id="invitationEmail"
+                  type="email"
+                  value={invitationForm.email}
+                  onChange={(event) => setInvitationForm({ ...invitationForm, email: event.target.value })}
+                  required
+                />
               </div>
-            )}
-            {submitError && <div className="error-banner">{submitError}</div>}
-            
-            <form className="form-stack" onSubmit={isEdit ? handleUpdate : handleSubmit}>
+
+              <div className="field-group">
+                <label htmlFor="dataCaducitat">Caducitat</label>
+                <input
+                  id="dataCaducitat"
+                  type="datetime-local"
+                  value={invitationForm.dataCaducitat}
+                  onChange={(event) => setInvitationForm({ ...invitationForm, dataCaducitat: event.target.value })}
+                />
+              </div>
+
+              <div className="button-row">
+                <button className="button-secondary" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Generant...' : 'Generar invitació'}
+                </button>
+                <button className="button-ghost" type="button" onClick={() => setView('list')}>
+                  Cancel·lar
+                </button>
+              </div>
+            </form>
+
+            {invitation ? (
+              <div className="invitation-result">
+                <div className="field-group">
+                  <label htmlFor="invitationLink">Enllaç de registre</label>
+                  <div className="copy-field">
+                    <input id="invitationLink" value={registrationLink} readOnly />
+                    <button className="button-ghost button--icon" type="button" onClick={copyInvitationLink} title="Copiar" aria-label="Copiar">
+                      <FaCopy />
+                    </button>
+                  </div>
+                </div>
+                <p className="muted">Destinatari: {invitation.email}</p>
+                <p className="muted">Token: {invitation.token}</p>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      </div>
+    )
+  }
+
+  if (view === 'edit') {
+    return (
+      <div className="screen-shell">
+        <div className="full-screen-form-shell">
+          <div className="form-header">
+            <div>
+              <p className="eyebrow">{organisation?.name || 'La teva clínica'}</p>
+              <h1>Editar Professional</h1>
+            </div>
+            <button className="button-ghost button--icon" onClick={() => setView('list')} title="Tornar" aria-label="Tornar">
+              <FaArrowLeft />
+            </button>
+          </div>
+
+          <section className="screen-card dashboard-panel">
+            {message ? <div className="message">{message}</div> : null}
+            {submitError ? <div className="error-banner">{submitError}</div> : null}
+
+            <form className="form-stack" onSubmit={handleUpdate}>
               <label className="checkbox-row">
                 <input
                   type="checkbox"
                   checked={form.is_admin}
-                  onChange={(e) => setForm({...form, is_admin: e.target.checked})}
+                  onChange={(event) => setForm({ ...form, is_admin: event.target.checked })}
                 />
                 <span>Assignar també com a administrador de l&apos;organització</span>
               </label>
@@ -184,8 +283,7 @@ export function ClinicTherapistsPage() {
                   <label>Nom</label>
                   <input
                     value={form.first_name}
-                    onChange={(e) => setForm({...form, first_name: e.target.value})}
-                    placeholder="Nom"
+                    onChange={(event) => setForm({ ...form, first_name: event.target.value })}
                     required
                   />
                 </div>
@@ -193,8 +291,7 @@ export function ClinicTherapistsPage() {
                   <label>Cognoms</label>
                   <input
                     value={form.last_name}
-                    onChange={(e) => setForm({...form, last_name: e.target.value})}
-                    placeholder="Cognoms"
+                    onChange={(event) => setForm({ ...form, last_name: event.target.value })}
                     required
                   />
                 </div>
@@ -204,8 +301,7 @@ export function ClinicTherapistsPage() {
                 <input
                   type="email"
                   value={form.email}
-                  onChange={(e) => setForm({...form, email: e.target.value})}
-                  placeholder="professional@clinica.com"
+                  onChange={(event) => setForm({ ...form, email: event.target.value })}
                   required
                 />
               </div>
@@ -214,8 +310,7 @@ export function ClinicTherapistsPage() {
                   <label>Núm. Col·legiat</label>
                   <input
                     value={form.license_number}
-                    onChange={(e) => setForm({...form, license_number: e.target.value})}
-                    placeholder="Ex: 12345-C"
+                    onChange={(event) => setForm({ ...form, license_number: event.target.value })}
                     required
                   />
                 </div>
@@ -223,25 +318,22 @@ export function ClinicTherapistsPage() {
                   <label>Especialitat</label>
                   <input
                     value={form.specialty}
-                    onChange={(e) => setForm({...form, specialty: e.target.value})}
-                    placeholder="Ex: Psicologia Clínica"
+                    onChange={(event) => setForm({ ...form, specialty: event.target.value })}
                     required
                   />
                 </div>
               </div>
-              {isEdit ? (
-                <label className="checkbox-row">
-                  <input
-                    type="checkbox"
-                    checked={form.is_active}
-                    onChange={(e) => setForm({...form, is_active: e.target.checked})}
-                  />
-                  <span>Compte actiu</span>
-                </label>
-              ) : null}
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={form.is_active}
+                  onChange={(event) => setForm({ ...form, is_active: event.target.checked })}
+                />
+                <span>Compte actiu</span>
+              </label>
               <div className="button-row" style={{ marginTop: '2rem' }}>
                 <button className="button-secondary" type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Desant...' : isEdit ? 'Guardar canvis' : 'Registrar i Enviar Invitació'}
+                  {isSubmitting ? 'Desant...' : 'Guardar canvis'}
                 </button>
                 <button className="button-ghost" type="button" onClick={() => setView('list')}>
                   Cancel·lar
@@ -263,61 +355,59 @@ export function ClinicTherapistsPage() {
               <p className="eyebrow">{organisation?.name || 'La teva clínica'}</p>
               <h1 className="section-title">Terapeutes</h1>
             </div>
-            <button className="button button--icon" onClick={openCreateView} title="Afegir terapeuta" aria-label="Afegir terapeuta">
+            <button className="button button--icon" onClick={openInviteView} title="Generar invitació" aria-label="Generar invitació">
               <FaPlus />
             </button>
           </div>
 
-          {error && <div className="error-banner">{error}</div>}
+          {error ? <div className="error-banner">{error}</div> : null}
 
           {loading ? (
             <p>Carregant equip...</p>
           ) : (
             <div className="management-grid">
-              {therapists.map((t) => (
-                <div key={t.id} className="screen-card entity-card">
+              {therapists.map((therapist) => (
+                <div key={therapist.id} className="screen-card entity-card">
                   <div className="entity-card__header">
-                    <h3 className="entity-card__title">{t.first_name} {t.last_name}</h3>
+                    <h3 className="entity-card__title">{therapist.first_name} {therapist.last_name}</h3>
                     <div className="item-heading-row">
-                      <span className={`status-pill ${t.is_active ? 'dashboard-status-pill--active' : 'dashboard-status-pill--pending'}`}>
-                        {t.is_active ? 'Actiu' : 'Pendent'}
+                      <span className={`status-pill ${therapist.is_active ? 'dashboard-status-pill--active' : 'dashboard-status-pill--pending'}`}>
+                        {therapist.is_active ? 'Actiu' : 'Pendent'}
                       </span>
-                      {t.is_clinic_admin ? (
-                        <span className="status-pill dashboard-status-pill--active">
-                          Admin
-                        </span>
+                      {therapist.is_clinic_admin ? (
+                        <span className="status-pill dashboard-status-pill--active">Admin</span>
                       ) : null}
                     </div>
                   </div>
                   <div className="entity-card__body">
                     <p className="entity-card__meta">
-                      <strong>Especialitat:</strong> {t.specialty}
+                      <strong>Especialitat:</strong> {therapist.specialty}
                     </p>
                     <p className="entity-card__meta">
-                      <strong>Col·legiat:</strong> {t.license_number}
+                      <strong>Col·legiat:</strong> {therapist.license_number}
                     </p>
                     <p className="entity-card__meta">
-                      <strong>Email:</strong> {t.email}
+                      <strong>Email:</strong> {therapist.email}
                     </p>
                   </div>
                   <div className="entity-card__footer">
-                    <span className="tiny muted">Alta: {new Date(t.registration_date).toLocaleDateString()}</span>
-                     <div className="button-row entity-actions">
-                       <button className="button-ghost button--icon action-chip--icon" type="button" onClick={() => openEditView(t)} title="Editar" aria-label="Editar">
+                    <span className="tiny muted">Alta: {new Date(therapist.registration_date).toLocaleDateString()}</span>
+                    <div className="button-row entity-actions">
+                      <button className="button-ghost button--icon action-chip--icon" type="button" onClick={() => openEditView(therapist)} title="Editar" aria-label="Editar">
                         <FaEdit />
                       </button>
-                      <button className="button-danger button--icon action-chip--icon" type="button" onClick={() => handleDelete(t)} title="Eliminar" aria-label="Eliminar">
+                      <button className="button-danger button--icon action-chip--icon" type="button" onClick={() => handleDelete(therapist)} title="Eliminar" aria-label="Eliminar">
                         <FaTrash />
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
-              {therapists.length === 0 && (
+              {therapists.length === 0 ? (
                 <div className="screen-card dashboard-panel profile-card--wide" style={{ textAlign: 'center', padding: '4rem' }}>
-                   <p className="muted">Encara no has registrat cap terapeuta a la teva clínica.</p>
+                  <p className="muted">Encara no hi ha cap terapeuta registrat a la teva clínica.</p>
                 </div>
-              )}
+              ) : null}
             </div>
           )}
         </section>
