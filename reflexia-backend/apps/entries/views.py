@@ -79,7 +79,7 @@ class TherapistPatientMixin:
 
 class JournalEditorContextView(PatientEntriesMixin, APIView):
     @extend_schema(
-        tags=["entries"],
+        tags=["Entries"],
         summary="Obtenir context de l’editor de journaling",
         responses={
             200: inline_serializer(
@@ -111,7 +111,7 @@ class JournalEditorContextView(PatientEntriesMixin, APIView):
 
 class JournalEntryListCreateView(PatientEntriesMixin, APIView):
     @extend_schema(
-        tags=["entries"],
+        tags=["Entries"],
         summary="Llistar entrades visibles del pacient",
         responses={
             200: JournalEntrySerializer(many=True),
@@ -127,7 +127,7 @@ class JournalEntryListCreateView(PatientEntriesMixin, APIView):
         return Response(JournalEntrySerializer(entries, many=True).data, status=status.HTTP_200_OK)
 
     @extend_schema(
-        tags=["entries"],
+        tags=["Entries"],
         summary="Crear esborrany d’entrada",
         request=JournalEntryDraftSerializer,
         responses={
@@ -156,7 +156,7 @@ class JournalEntryListCreateView(PatientEntriesMixin, APIView):
 
 class JournalEntryDetailView(PatientEntriesMixin, APIView):
     @extend_schema(
-        tags=["entries"],
+        tags=["Entries"],
         summary="Obtenir una entrada visible",
         responses={
             200: JournalEntrySerializer,
@@ -176,7 +176,7 @@ class JournalEntryDetailView(PatientEntriesMixin, APIView):
         return Response(JournalEntrySerializer(entry).data, status=status.HTTP_200_OK)
 
     @extend_schema(
-        tags=["entries"],
+        tags=["Entries"],
         summary="Actualitzar esborrany d’entrada",
         request=JournalEntryDraftSerializer,
         responses={
@@ -206,7 +206,7 @@ class JournalEntryDetailView(PatientEntriesMixin, APIView):
         return Response(JournalEntrySerializer(updated_entry).data, status=status.HTTP_200_OK)
 
     @extend_schema(
-        tags=["entries"],
+        tags=["Entries"],
         summary="Eliminar lògicament una entrada",
         responses={
             200: inline_serializer(
@@ -243,7 +243,7 @@ class JournalEntryDetailView(PatientEntriesMixin, APIView):
 
 class PatientAnalyzeEntryView(PatientEntriesMixin, APIView):
     @extend_schema(
-        tags=["entries"],
+        tags=["Entries"],
         summary="Generar analisi emocional d'una entrada visible",
         responses={
             200: inline_serializer(
@@ -284,8 +284,9 @@ class PatientAnalyzeEntryView(PatientEntriesMixin, APIView):
 
 class PatientEntryExportView(PatientEntriesMixin, APIView):
     @extend_schema(
-        tags=["entries"],
+        tags=["Entries"],
         summary="Exportar una entrada del pacient a PDF",
+        operation_id="entries_export_entry",
         responses={200: OpenApiResponse(description="PDF generat correctament.")},
     )
     def get(self, request, entry_id):
@@ -305,8 +306,9 @@ class PatientEntryExportView(PatientEntriesMixin, APIView):
 
 class PatientEntriesExportView(PatientEntriesMixin, APIView):
     @extend_schema(
-        tags=["entries"],
+        tags=["Entries"],
         summary="Exportar l'historial del pacient a PDF",
+        operation_id="entries_export_history",
         responses={200: OpenApiResponse(description="PDF generat correctament.")},
     )
     def get(self, request):
@@ -323,7 +325,7 @@ class PatientEntriesExportView(PatientEntriesMixin, APIView):
 
 class TherapistPatientEntriesView(TherapistPatientMixin, APIView):
     @extend_schema(
-        tags=["therapist-patients"],
+        tags=["Entries"],
         summary="Llistar entrades visibles d'un pacient (Terapeuta)",
         responses={
             200: JournalEntrySerializer(many=True),
@@ -339,7 +341,7 @@ class TherapistPatientEntriesView(TherapistPatientMixin, APIView):
 
 class TherapistPatientEntryDetailView(TherapistPatientMixin, APIView):
     @extend_schema(
-        tags=["therapist-patients"],
+        tags=["Entries"],
         summary="Obtenir detall d'una entrada visible d'un pacient (Terapeuta)",
         responses={
             200: JournalEntrySerializer,
@@ -355,11 +357,10 @@ class TherapistPatientEntryDetailView(TherapistPatientMixin, APIView):
 
 class TherapistPatientEntryNotesView(TherapistPatientMixin, APIView):
     @extend_schema(
-        tags=["therapist-patients"],
-        summary="Llistar o afegir notes privades d'una entrada",
+        tags=["Entries"],
+        summary="Llistar notes privades d'una entrada",
         responses={
             200: PrivateNoteSerializer(many=True),
-            201: PrivateNoteSerializer,
             404: OpenApiResponse(description="Pacient o entrada no trobats."),
         },
     )
@@ -370,6 +371,21 @@ class TherapistPatientEntryNotesView(TherapistPatientMixin, APIView):
         notes = PrivateNote.objects.filter(entry=entry, therapist=therapist).order_by("-creation_date")
         return Response(PrivateNoteSerializer(notes, many=True).data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        tags=["Entries"],
+        summary="Afegir una nota privada a una entrada",
+        request=PrivateNoteCreateSerializer,
+        responses={
+            201: inline_serializer(
+                name="PrivateNoteCreateResponse",
+                fields={
+                    "message": serializers.CharField(),
+                    "note": PrivateNoteSerializer(),
+                },
+            ),
+            404: OpenApiResponse(description="Pacient o entrada no trobats."),
+        },
+    )
     def post(self, request, patient_id, entry_id):
         patient = self.get_patient(request, patient_id)
         entry = get_object_or_404(self.get_visible_entries_queryset(patient=patient), pk=entry_id)
@@ -388,11 +404,10 @@ class TherapistPatientEntryNotesView(TherapistPatientMixin, APIView):
 
 class TherapistPatientQuestionsView(TherapistPatientMixin, APIView):
     @extend_schema(
-        tags=["therapist-patients"],
-        summary="Llistar o crear preguntes d'un pacient (Terapeuta)",
+        tags=["Entries"],
+        summary="Llistar preguntes d'un pacient (Terapeuta)",
         responses={
             200: TherapistQuestionSerializer(many=True),
-            201: TherapistQuestionSerializer,
             403: OpenApiResponse(description="Només els terapeutes poden accedir a aquesta informació."),
             404: OpenApiResponse(description="Pacient no trobat o no assignat."),
         },
@@ -402,6 +417,22 @@ class TherapistPatientQuestionsView(TherapistPatientMixin, APIView):
         questions = TherapistQuestion.objects.filter(patient=patient).order_by("-created_at")
         return Response(TherapistQuestionSerializer(questions, many=True).data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        tags=["Entries"],
+        summary="Crear una pregunta per a un pacient (Terapeuta)",
+        request=TherapistQuestionCreateSerializer,
+        responses={
+            201: inline_serializer(
+                name="TherapistQuestionCreateResponse",
+                fields={
+                    "message": serializers.CharField(),
+                    "question": TherapistQuestionSerializer(),
+                },
+            ),
+            403: OpenApiResponse(description="Només els terapeutes poden accedir a aquesta informació."),
+            404: OpenApiResponse(description="Pacient no trobat o no assignat."),
+        },
+    )
     def post(self, request, patient_id):
         patient = self.get_patient(request, patient_id)
         serializer = TherapistQuestionCreateSerializer(data=request.data)
@@ -424,7 +455,7 @@ class TherapistPatientQuestionsView(TherapistPatientMixin, APIView):
 
 class TherapistPatientQuestionDetailView(TherapistPatientMixin, APIView):
     @extend_schema(
-        tags=["therapist-patients"],
+        tags=["Entries"],
         summary="Obtenir detall d'una pregunta d'un pacient (Terapeuta)",
         responses={
             200: TherapistQuestionSerializer,
@@ -440,8 +471,9 @@ class TherapistPatientQuestionDetailView(TherapistPatientMixin, APIView):
 
 class TherapistPatientEntryExportView(TherapistPatientMixin, APIView):
     @extend_schema(
-        tags=["therapist-patients"],
+        tags=["Entries"],
         summary="Exportar una entrada d'un pacient a PDF",
+        operation_id="entries_export_patient_entry",
         responses={200: OpenApiResponse(description="PDF generat correctament.")},
     )
     def get(self, request, patient_id, entry_id):
@@ -455,8 +487,9 @@ class TherapistPatientEntryExportView(TherapistPatientMixin, APIView):
 
 class TherapistPatientEntriesExportView(TherapistPatientMixin, APIView):
     @extend_schema(
-        tags=["therapist-patients"],
+        tags=["Entries"],
         summary="Exportar l'historial visible d'un pacient a PDF",
+        operation_id="entries_export_patient_history",
         responses={200: OpenApiResponse(description="PDF generat correctament.")},
     )
     def get(self, request, patient_id):
@@ -471,7 +504,7 @@ class TherapistAllQuestionsView(APIView):
     permission_classes = [IsTherapistUser]
 
     @extend_schema(
-        tags=["therapist-patients"],
+        tags=["Entries"],
         summary="Llistar totes les preguntes creades pel terapeuta",
         responses={
             200: TherapistQuestionSerializer(many=True),

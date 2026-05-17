@@ -16,7 +16,7 @@ export function ForgotPasswordPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await api.post('/auth/password/forgot/', { email })
+      const response = await api.post('/users/password/forgot/', { email })
       setMessage(response.data.message)
     } catch {
       setError('No hem pogut tramitar la recuperació de contrasenya.')

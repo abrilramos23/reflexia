@@ -7,6 +7,8 @@ from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 
 from apps.users.models import (
     InvitacioOrganitzacio,
@@ -86,22 +88,26 @@ class UserSummarySerializer(serializers.ModelSerializer):
             "specialty",
         )
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_consent_accepted(self, obj):
         if hasattr(obj, "patient_profile"):
             return obj.patient_profile.consent_accepted
         return None
 
+    @extend_schema_field(OrganisationSerializer)
     def get_organisation(self, obj):
         organisation = obj.organisation
         if organisation is None:
             return None
         return OrganisationSerializer(organisation).data
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_specialty(self, obj):
         if hasattr(obj, "therapist_profile"):
             return obj.therapist_profile.specialty
         return None
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_license_number(self, obj):
         if hasattr(obj, "therapist_profile"):
             return obj.therapist_profile.license_number

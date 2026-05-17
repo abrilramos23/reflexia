@@ -5,7 +5,7 @@ description: >-
 
 
   **Auth:** JWT Bearer (IsAuthenticated)
-url: "{{base_url}}/api/auth/2fa/disable/"
+url: "{{base_url}}/api/users/2fa/disable/"
 method: POST
 headers:
   Content-Type: application/json

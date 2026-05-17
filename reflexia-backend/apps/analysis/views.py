@@ -32,7 +32,7 @@ class PatientAnalysisMixin:
 
 class PatientEntryAnalysisView(PatientAnalysisMixin, APIView):
     @extend_schema(
-        tags=["analysis"],
+        tags=["Analysis"],
         summary="Consultar l'analisi d'una entrada",
         responses={
             200: EmotionalAnalysisSerializer,
@@ -59,8 +59,9 @@ class PatientEntryAnalysisView(PatientAnalysisMixin, APIView):
 
 class PatientAnalyzeEntryView(PatientAnalysisMixin, APIView):
     @extend_schema(
-        tags=["analysis"],
+        tags=["Analysis"],
         summary="Generar analisi emocional d'una entrada",
+        request=None,
         responses={
             200: JournalEntrySerializer,
             403: OpenApiResponse(description="Nomes els pacients poden analitzar entrades propies."),
@@ -97,7 +98,7 @@ class PatientAnalyzeEntryView(PatientAnalysisMixin, APIView):
 
 class PatientEvolutionView(PatientAnalysisMixin, APIView):
     @extend_schema(
-        tags=["analysis"],
+        tags=["Analysis"],
         summary="Consultar evolucio emocional propia",
         responses={200: OpenApiResponse(description="Dades cronologiques d'evolucio emocional.")},
     )
@@ -123,7 +124,7 @@ class TherapistPatientAnalysisMixin:
 
 class TherapistPatientEntryAnalysisView(TherapistPatientAnalysisMixin, APIView):
     @extend_schema(
-        tags=["analysis"],
+        tags=["Analysis"],
         summary="Consultar o corregir l'analisi emocional d'una entrada d'un pacient",
         responses={
             200: EmotionalAnalysisSerializer,
@@ -145,7 +146,7 @@ class TherapistPatientEntryAnalysisView(TherapistPatientAnalysisMixin, APIView):
         return Response(EmotionalAnalysisSerializer(analysis).data, status=status.HTTP_200_OK)
 
     @extend_schema(
-        tags=["analysis"],
+        tags=["Analysis"],
         summary="Afegir una correccio del terapeuta a l'analisi",
         request=AnalysisCorrectionSerializer,
         responses={
@@ -172,7 +173,7 @@ class TherapistPatientEntryAnalysisView(TherapistPatientAnalysisMixin, APIView):
 
 class TherapistPatientEvolutionView(TherapistPatientAnalysisMixin, APIView):
     @extend_schema(
-        tags=["analysis"],
+        tags=["Analysis"],
         summary="Consultar evolucio emocional d'un pacient assignat",
         responses={
             200: OpenApiResponse(description="Dades cronologiques d'evolucio emocional."),

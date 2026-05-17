@@ -3,7 +3,7 @@ description: |-
   Blacklist the provided refresh token to log the user out.
 
   **Auth:** JWT Bearer (IsAuthenticated)
-url: "{{base_url}}/api/auth/logout/"
+url: "{{base_url}}/api/users/logout/"
 method: POST
 headers:
   Content-Type: application/json

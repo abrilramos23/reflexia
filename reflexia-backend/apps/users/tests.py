@@ -40,7 +40,7 @@ class TherapistRegistrationTests(APITestCase):
             license_number="17105",
             complete_name="JOAN SERRA",
         )
-        self.url = "/api/auth/register/therapist/"
+        self.url = "/api/users/register/therapist/"
 
     def test_register_independent_therapist_creates_individual_organisation(self):
         payload = {
@@ -203,7 +203,7 @@ class TherapistRegistrationTests(APITestCase):
 )
 class OrganisationInvitationTests(APITestCase):
     def setUp(self):
-        self.url = "/api/admin/organisations/invitations/"
+        self.url = "/api/users/admin/organisations/invitations/"
         self.clinic = Organisation.objects.create(
             name="Test Clinic",
             type=Organisation.Type.CLINIC,
@@ -373,7 +373,7 @@ class PatientRegistrationTests(APITestCase):
             specialty="Clinical Psychology",
         )
         OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
-        self.url = "/api/auth/register/patient/"
+        self.url = "/api/users/register/patient/"
 
     def test_register_patient_successfully_for_therapist(self):
         self.client.force_authenticate(user=self.therapist)
@@ -474,8 +474,8 @@ class TherapistPatientManagementTests(APITestCase):
         )
         # Link patients to therapist (required for therapist patience list)
         TherapistPatient.objects.create(therapist=self.therapist, patient=self.patient)
-        self.list_url = "/api/auth/patients/"
-        self.register_url = "/api/auth/register/patient/"
+        self.list_url = "/api/users/patients/"
+        self.register_url = "/api/users/register/patient/"
 
     def test_therapist_can_list_assigned_patients(self):
         self.client.force_authenticate(user=self.therapist)
@@ -530,7 +530,7 @@ class AccountActivationTests(APITestCase):
         )
         self.therapist.set_unusable_password()
         self.therapist.save(update_fields=["password", "is_active"])
-        self.url = "/api/auth/activate/account/"
+        self.url = "/api/users/activate/account/"
 
     def test_activate_patient_account_successfully(self):
         uid = urlsafe_base64_encode(force_bytes(self.patient.pk))
@@ -625,15 +625,15 @@ class LoginTests(APITestCase):
         )
         self.inactive_patient.set_password("StrongPass123!")
         self.inactive_patient.save(update_fields=["password", "is_active"])
-        self.login_url = "/api/auth/login/"
-        self.logout_url = "/api/auth/logout/"
-        self.me_url = "/api/auth/me/"
-        self.accept_consent_url = "/api/auth/consent/accept/"
-        self.reject_consent_url = "/api/auth/consent/reject/"
-        self.two_factor_setup_url = "/api/auth/2fa/setup/"
-        self.two_factor_enable_url = "/api/auth/2fa/enable/"
-        self.two_factor_verify_url = "/api/auth/2fa/verify/"
-        self.two_factor_disable_url = "/api/auth/2fa/disable/"
+        self.login_url = "/api/users/login/"
+        self.logout_url = "/api/users/logout/"
+        self.me_url = "/api/users/me/"
+        self.accept_consent_url = "/api/users/consent/accept/"
+        self.reject_consent_url = "/api/users/consent/reject/"
+        self.two_factor_setup_url = "/api/users/2fa/setup/"
+        self.two_factor_enable_url = "/api/users/2fa/enable/"
+        self.two_factor_verify_url = "/api/users/2fa/verify/"
+        self.two_factor_disable_url = "/api/users/2fa/disable/"
 
     def test_login_returns_jwt_tokens_for_therapist(self):
         response = self.client.post(
@@ -836,7 +836,7 @@ class LoginTests(APITestCase):
 
 class ConsentDocumentTests(APITestCase):
     def test_consent_document_is_available(self):
-        response = self.client.get("/api/auth/consent/document/")
+        response = self.client.get("/api/users/consent/document/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response["Content-Type"], "application/pdf")
@@ -854,8 +854,8 @@ class PasswordRecoveryTests(APITestCase):
             first_name="Recover",
             last_name="User",
         )
-        self.forgot_url = "/api/auth/password/forgot/"
-        self.reset_url = "/api/auth/password/reset/"
+        self.forgot_url = "/api/users/password/forgot/"
+        self.reset_url = "/api/users/password/reset/"
 
     def test_forgot_password_sends_email_when_user_exists(self):
         response = self.client.post(
@@ -939,10 +939,10 @@ class ProfileManagementTests(APITestCase):
             specialty="Clinical Psychology",
         )
         OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
-        self.patient_me_url = "/api/auth/me/"
-        self.change_password_url = "/api/auth/change-password/"
-        self.delete_account_url = "/api/auth/delete-account/"
-        self.patient_deactivate_url = "/api/auth/patients/deactivate/"
+        self.patient_me_url = "/api/users/me/"
+        self.change_password_url = "/api/users/change-password/"
+        self.delete_account_url = "/api/users/delete-account/"
+        self.patient_deactivate_url = "/api/users/patients/deactivate/"
 
     def test_patient_can_update_email(self):
         refresh = RefreshToken.for_user(self.patient)
@@ -1134,7 +1134,7 @@ class MultiTenancyAndAdminTests(APITestCase):
         OrganisationMember.objects.create(
             user=self.therapist, organisation=self.org, is_admin=True
         )
-        self.stats_clinic_url = "/api/admin/stats/clinic/"
+        self.stats_clinic_url = "/api/users/admin/stats/clinic/"
 
     def test_clinic_admin_can_get_clinic_stats(self):
         active_patient = Patient.objects.create_user(
@@ -1208,7 +1208,7 @@ class MultiTenancyAndAdminTests(APITestCase):
         )
 
         response = self.client.patch(
-            f"/api/admin/users/therapists/{therapist_to_assign.id}/",
+            f"/api/users/admin/therapists/{therapist_to_assign.id}/",
             {"is_admin": True},
             format="json",
         )
@@ -1272,12 +1272,12 @@ class AccessControlTests(APITestCase):
     def test_patient_cannot_access_patient_list(self):
         self.client.force_authenticate(user=self.patient)
 
-        response = self.client.get("/api/auth/patients/")
+        response = self.client.get("/api/users/patients/")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_cannot_access_me(self):
-        response = self.client.get("/api/auth/me/")
+        response = self.client.get("/api/users/me/")
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -1285,7 +1285,7 @@ class AccessControlTests(APITestCase):
         self.client.force_authenticate(user=self.patient)
 
         response = self.client.post(
-            "/api/auth/patients/deactivate/",
+            "/api/users/patients/deactivate/",
             {"patient_id": str(self.patient.pk)},
             format="json",
         )
@@ -1296,7 +1296,7 @@ class AccessControlTests(APITestCase):
         TherapistPatient.objects.create(therapist=self.therapist, patient=self.patient)
         self.client.force_authenticate(user=self.therapist)
 
-        response = self.client.get(f"/api/auth/patients/{self.patient.pk}/")
+        response = self.client.get(f"/api/users/patients/{self.patient.pk}/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["email"], self.patient.email)
@@ -1304,7 +1304,7 @@ class AccessControlTests(APITestCase):
     def test_therapist_cannot_get_unassigned_patient_detail(self):
         self.client.force_authenticate(user=self.therapist)
 
-        response = self.client.get(f"/api/auth/patients/{self.patient.pk}/")
+        response = self.client.get(f"/api/users/patients/{self.patient.pk}/")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -1364,7 +1364,7 @@ class AdminEntityManagementTests(APITestCase):
         self.client.force_authenticate(user=self.clinic_admin)
 
         response = self.client.patch(
-            f"/api/admin/organisations/{self.org.pk}/",
+            f"/api/users/admin/organisations/{self.org.pk}/",
             {"name": "Central Clinic Updated"},
             format="json",
         )
@@ -1377,7 +1377,7 @@ class AdminEntityManagementTests(APITestCase):
         self.client.force_authenticate(user=self.clinic_admin)
 
         response = self.client.patch(
-            f"/api/admin/organisations/{self.other_org.pk}/",
+            f"/api/users/admin/organisations/{self.other_org.pk}/",
             {"name": "Forbidden"},
             format="json",
         )
@@ -1388,7 +1388,7 @@ class AdminEntityManagementTests(APITestCase):
         self.client.force_authenticate(user=self.clinic_admin)
 
         response = self.client.patch(
-            f"/api/admin/users/therapists/{self.therapist.pk}/",
+            f"/api/users/admin/therapists/{self.therapist.pk}/",
             {"specialty": "Trauma"},
             format="json",
         )
@@ -1401,7 +1401,7 @@ class AdminEntityManagementTests(APITestCase):
         self.client.force_authenticate(user=self.clinic_admin)
 
         response = self.client.patch(
-            f"/api/admin/users/therapists/{self.other_therapist.pk}/",
+            f"/api/users/admin/therapists/{self.other_therapist.pk}/",
             {"specialty": "Forbidden"},
             format="json",
         )
@@ -1411,7 +1411,7 @@ class AdminEntityManagementTests(APITestCase):
     def test_clinic_admin_can_soft_delete_own_organisation(self):
         self.client.force_authenticate(user=self.clinic_admin)
 
-        response = self.client.delete(f"/api/admin/organisations/{self.org.pk}/")
+        response = self.client.delete(f"/api/users/admin/organisations/{self.org.pk}/")
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.org.refresh_from_db()
@@ -1421,7 +1421,7 @@ class AdminEntityManagementTests(APITestCase):
         self.client.force_authenticate(user=self.clinic_admin)
 
         response = self.client.patch(
-            f"/api/admin/users/therapists/{self.second_admin.pk}/",
+            f"/api/users/admin/therapists/{self.second_admin.pk}/",
             {"is_admin": False},
             format="json",
         )

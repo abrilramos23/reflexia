@@ -198,7 +198,7 @@ class TherapistEntriesAndQuestionsTests(APITestCase):
     def test_therapist_can_list_assigned_patient_entries(self):
         self.client.force_authenticate(user=self.therapist)
 
-        response = self.client.get(f"/api/auth/patients/{self.patient.pk}/entries/")
+        response = self.client.get(f"/api/entries/patients/{self.patient.pk}/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
@@ -207,7 +207,7 @@ class TherapistEntriesAndQuestionsTests(APITestCase):
     def test_therapist_cannot_list_entries_of_unassigned_patient(self):
         self.client.force_authenticate(user=self.therapist)
 
-        response = self.client.get(f"/api/auth/patients/{self.other_patient.pk}/entries/")
+        response = self.client.get(f"/api/entries/patients/{self.other_patient.pk}/")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -215,7 +215,7 @@ class TherapistEntriesAndQuestionsTests(APITestCase):
         self.client.force_authenticate(user=self.therapist)
 
         response = self.client.post(
-            f"/api/auth/patients/{self.patient.pk}/questions/",
+            f"/api/entries/patients/{self.patient.pk}/questions/",
             {"text": "Quina situació t'ha generat més ansietat avui?"},
             format="json",
         )
@@ -234,7 +234,7 @@ class TherapistEntriesAndQuestionsTests(APITestCase):
         )
         self.client.force_authenticate(user=self.therapist)
 
-        response = self.client.get("/api/auth/questions/")
+        response = self.client.get("/api/entries/questions/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         question_ids = {item["id"] for item in response.data}
@@ -247,11 +247,11 @@ class TherapistEntriesAndQuestionsTests(APITestCase):
         self.client.force_authenticate(user=self.therapist)
 
         create_response = self.client.post(
-            f"/api/auth/patients/{self.patient.pk}/entries/{self.entry.pk}/notes/",
+            f"/api/entries/patients/{self.patient.pk}/{self.entry.pk}/notes/",
             {"content": "Valorar si hi ha un patró d'evitació després de la propera sessió."},
             format="json",
         )
-        list_response = self.client.get(f"/api/auth/patients/{self.patient.pk}/entries/{self.entry.pk}/notes/")
+        list_response = self.client.get(f"/api/entries/patients/{self.patient.pk}/{self.entry.pk}/notes/")
 
         self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(PrivateNote.objects.count(), 1)
@@ -262,6 +262,6 @@ class TherapistEntriesAndQuestionsTests(APITestCase):
     def test_other_therapist_cannot_access_private_notes_of_unassigned_patient(self):
         self.client.force_authenticate(user=self.other_therapist)
 
-        response = self.client.get(f"/api/auth/patients/{self.patient.pk}/entries/{self.entry.pk}/notes/")
+        response = self.client.get(f"/api/entries/patients/{self.patient.pk}/{self.entry.pk}/notes/")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

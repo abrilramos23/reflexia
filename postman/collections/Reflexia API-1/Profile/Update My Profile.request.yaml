@@ -5,7 +5,7 @@ description: >-
 
 
   **Auth:** JWT Bearer (IsAuthenticated)
-url: "{{base_url}}/api/auth/me/"
+url: "{{base_url}}/api/users/me/"
 method: PATCH
 headers:
   Content-Type: application/json

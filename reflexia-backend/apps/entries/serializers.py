@@ -2,6 +2,8 @@ from datetime import timedelta
 
 from django.utils.html import strip_tags
 from rest_framework import serializers
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 
 from apps.analysis.serializers import EmotionalAnalysisSerializer
 from apps.entries.models import JournalEntry, PrivateNote, TherapistQuestion
@@ -12,6 +14,7 @@ class TherapistQuestionSerializer(serializers.ModelSerializer):
     creation_date = serializers.DateTimeField(source="created_at", read_only=True)
     patient_name = serializers.SerializerMethodField()
     patient_id = serializers.UUIDField(source="patient.id", read_only=True)
+    resolved = serializers.SerializerMethodField()
 
     class Meta:
         model = TherapistQuestion
@@ -28,9 +31,11 @@ class TherapistQuestionSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_patient_name(self, obj):
         return f"{obj.patient.first_name} {obj.patient.last_name}"
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_resolved(self, obj):
         return not obj.is_active
 
@@ -96,15 +101,18 @@ class JournalEntrySerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_deleted(self, obj):
         return obj.is_deleted
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_preview(self, obj):
         plain_text = strip_tags(obj.content or "").strip()
         if len(plain_text) <= 120:
             return plain_text
         return f"{plain_text[:120]}..."
 
+    @extend_schema_field(OpenApiTypes.DATETIME)
     def get_modification_date(self, obj):
         if not obj.updated_at or not obj.created_at:
             return None

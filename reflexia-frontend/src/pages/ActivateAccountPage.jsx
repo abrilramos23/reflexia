@@ -38,7 +38,7 @@ export function ActivateAccountPage() {
     setIsSubmitting(true)
 
     try {
-      await api.post('/auth/activate/account/', {
+      await api.post('/users/activate/account/', {
         uid,
         token,
         password,

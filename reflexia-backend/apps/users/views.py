@@ -47,7 +47,7 @@ class TherapistRegistrationView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["auth"],
+        tags=["Users"],
         summary="Registrar terapeuta",
         request=TherapistRegistrationSerializer,
         responses={
@@ -106,7 +106,7 @@ class InvitacioOrganitzacioCreateView(APIView):
     permission_classes = [IsClinicAdminUser]
 
     @extend_schema(
-        tags=["admin"],
+        tags=["Users"],
         summary="Crear una invitació d'organització",
         request=InvitacioOrganitzacioCreateSerializer,
         responses={201: InvitacioOrganitzacioSerializer},
@@ -128,7 +128,7 @@ class PatientRegistrationView(APIView):
     permission_classes = [IsTherapistUser]
 
     @extend_schema(
-        tags=["auth"],
+        tags=["Users"],
         summary="Registrar pacient",
         request=PatientRegistrationSerializer,
         responses={
@@ -185,7 +185,7 @@ class AccountActivationView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["auth"],
+        tags=["Users"],
         summary="Activar compte",
         request=AccountActivationSerializer,
         responses={
@@ -220,7 +220,7 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["auth"],
+        tags=["Users"],
         summary="Iniciar sessio",
         request=LoginSerializer,
         responses={
@@ -281,7 +281,7 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["auth"],
+        tags=["Users"],
         summary="Tancar sessio",
         request=RefreshTokenSerializer,
         responses={200: inline_serializer(name="LogoutResponse", fields={"message": serializers.CharField()})},
@@ -297,7 +297,7 @@ class PasswordForgotView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["auth"],
+        tags=["Users"],
         summary="Sollicitar recuperacio de contrasenya",
         request=PasswordForgotSerializer,
         responses={
@@ -327,7 +327,7 @@ class PasswordResetView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["auth"],
+        tags=["Users"],
         summary="Restablir contrasenya",
         request=PasswordResetSerializer,
         responses={
@@ -350,7 +350,7 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["profile"],
+        tags=["Users"],
         summary="Obtenir usuari autenticat",
         responses={200: UserSummarySerializer},
     )
@@ -358,7 +358,7 @@ class MeView(APIView):
         return Response(UserSummarySerializer(request.user).data, status=status.HTTP_200_OK)
 
     @extend_schema(
-        tags=["profile"],
+        tags=["Users"],
         summary="Actualitzar perfil",
         request=ProfileUpdateSerializer,
         responses={
@@ -388,7 +388,7 @@ class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["profile"],
+        tags=["Users"],
         summary="Canviar contrasenya",
         request=ChangePasswordSerializer,
         responses={
@@ -411,7 +411,7 @@ class DeleteAccountView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["profile"],
+        tags=["Users"],
         summary="Eliminar compte",
         request=DeleteAccountSerializer,
         responses={
@@ -454,7 +454,7 @@ class TherapistPatientDeactivateView(APIView):
     permission_classes = [IsTherapistUser]
 
     @extend_schema(
-        tags=["profile"],
+        tags=["Users"],
         summary="Donar de baixa un pacient assignat",
         request=TherapistPatientDeactivateSerializer,
         responses={
@@ -487,7 +487,7 @@ class TherapistPatientListView(APIView):
     permission_classes = [IsTherapistUser]
 
     @extend_schema(
-        tags=["profile"],
+        tags=["Users"],
         summary="Llistar pacients assignats al terapeuta",
         responses={200: TherapistPatientSummarySerializer(many=True)},
     )
@@ -505,7 +505,7 @@ class TherapistPatientDetailView(APIView):
     permission_classes = [IsTherapistUser]
 
     @extend_schema(
-        tags=["profile"],
+        tags=["Users"],
         summary="Obtenir detall d'un pacient assignat al terapeuta",
         responses={200: TherapistPatientSummarySerializer},
     )
@@ -525,7 +525,7 @@ class TherapistDashboardView(APIView):
     permission_classes = [IsTherapistUser]
 
     @extend_schema(
-        tags=["profile"],
+        tags=["Users"],
         summary="Obtenir dades del tauler del terapeuta",
         responses={200: inline_serializer(
             name="TherapistDashboardData",
@@ -609,7 +609,7 @@ class PatientConsentAcceptView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["profile"],
+        tags=["Users"],
         summary="Acceptar consentiment informat",
         request=None,
         responses={
@@ -644,7 +644,7 @@ class PatientConsentRejectView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["profile"],
+        tags=["Users"],
         summary="Rebutjar consentiment informat",
         request=RefreshTokenSerializer,
         responses={200: inline_serializer(name="PatientConsentRejectResponse", fields={"message": serializers.CharField()})},
@@ -674,7 +674,7 @@ class TwoFactorSetupView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["2fa"],
+        tags=["Users"],
         summary="Iniciar configuracio 2FA",
         request=None,
         responses={
@@ -697,7 +697,7 @@ class TwoFactorEnableView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["2fa"],
+        tags=["Users"],
         summary="Activar 2FA",
         request=TwoFactorEnableSerializer,
         responses={
@@ -727,7 +727,7 @@ class TwoFactorVerifyView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["2fa"],
+        tags=["Users"],
         summary="Verificar codi 2FA en login",
         request=TwoFactorVerifySerializer,
         responses={
@@ -761,7 +761,7 @@ class TwoFactorDisableView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["2fa"],
+        tags=["Users"],
         summary="Desactivar 2FA",
         request=TwoFactorDisableSerializer,
         responses={
@@ -791,7 +791,7 @@ class ConsentDocumentView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["documents"],
+        tags=["Users"],
         summary="Descarregar document de consentiment",
         responses={
             200: OpenApiResponse(description="Fitxer PDF del consentiment informat."),
@@ -813,7 +813,7 @@ class ClinicStatsView(APIView):
     permission_classes = [IsClinicAdminUser]
 
     @extend_schema(
-        tags=["admin"],
+        tags=["Users"],
         summary="Obtenir estadístiques de la clínica",
         responses={200: inline_serializer(
             name="ClinicStats",
@@ -974,10 +974,9 @@ class OrganisationDetailView(APIView):
     permission_classes = [IsClinicAdminUser]
 
     @extend_schema(
-        tags=["admin"],
-        summary="Consultar, modificar o eliminar una organització",
-        request=OrganisationUpdateSerializer,
-        responses={200: OrganisationSerializer, 204: None},
+        tags=["Users"],
+        summary="Consultar una organització",
+        responses={200: OrganisationSerializer},
     )
     def get(self, request, organisation_id):
         organisation = get_object_or_404(Organisation, pk=organisation_id)
@@ -985,6 +984,12 @@ class OrganisationDetailView(APIView):
             return Response({"detail": "No tens permisos per gestionar aquesta organització."}, status=status.HTTP_403_FORBIDDEN)
         return Response(OrganisationSerializer(organisation).data)
 
+    @extend_schema(
+        tags=["Users"],
+        summary="Modificar una organització",
+        request=OrganisationUpdateSerializer,
+        responses={200: OrganisationSerializer},
+    )
     def patch(self, request, organisation_id):
         organisation = get_object_or_404(Organisation, pk=organisation_id)
         if not _admin_can_manage_organisation(request.user, organisation):
@@ -995,6 +1000,11 @@ class OrganisationDetailView(APIView):
         organisation = serializer.save()
         return Response(OrganisationSerializer(organisation).data)
 
+    @extend_schema(
+        tags=["Users"],
+        summary="Eliminar una organització",
+        responses={204: None},
+    )
     def delete(self, request, organisation_id):
         organisation = get_object_or_404(Organisation, pk=organisation_id)
         if not _admin_can_manage_organisation(request.user, organisation):
@@ -1009,10 +1019,9 @@ class TherapistAdminDetailView(APIView):
     permission_classes = [IsClinicAdminUser]
 
     @extend_schema(
-        tags=["admin"],
-        summary="Consultar, modificar o eliminar un terapeuta",
-        request=TherapistAdminUpdateSerializer,
-        responses={200: UserSummarySerializer, 204: None},
+        tags=["Users"],
+        summary="Consultar un terapeuta",
+        responses={200: UserSummarySerializer},
     )
     def get(self, request, user_id):
         therapist = get_object_or_404(Therapist, pk=user_id)
@@ -1021,6 +1030,12 @@ class TherapistAdminDetailView(APIView):
 
         return Response(UserSummarySerializer(therapist).data)
 
+    @extend_schema(
+        tags=["Users"],
+        summary="Modificar un terapeuta",
+        request=TherapistAdminUpdateSerializer,
+        responses={200: UserSummarySerializer},
+    )
     def patch(self, request, user_id):
         therapist = get_object_or_404(Therapist, pk=user_id)
         if not _admin_can_manage_therapist(request.user, therapist):
@@ -1044,6 +1059,11 @@ class TherapistAdminDetailView(APIView):
 
         return Response(UserSummarySerializer(therapist).data)
 
+    @extend_schema(
+        tags=["Users"],
+        summary="Eliminar un terapeuta",
+        responses={204: None},
+    )
     def delete(self, request, user_id):
         therapist = get_object_or_404(Therapist, pk=user_id)
         if not _admin_can_manage_therapist(request.user, therapist):
@@ -1064,7 +1084,7 @@ class ClinicTherapistListView(APIView):
     permission_classes = [IsClinicAdminUser]
 
     @extend_schema(
-        tags=["admin"],
+        tags=["Users"],
         summary="Llistar terapeutes de la clínica",
         responses={200: UserSummarySerializer(many=True)},
     )

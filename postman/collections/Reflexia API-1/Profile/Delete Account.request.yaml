@@ -5,7 +5,7 @@ description: >-
 
 
   **Auth:** JWT Bearer (IsAuthenticated)
-url: "{{base_url}}/api/auth/delete-account/"
+url: "{{base_url}}/api/users/delete-account/"
 method: POST
 headers:
   Content-Type: application/json

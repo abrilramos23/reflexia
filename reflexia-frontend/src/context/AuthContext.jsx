@@ -116,7 +116,7 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const response = await api.get('/auth/me/')
+        const response = await api.get('/users/me/')
 
         if (!isMounted) {
           return
@@ -145,7 +145,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function login(email, password) {
-    const response = await api.post('/auth/login/', { email, password })
+    const response = await api.post('/users/login/', { email, password })
     const data = response.data
 
     if (data.login_status === 'two_factor_required') {
@@ -168,7 +168,7 @@ export function AuthProvider({ children }) {
       throw new Error('La sessio pendent de 2FA ha caducat. Torna a iniciar sessio.')
     }
 
-    const response = await api.post('/auth/2fa/verify/', {
+    const response = await api.post('/users/2fa/verify/', {
       email: pendingPayload.email,
       password: pendingPayload.password,
       code,
@@ -187,7 +187,7 @@ export function AuthProvider({ children }) {
 
     try {
       if (refresh) {
-        await api.post('/auth/logout/', { refresh })
+        await api.post('/users/logout/', { refresh })
       }
     } finally {
       clearSession()
@@ -197,14 +197,14 @@ export function AuthProvider({ children }) {
   }
 
   async function refreshProfile() {
-    const response = await api.get('/auth/me/')
+    const response = await api.get('/users/me/')
     setUser(response.data)
     setStoredUser(response.data)
     return response.data
   }
 
   async function acceptConsent() {
-    const response = await api.post('/auth/consent/accept/')
+    const response = await api.post('/users/consent/accept/')
     setUser(response.data.user)
     setStoredUser(response.data.user)
     return response.data
@@ -212,7 +212,7 @@ export function AuthProvider({ children }) {
 
   async function rejectConsent() {
     const refresh = getStoredRefreshToken()
-    const response = await api.post('/auth/consent/reject/', { refresh })
+    const response = await api.post('/users/consent/reject/', { refresh })
     clearSession()
     setUser(null)
     setPendingTwoFactor(null)
@@ -220,14 +220,14 @@ export function AuthProvider({ children }) {
   }
 
   async function updateProfile(payload) {
-    const response = await api.patch('/auth/me/', payload)
+    const response = await api.patch('/users/me/', payload)
     setUser(response.data.user)
     setStoredUser(response.data.user)
     return response.data
   }
 
   async function changePassword(payload) {
-    const response = await api.post('/auth/change-password/', payload)
+    const response = await api.post('/users/change-password/', payload)
     return response.data
   }
 
@@ -272,27 +272,27 @@ export function AuthProvider({ children }) {
   }
 
   async function registerTherapist(payload) {
-    const response = await api.post('/auth/register/therapist/', payload)
+    const response = await api.post('/users/register/therapist/', payload)
     return response.data
   }
 
   async function createOrganisationInvitation(payload = {}) {
-    const response = await api.post('/admin/organisations/invitations/', payload)
+    const response = await api.post('/users/admin/organisations/invitations/', payload)
     return response.data
   }
 
   async function registerPatient(payload) {
-    const response = await api.post('/auth/register/patient/', payload)
+    const response = await api.post('/users/register/patient/', payload)
     return response.data
   }
 
   async function listTherapistPatients() {
-    const response = await api.get('/auth/patients/')
+    const response = await api.get('/users/patients/')
     return response.data
   }
 
   async function getPatient(patientId) {
-    const response = await api.get(`/auth/patients/${patientId}/`)
+    const response = await api.get(`/users/patients/${patientId}/`)
     return response.data
   }
 
@@ -322,7 +322,7 @@ export function AuthProvider({ children }) {
   }
 
   async function analyzeEntry(entryId, payload = {}) {
-    const response = await api.post(`/entries/${entryId}/analyze/`, payload)
+    const response = await api.post(`/analysis/entries/${entryId}/analyze/`, payload)
     return response.data
   }
 
@@ -353,19 +353,19 @@ export function AuthProvider({ children }) {
   }
 
   async function setupTwoFactor() {
-    const response = await api.post('/auth/2fa/setup/')
+    const response = await api.post('/users/2fa/setup/')
     return response.data
   }
 
   async function enableTwoFactor(code) {
-    const response = await api.post('/auth/2fa/enable/', { code })
+    const response = await api.post('/users/2fa/enable/', { code })
     setUser(response.data.user)
     setStoredUser(response.data.user)
     return response.data
   }
 
   async function disableTwoFactor(payload) {
-    const response = await api.post('/auth/2fa/disable/', payload)
+    const response = await api.post('/users/2fa/disable/', payload)
     setUser(response.data.user)
     setStoredUser(response.data.user)
     return response.data
@@ -375,7 +375,7 @@ export function AuthProvider({ children }) {
     const refresh = getStoredRefreshToken()
 
     try {
-      const response = await api.post('/auth/delete-account/', {
+      const response = await api.post('/users/delete-account/', {
         password,
         refresh,
       })
@@ -396,7 +396,7 @@ export function AuthProvider({ children }) {
   }
 
   async function deactivatePatient(patientId) {
-    const response = await api.post('/auth/patients/deactivate/', {
+    const response = await api.post('/users/patients/deactivate/', {
       patient_id: patientId,
     })
 
@@ -404,52 +404,52 @@ export function AuthProvider({ children }) {
   }
 
   async function getClinicStats() {
-    const response = await api.get('/admin/stats/clinic/')
+    const response = await api.get('/users/admin/stats/clinic/')
     return response.data
   }
 
   async function getTherapistDashboardData() {
-    const response = await api.get('/auth/dashboard/therapist/')
+    const response = await api.get('/users/dashboard/therapist/')
     return response.data
   }
 
   async function updateOrganisation(organisationId, payload) {
-    const response = await api.patch(`/admin/organisations/${organisationId}/`, payload)
+    const response = await api.patch(`/users/admin/organisations/${organisationId}/`, payload)
     return response.data
   }
 
   async function deleteOrganisation(organisationId) {
-    const response = await api.delete(`/admin/organisations/${organisationId}/`)
+    const response = await api.delete(`/users/admin/organisations/${organisationId}/`)
     return response.data
   }
 
   async function listClinicTherapists() {
-    const response = await api.get('/admin/users/clinic/therapists/')
+    const response = await api.get('/users/admin/clinic/therapists/')
     return response.data
   }
 
   async function updateTherapist(therapistId, payload) {
-    const response = await api.patch(`/admin/users/therapists/${therapistId}/`, payload)
+    const response = await api.patch(`/users/admin/therapists/${therapistId}/`, payload)
     return response.data
   }
 
   async function deleteTherapist(therapistId) {
-    const response = await api.delete(`/admin/users/therapists/${therapistId}/`)
+    const response = await api.delete(`/users/admin/therapists/${therapistId}/`)
     return response.data
   }
 
   async function listPatientEntries(patientId) {
-    const response = await api.get(`/auth/patients/${patientId}/entries/`)
+    const response = await api.get(`/entries/patients/${patientId}/`)
     return response.data
   }
 
   async function getPatientEntry(patientId, entryId) {
-    const response = await api.get(`/auth/patients/${patientId}/entries/${entryId}/`)
+    const response = await api.get(`/entries/patients/${patientId}/${entryId}/`)
     return response.data
   }
 
   async function exportPatientEntryPdf(patientId, entryId) {
-    const response = await api.get(`/auth/patients/${patientId}/entries/${entryId}/export/`, { responseType: 'blob' })
+    const response = await api.get(`/entries/patients/${patientId}/${entryId}/export/`, { responseType: 'blob' })
     return {
       blob: response.data,
       filename: readDownloadFilename(response.headers['content-disposition']) || `patient-entry-${entryId}.pdf`,
@@ -457,7 +457,7 @@ export function AuthProvider({ children }) {
   }
 
   async function exportPatientEntriesPdf(patientId) {
-    const response = await api.get(`/auth/patients/${patientId}/entries/export/`, { responseType: 'blob' })
+    const response = await api.get(`/entries/patients/${patientId}/export/`, { responseType: 'blob' })
     return {
       blob: response.data,
       filename: readDownloadFilename(response.headers['content-disposition']) || `patient-history-${patientId}.pdf`,
@@ -465,42 +465,42 @@ export function AuthProvider({ children }) {
   }
 
   async function getPatientEvolution(patientId) {
-    const response = await api.get(`/auth/patients/${patientId}/analysis/evolution/`)
+    const response = await api.get(`/analysis/patients/${patientId}/evolution/`)
     return response.data
   }
 
   async function updatePatientEntryAnalysisCorrection(patientId, entryId, payload) {
-    const response = await api.patch(`/auth/patients/${patientId}/entries/${entryId}/analysis/`, payload)
+    const response = await api.patch(`/analysis/patients/${patientId}/entries/${entryId}/`, payload)
     return response.data
   }
 
   async function listPatientQuestions(patientId) {
-    const response = await api.get(`/auth/patients/${patientId}/questions/`)
+    const response = await api.get(`/entries/patients/${patientId}/questions/`)
     return response.data
   }
 
   async function createPatientQuestion(patientId, payload) {
-    const response = await api.post(`/auth/patients/${patientId}/questions/`, payload)
+    const response = await api.post(`/entries/patients/${patientId}/questions/`, payload)
     return response.data
   }
 
   async function getPatientQuestion(patientId, questionId) {
-    const response = await api.get(`/auth/patients/${patientId}/questions/${questionId}/`)
+    const response = await api.get(`/entries/patients/${patientId}/questions/${questionId}/`)
     return response.data
   }
 
   async function listAllTherapistQuestions() {
-    const response = await api.get('/auth/questions/')
+    const response = await api.get('/entries/questions/')
     return response.data
   }
 
   async function listPatientEntryNotes(patientId, entryId) {
-    const response = await api.get(`/auth/patients/${patientId}/entries/${entryId}/notes/`)
+    const response = await api.get(`/entries/patients/${patientId}/${entryId}/notes/`)
     return response.data
   }
 
   async function createPatientEntryNote(patientId, entryId, payload) {
-    const response = await api.post(`/auth/patients/${patientId}/entries/${entryId}/notes/`, payload)
+    const response = await api.post(`/entries/patients/${patientId}/${entryId}/notes/`, payload)
     return response.data
   }
 

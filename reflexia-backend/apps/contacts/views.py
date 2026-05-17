@@ -21,7 +21,7 @@ class AssociatedContactListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["contacts"],
+        tags=["Contacts"],
         summary="Llistar contactes associats",
         responses={
             200: AssociatedContactSerializer(many=True),
@@ -45,7 +45,7 @@ class AssociatedContactListCreateView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
-        tags=["contacts"],
+        tags=["Contacts"],
         summary="Crear contacte associat",
         request=AssociatedContactSerializer,
         responses={
@@ -99,7 +99,7 @@ class AssociatedContactDetailView(APIView):
         return contact
 
     @extend_schema(
-        tags=["contacts"],
+        tags=["Contacts"],
         summary="Actualitzar contacte associat",
         parameters=[
             OpenApiParameter(
@@ -135,7 +135,7 @@ class AssociatedContactDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
-        tags=["contacts"],
+        tags=["Contacts"],
         summary="Eliminar contacte associat",
         parameters=[
             OpenApiParameter(
@@ -177,7 +177,7 @@ class SupportTherapistListCreateView(APIView):
     permission_classes = [IsTherapistUser]
 
     @extend_schema(
-        tags=["contacts"],
+        tags=["Contacts"],
         summary="Llistar terapeutes de suport",
         responses={
             200: SupportTherapistListSerializer(many=True),
@@ -193,7 +193,7 @@ class SupportTherapistListCreateView(APIView):
         return Response(SupportTherapistListSerializer(links, many=True).data, status=status.HTTP_200_OK)
 
     @extend_schema(
-        tags=["contacts"],
+        tags=["Contacts"],
         summary="Afegir terapeuta de suport",
         request=SupportTherapistCreateSerializer,
         responses={
@@ -220,7 +220,7 @@ class SupportTherapistDeleteView(APIView):
     permission_classes = [IsTherapistUser]
 
     @extend_schema(
-        tags=["contacts"],
+        tags=["Contacts"],
         summary="Eliminar terapeuta de suport",
         parameters=[
             OpenApiParameter(
@@ -254,7 +254,7 @@ class AvailableSupportTherapistListView(APIView):
     permission_classes = [IsTherapistUser]
 
     @extend_schema(
-        tags=["contacts"],
+        tags=["Contacts"],
         summary="Llistar terapeutes disponibles com a suport",
         responses={
             200: AvailableTherapistSerializer(many=True),
