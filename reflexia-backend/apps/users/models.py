@@ -35,44 +35,6 @@ class Organisation(models.Model):
         self.full_clean()
         return super().save(*args, **kwargs)
 
-
-"""
-class Subscription(models.Model):
-    class Plan(models.TextChoices):
-        FREE   = 'free',   'Free'
-        PRO    = 'pro',    'Pro'
-        CLINIC = 'clinic', 'Clinic'
-
-    class Status(models.TextChoices):
-        ACTIVE   = 'active',   'Active'
-        CANCELED = 'canceled', 'Canceled'
-
-    class Periodicity(models.TextChoices):
-        MONTHLY = 'monthly', 'Monthly'
-        YEARLY  = 'yearly',  'Yearly'
-
-    id           = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    plan         = models.CharField(max_length=20, choices=Plan.choices, default=Plan.FREE)
-    status       = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
-    periodicity  = models.CharField(max_length=20, choices=Periodicity.choices, default=Periodicity.MONTHLY)
-    ini_date     = models.DateTimeField(default=timezone.now)
-    end_date     = models.DateTimeField(null=True, blank=True)
-    organisation = models.ForeignKey(
-                       Organisation,
-                       on_delete=models.CASCADE,
-                       related_name='subscriptions',
-                       null=True, blank=True
-                   )
-
-    class Meta:
-        verbose_name = 'subscription'
-        verbose_name_plural = 'subscriptions'
-
-    def __str__(self):
-        return f"Sub: {self.plan} - {self.organisation.name if self.organisation else 'No Org'}"
-"""
-
-
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
