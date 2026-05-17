@@ -195,13 +195,13 @@ def send_organisation_invitation_email(*, invitation, admin, invitation_url):
 
 
 def send_clinic_admin_activation_email(*, user, organisation, activation_url):
-    subject = "Activate your Reflexia clinic admin account"
+    subject = "Activa el teu compte d'administració de Reflexia"
     message = (
-        f"Hello {user.first_name},\n\n"
-        f"You have been registered as the administrator for {organisation.name}.\n"
-        "Use the following link to set your password and activate your access:\n\n"
+        f"Hola {user.first_name},\n\n"
+        f"T'hem registrat com a administrador/a de {organisation.name}.\n"
+        "Utilitza aquest enllaç per definir la contrasenya i activar l'accés:\n\n"
         f"{activation_url}\n\n"
-        "If you were not expecting this email, you can ignore it."
+        "Si no esperaves aquest correu, pots ignorar-lo."
     )
     send_mail(
         subject,
@@ -213,13 +213,13 @@ def send_clinic_admin_activation_email(*, user, organisation, activation_url):
 
 
 def send_therapist_activation_email(*, therapist, activation_url):
-    subject = "Activate your Reflexia therapist account"
+    subject = "Activa el teu compte de terapeuta a Reflexia"
     message = (
-        f"Hello {therapist.first_name},\n\n"
-        "An administrator has created your Reflexia therapist account.\n"
-        "Use the following link to set your password and activate your access:\n\n"
+        f"Hola {therapist.first_name},\n\n"
+        "Un administrador ha creat el teu compte de terapeuta a Reflexia.\n"
+        "Utilitza aquest enllaç per definir la contrasenya i activar l'accés:\n\n"
         f"{activation_url}\n\n"
-        "If you were not expecting this email, you can ignore it."
+        "Si no esperaves aquest correu, pots ignorar-lo."
     )
     send_mail(
         subject,
@@ -231,13 +231,13 @@ def send_therapist_activation_email(*, therapist, activation_url):
 
 
 def send_patient_activation_email(*, patient, therapist, activation_url):
-    subject = "Activate your Reflexia account"
+    subject = "Activa el teu compte de Reflexia"
     message = (
-        f"Hello {patient.first_name},\n\n"
-        f"{therapist.first_name} {therapist.last_name} has created your Reflexia account.\n"
-        f"Use the following link to set your password and activate your access:\n\n"
+        f"Hola {patient.first_name},\n\n"
+        f"{therapist.first_name} {therapist.last_name} ha creat el teu compte de Reflexia.\n"
+        "Utilitza aquest enllaç per definir la contrasenya i activar l'accés:\n\n"
         f"{activation_url}\n\n"
-        "If you were not expecting this email, you can ignore it."
+        "Si no esperaves aquest correu, pots ignorar-lo."
     )
     send_mail(
         subject,
@@ -255,13 +255,13 @@ def build_password_reset_url(user):
 
 
 def send_password_reset_email(*, user, reset_url):
-    subject = "Reset your Reflexia password"
+    subject = "Restableix la contrasenya de Reflexia"
     message = (
-        f"Hello {user.first_name},\n\n"
-        "We received a request to reset your Reflexia password.\n"
-        "Use the following link to choose a new password:\n\n"
+        f"Hola {user.first_name},\n\n"
+        "Hem rebut una sol·licitud per restablir la contrasenya de Reflexia.\n"
+        "Utilitza aquest enllaç per definir-ne una de nova:\n\n"
         f"{reset_url}\n\n"
-        "If you did not request this change, you can ignore this email."
+        "Si no has demanat aquest canvi, pots ignorar aquest correu."
     )
     send_mail(
         subject,
@@ -273,11 +273,11 @@ def send_password_reset_email(*, user, reset_url):
 
 
 def send_account_deleted_email(*, user_email):
-    subject = "Your Reflexia account has been deleted"
+    subject = "El teu compte de Reflexia s'ha tancat"
     message = (
-        "Your Reflexia account has been deactivated successfully.\n\n"
-        "Non-clinical profile data has been removed, and clinical records will be retained "
-        "only for the legally required period."
+        "El teu compte de Reflexia s'ha desactivat correctament.\n\n"
+        "Les dades no clíniques s'han eliminat i la documentació clínica es conservarà "
+        "només durant el període legal obligatori."
     )
     send_mail(
         subject,
@@ -331,7 +331,7 @@ def update_user_profile(*, user, email=None, specialty=None):
 @transaction.atomic
 def change_user_password(*, user, current_password, new_password):
     if not user.check_password(current_password):
-        raise DjangoValidationError({"current_password": ["Current password is incorrect."]})
+        raise DjangoValidationError({"current_password": ["La contrasenya actual no és correcta."]})
 
     validate_password(new_password, user=user)
     user.set_password(new_password)
@@ -350,7 +350,7 @@ def delete_user_account(*, user):
         if active_patients_count > 0:
             raise DjangoValidationError(
                 {
-                    "assigned_patients": [f"This therapist still has {active_patients_count} active patients."],
+                    "assigned_patients": [f"Aquest terapeuta encara té {active_patients_count} pacients actius."],
                     "patients": [
                         {
                             "id": str(link.patient.pk),
@@ -372,13 +372,7 @@ def delete_user_account(*, user):
             is_admin=True
         ).count()
         if admin_count <= 1:
-            # We only block if there are other members who need an admin.
-            # If they are the ONLY member, the organisation will effectively be empty/inactive.
-            # However, the user request says "if it is only one user, this will be the admin".
-            # This implies even if they are alone, they are admin. If they delete themselves, 
-            # the org is empty. That's usually acceptable if the whole account is being deleted, 
-            # but to be safe and follow the spirit of "always have an admin", we block it 
-            # if they are managing a clinic with other therapists.
+            # Es bloqueja només si hi ha altres membres que quedarien sense administrador.
             member_count = OrganisationMember.objects.filter(organisation=membership.organisation).count()
             if member_count > 1:
                 sole_admin_orgs.append(membership.organisation)
@@ -402,8 +396,8 @@ def delete_user_account(*, user):
     original_email = user.email
     anonymized_identifier = str(user.pk)
     user.email = f"deleted-{anonymized_identifier}@deleted.reflexia.local"
-    user.first_name = "Deleted"
-    user.last_name = "User"
+    user.first_name = "Usuari"
+    user.last_name = "Eliminat"
     user.two_factor_enabled = False
     user.two_factor_secret = ""
     user.two_factor_pending_secret = ""
@@ -435,8 +429,8 @@ def deactivate_patient_by_therapist(*, therapist, patient):
         raise DjangoValidationError({"patient": ["This patient is not assigned to the authenticated therapist."]})
 
     patient.email = f"deleted-{patient.pk}@deleted.reflexia.local"
-    patient.first_name = "Deleted"
-    patient.last_name = "Patient"
+    patient.first_name = "Pacient"
+    patient.last_name = "Eliminat"
     patient.two_factor_enabled = False
     patient.two_factor_secret = ""
     patient.two_factor_pending_secret = ""

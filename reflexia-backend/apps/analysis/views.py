@@ -33,11 +33,11 @@ class PatientAnalysisMixin:
 class PatientEntryAnalysisView(PatientAnalysisMixin, APIView):
     @extend_schema(
         tags=["Analysis"],
-        summary="Consultar l'analisi d'una entrada",
+        summary="Consultar l'anàlisi d'una entrada",
         responses={
             200: EmotionalAnalysisSerializer,
-            202: OpenApiResponse(description="Analisi encara no generada."),
-            403: OpenApiResponse(description="Nomes els pacients poden consultar aquesta analisi."),
+            202: OpenApiResponse(description="Anàlisi encara no generada."),
+            403: OpenApiResponse(description="Només els pacients poden consultar aquesta anàlisi."),
             404: OpenApiResponse(description="Entrada no trobada."),
         },
     )
@@ -50,7 +50,7 @@ class PatientEntryAnalysisView(PatientAnalysisMixin, APIView):
         analysis = getattr(entry, "analysis", None)
         if analysis is None:
             return Response(
-                {"detail": "L'analisi encara no s'ha generat.", "analysis": None},
+                {"detail": "L'anàlisi encara no s'ha generat.", "analysis": None},
                 status=status.HTTP_202_ACCEPTED,
             )
 
@@ -60,13 +60,13 @@ class PatientEntryAnalysisView(PatientAnalysisMixin, APIView):
 class PatientAnalyzeEntryView(PatientAnalysisMixin, APIView):
     @extend_schema(
         tags=["Analysis"],
-        summary="Generar analisi emocional d'una entrada",
+        summary="Generar anàlisi emocional d'una entrada",
         request=None,
         responses={
             200: JournalEntrySerializer,
-            403: OpenApiResponse(description="Nomes els pacients poden analitzar entrades propies."),
+            403: OpenApiResponse(description="Només els pacients poden analitzar entrades pròpies."),
             404: OpenApiResponse(description="Entrada no trobada."),
-            503: OpenApiResponse(description="Servei d'analisi no disponible."),
+            503: OpenApiResponse(description="Servei d'anàlisi no disponible."),
         },
     )
     def post(self, request, entry_id):
@@ -89,7 +89,7 @@ class PatientAnalyzeEntryView(PatientAnalysisMixin, APIView):
         entry.refresh_from_db()
         return Response(
             {
-                "message": "Analisi generada correctament. Recorda que es orientativa i sera revisada pel terapeuta.",
+                "message": "Anàlisi generada correctament. Recorda que és orientativa i serà revisada pel terapeuta.",
                 "entry": JournalEntrySerializer(entry).data,
             },
             status=status.HTTP_200_OK,
@@ -99,8 +99,8 @@ class PatientAnalyzeEntryView(PatientAnalysisMixin, APIView):
 class PatientEvolutionView(PatientAnalysisMixin, APIView):
     @extend_schema(
         tags=["Analysis"],
-        summary="Consultar evolucio emocional propia",
-        responses={200: OpenApiResponse(description="Dades cronologiques d'evolucio emocional.")},
+        summary="Consultar evolució emocional pròpia",
+        responses={200: OpenApiResponse(description="Dades cronològiques d'evolució emocional.")},
     )
     def get(self, request):
         patient, error_response = self.ensure_patient(request)
@@ -125,12 +125,12 @@ class TherapistPatientAnalysisMixin:
 class TherapistPatientEntryAnalysisView(TherapistPatientAnalysisMixin, APIView):
     @extend_schema(
         tags=["Analysis"],
-        summary="Consultar o corregir l'analisi emocional d'una entrada d'un pacient",
+        summary="Consultar o corregir l'anàlisi emocional d'una entrada d'un pacient",
         responses={
             200: EmotionalAnalysisSerializer,
-            202: OpenApiResponse(description="Analisi encara no generada."),
-            403: OpenApiResponse(description="Nomes terapeutes assignats."),
-            404: OpenApiResponse(description="Pacient, entrada o analisi no trobats."),
+            202: OpenApiResponse(description="Anàlisi encara no generada."),
+            403: OpenApiResponse(description="Només terapeutes assignats."),
+            404: OpenApiResponse(description="Pacient, entrada o anàlisi no trobats."),
         },
     )
     def get(self, request, patient_id, entry_id):
@@ -139,7 +139,7 @@ class TherapistPatientEntryAnalysisView(TherapistPatientAnalysisMixin, APIView):
         analysis = getattr(entry, "analysis", None)
         if analysis is None:
             return Response(
-                {"detail": "L'analisi encara no s'ha generat.", "analysis": None},
+                {"detail": "L'anàlisi encara no s'ha generat.", "analysis": None},
                 status=status.HTTP_202_ACCEPTED,
             )
 
@@ -147,13 +147,13 @@ class TherapistPatientEntryAnalysisView(TherapistPatientAnalysisMixin, APIView):
 
     @extend_schema(
         tags=["Analysis"],
-        summary="Afegir una correccio del terapeuta a l'analisi",
+        summary="Afegir una correcció del terapeuta a l'anàlisi",
         request=AnalysisCorrectionSerializer,
         responses={
             200: EmotionalAnalysisSerializer,
-            400: OpenApiResponse(description="Correccio no valida."),
-            403: OpenApiResponse(description="Nomes terapeutes assignats."),
-            404: OpenApiResponse(description="Pacient, entrada o analisi no trobats."),
+            400: OpenApiResponse(description="Correcció no vàlida."),
+            403: OpenApiResponse(description="Només terapeutes assignats."),
+            404: OpenApiResponse(description="Pacient, entrada o anàlisi no trobats."),
         },
     )
     def patch(self, request, patient_id, entry_id):
@@ -174,10 +174,10 @@ class TherapistPatientEntryAnalysisView(TherapistPatientAnalysisMixin, APIView):
 class TherapistPatientEvolutionView(TherapistPatientAnalysisMixin, APIView):
     @extend_schema(
         tags=["Analysis"],
-        summary="Consultar evolucio emocional d'un pacient assignat",
+        summary="Consultar evolució emocional d'un pacient assignat",
         responses={
-            200: OpenApiResponse(description="Dades cronologiques d'evolucio emocional."),
-            403: OpenApiResponse(description="Nomes terapeutes assignats."),
+            200: OpenApiResponse(description="Dades cronològiques d'evolució emocional."),
+            403: OpenApiResponse(description="Només terapeutes assignats."),
             404: OpenApiResponse(description="Pacient no trobat o no assignat."),
         },
     )

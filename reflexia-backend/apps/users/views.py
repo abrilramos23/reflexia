@@ -77,7 +77,7 @@ class TherapistRegistrationView(APIView):
                     "last_name": "Lopez",
                     "email": "therapist@example.com",
                     "license_number": "21039",
-                    "specialty": "Clinical Psychology",
+                    "specialty": "Psicologia clínica",
                     "registration_path": "create_clinic",
                     "organisation_name": "Centre Reflexia",
                 },

@@ -684,7 +684,7 @@ class DeleteAccountSerializer(RefreshTokenSerializer):
         attrs = super().validate(attrs)
         user = self.context["user"]
         if not user.check_password(attrs["password"]):
-            raise serializers.ValidationError({"password": "Current password is incorrect."})
+            raise serializers.ValidationError({"password": "La contrasenya actual no és correcta."})
         return attrs
 
     def save(self, **kwargs):

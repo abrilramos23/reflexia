@@ -127,8 +127,8 @@ export function PatientsPage() {
                 ...currentPatient,
                 is_active: false,
                 email: `deleted-${patient.id}@deleted.reflexia.local`,
-                first_name: 'Deleted',
-                last_name: 'Patient',
+                first_name: 'Pacient',
+                last_name: 'Eliminat',
               }
             : currentPatient,
         ),

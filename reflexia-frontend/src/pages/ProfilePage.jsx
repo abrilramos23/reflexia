@@ -7,7 +7,7 @@ import { consentDocumentUrl } from '../lib/api.js'
 
 function firstErrorMessage(error) {
   if (!error) {
-    return 'S`ha produït un error inesperat.'
+    return 'S’ha produït un error inesperat.'
   }
 
   if (typeof error === 'string') {
@@ -24,7 +24,7 @@ function firstErrorMessage(error) {
     return firstEntry
   }
 
-  return 'S`ha produït un error inesperat.'
+  return 'S’ha produït un error inesperat.'
 }
 
 
@@ -285,7 +285,7 @@ export function ProfilePage() {
                       type="text"
                       value={specialty}
                       onChange={(event) => setSpecialty(event.target.value)}
-                      placeholder="Trauma Therapy"
+                      placeholder="Psicologia clínica"
                     />
                   </div>
                 ) : null}
@@ -383,7 +383,7 @@ export function ProfilePage() {
 
           {!user.two_factor_enabled ? (
             <>
-              <div className="button-row" style={{padding: '20px 0'}}>
+              <div className="button-row button-row--padded">
                 <button className="button-secondary" type="button" onClick={handleTwoFactorSetup}>
                   Generar configuració 2FA
                 </button>
@@ -459,14 +459,14 @@ export function ProfilePage() {
           )}
         </section>
 
-        <section className="screen-card dashboard-panel" style={{ height: 'fit-content' }}>
+        <section className="screen-card dashboard-panel panel-fit">
           <div className="panel-heading">
             <p className="eyebrow">Accions ràpides</p>
             <h2>Seguretat i legal</h2>
           </div>
 
           <div className="button-row">
-            <a style={{ textDecoration: 'none' }} className="button-ghost" href={consentDocumentUrl} target="_blank" rel="noreferrer">
+            <a className="button-ghost link-clean" href={consentDocumentUrl} target="_blank" rel="noreferrer">
               Veure consentiment PDF
             </a>
           </div>
@@ -478,7 +478,7 @@ export function ProfilePage() {
             <h3>Tancar sessió</h3>
           </div>
 
-          <div className="button-row" style={{paddingTop: '10px'}}>
+          <div className="button-row button-row--small-top">
             <button className="button-ghost" type="button" onClick={handleLogout}>
               Tancar sessió
             </button>
@@ -494,8 +494,8 @@ export function ProfilePage() {
           {deleteMessage ? <div className="message">{deleteMessage}</div> : null}
           {deleteError ? <div className="error-banner">{deleteError}</div> : null}
 
-          <div className="content-card section-stack" style={{ textDecoration: 'none', backgroundColor: 'transparent', border: 'none', padding: '0',  }}>
-            <p className="muted" style={{ textDecoration: 'none', backgroundColor: 'transparent', border: 'none', paddingBottom: '10px' }}>
+          <div className="section-stack plain-section">
+            <p className="muted delete-account-note">
               Les dades no clíniques s&apos;eliminaran i la resta quedarà subjecta al període legal de conservació.
             </p>
           </div>
@@ -531,8 +531,8 @@ export function ProfilePage() {
 
           {soleAdminOrgs.length > 0 ? (
             <div className="content-card section-stack">
-              <h3 style={{ marginTop: '1rem' }}>Administració obligatòria d&apos;organitzacions</h3>
-              <p className="muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+              <h3 className="section-heading-offset">Administració obligatòria d&apos;organitzacions</h3>
+              <p className="muted compact-help">
                 No pots tancar el compte perquè ets l&apos;únic administrador d&apos;aquesta organització. 
                 Has de designar una altra persona com a administrador o donar de baixa l&apos;entitat abans de continuar.
               </p>

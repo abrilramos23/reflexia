@@ -244,7 +244,7 @@ class JournalEntryDetailView(PatientEntriesMixin, APIView):
 class PatientAnalyzeEntryView(PatientEntriesMixin, APIView):
     @extend_schema(
         tags=["Entries"],
-        summary="Generar analisi emocional d'una entrada visible",
+        summary="Generar anàlisi emocional d'una entrada visible",
         responses={
             200: inline_serializer(
                 name="PatientAnalyzeEntryResponse",
@@ -253,9 +253,9 @@ class PatientAnalyzeEntryView(PatientEntriesMixin, APIView):
                     "entry": JournalEntrySerializer(),
                 },
             ),
-            403: OpenApiResponse(description="Nomes els pacients poden analitzar entrades propies."),
+            403: OpenApiResponse(description="Només els pacients poden analitzar entrades pròpies."),
             404: OpenApiResponse(description="Entrada no trobada."),
-            503: OpenApiResponse(description="Servei d'analisi no disponible."),
+            503: OpenApiResponse(description="Servei d'anàlisi no disponible."),
         },
     )
     def post(self, request, entry_id):
@@ -275,7 +275,7 @@ class PatientAnalyzeEntryView(PatientEntriesMixin, APIView):
         entry.refresh_from_db()
         return Response(
             {
-                "message": "Analisi generada correctament. Recorda que es orientativa i sera revisada pel terapeuta.",
+                "message": "Anàlisi generada correctament. Recorda que és orientativa i serà revisada pel terapeuta.",
                 "entry": JournalEntrySerializer(entry).data,
             },
             status=status.HTTP_200_OK,
@@ -298,7 +298,7 @@ class PatientEntryExportView(PatientEntriesMixin, APIView):
         if entry is None:
             return Response({"detail": "Entrada no trobada."}, status=status.HTTP_404_NOT_FOUND)
 
-        pdf_bytes = render_entries_pdf(title="Exportacio d'una entrada de journaling", entries=[entry])
+        pdf_bytes = render_entries_pdf(title="Exportació d'una entrada de journaling", entries=[entry])
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{build_export_filename(prefix="entry", suffix=str(entry.pk)[:8])}"'
         return response
@@ -479,7 +479,7 @@ class TherapistPatientEntryExportView(TherapistPatientMixin, APIView):
     def get(self, request, patient_id, entry_id):
         patient = self.get_patient(request, patient_id)
         entry = get_object_or_404(self.get_visible_entries_queryset(patient=patient), pk=entry_id)
-        pdf_bytes = render_entries_pdf(title="Exportacio d'una entrada del pacient", entries=[entry])
+        pdf_bytes = render_entries_pdf(title="Exportació d'una entrada del pacient", entries=[entry])
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{build_export_filename(prefix="patient-entry", suffix=str(entry.pk)[:8])}"'
         return response

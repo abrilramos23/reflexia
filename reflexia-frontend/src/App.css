@@ -83,6 +83,57 @@
   gap: 20px;
 }
 
+.auth-form-stack {
+  display: grid;
+  gap: 20px;
+}
+
+.auth-register-link {
+  justify-self: center;
+  text-decoration: none;
+}
+
+.eyebrow--flush {
+  margin-bottom: 0;
+}
+
+.link-clean {
+  text-decoration: none;
+}
+
+.panel-fit {
+  height: fit-content;
+}
+
+.button-row--top {
+  margin-top: 15px;
+}
+
+.button-row--padded {
+  padding: 20px 0;
+}
+
+.button-row--small-top {
+  padding-top: 10px;
+}
+
+.plain-section {
+  padding: 0;
+}
+
+.delete-account-note {
+  padding-bottom: 10px;
+}
+
+.section-heading-offset {
+  margin-top: 1rem;
+}
+
+.compact-help {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
 .hero-lead {
   font-size: 1.05rem;
   line-height: 1.5;

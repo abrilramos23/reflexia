@@ -14,7 +14,7 @@ function formatRole(role) {
 
 function firstErrorMessage(error) {
   if (!error) {
-    return 'S`ha produït un error inesperat.'
+    return 'S’ha produït un error inesperat.'
   }
 
   if (typeof error === 'string') {
@@ -31,7 +31,7 @@ function firstErrorMessage(error) {
     return firstEntry
   }
 
-  return 'S`ha produït un error inesperat.'
+  return 'S’ha produït un error inesperat.'
 }
 
 function formatShortDate(value) {
@@ -284,7 +284,7 @@ export function DashboardPage() {
                           <div className="item-heading-row">
                             <strong>{formatEntryDate(entry.updated_at)}</strong>
                             <span className="status-pill">
-                              {entry.analysis ? entry.analysis.primary_emotion : 'Sense analisi'}
+                              {entry.analysis ? entry.analysis.primary_emotion : 'Sense anàlisi'}
                             </span>
                           </div>
                           <p className="muted">{entry.preview}</p>

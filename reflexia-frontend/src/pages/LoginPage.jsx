@@ -65,10 +65,10 @@ export function LoginPage() {
           </div>
         </aside>
 
-        <div style={{ display: "grid", gap: "20px" }}>
+        <div className="auth-form-stack">
             <section className="screen-card form-panel">
           <div className="panel-heading">
-            <p className="eyebrow" style={{ marginBottom: "0rem" }}>Iniciar sessió</p>
+            <p className="eyebrow eyebrow--flush">Iniciar sessió</p>
           </div>
 
           {successMessage ? <div className="message">{successMessage}</div> : null}
@@ -101,7 +101,7 @@ export function LoginPage() {
               />
             </div>
 
-            <div className="button-row" style={{ marginTop: "15px" }}>
+            <div className="button-row button-row--top">
               <button className="button" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Entrant...' : 'Entrar'}
               </button>
@@ -113,9 +113,8 @@ export function LoginPage() {
         </section>
         <section className="screen-card form-panel">
             <div className="panel-heading">
-              <p className="eyebrow" style={{ marginBottom: "0rem" }}>No tens un compte?</p>
-              <p style={{ margin: "0 0 1rem 0" }}>Registra&apos;t per accedir al teu compte.</p>
-              <Link className="button" style={{ justifySelf: "center", textDecoration: "none" }} to="/register/therapist">
+              <p className="eyebrow eyebrow--flush">No tens un compte?</p>
+              <Link className="button auth-register-link" to="/register/therapist">
                 Registre terapeuta
               </Link>
             </div>
