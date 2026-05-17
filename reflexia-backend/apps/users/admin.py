@@ -38,9 +38,9 @@ class OrganisationMemberAdmin(admin.ModelAdmin):
 
 @admin.register(InvitacioOrganitzacio)
 class InvitacioOrganitzacioAdmin(admin.ModelAdmin):
-    list_display = ("token", "idOrganitzacio", "dataCreacio", "dataCaducitat", "usat")
+    list_display = ("token", "email", "idOrganitzacio", "dataCreacio", "dataCaducitat", "usat")
     list_filter = ("usat", "idOrganitzacio")
-    search_fields = ("token", "idOrganitzacio__name")
+    search_fields = ("token", "email", "idOrganitzacio__name")
 
 
 @admin.register(User)

@@ -192,6 +192,10 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"invitation_token": "La invitació no pertany a una organització clínica."}
                 )
+            if invitation.email and invitation.email.lower() != attrs.get("email", "").lower():
+                raise serializers.ValidationError(
+                    {"email": "Aquest token d'invitació està vinculat a un altre correu electrònic."}
+                )
 
         if registration_path != self.RegistrationPath.JOIN_ORGANISATION and invitation_token:
             raise serializers.ValidationError(
@@ -216,12 +220,19 @@ class InvitacioOrganitzacioSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = InvitacioOrganitzacio
-        fields = ("token", "idOrganitzacio", "dataCreacio", "dataCaducitat", "usat")
+        fields = ("token", "email", "idOrganitzacio", "dataCreacio", "dataCaducitat", "usat")
         read_only_fields = ("token", "idOrganitzacio", "dataCreacio", "usat")
 
 
 class InvitacioOrganitzacioCreateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
     dataCaducitat = serializers.DateTimeField(required=False, allow_null=True)
+
+    def validate_email(self, value):
+        normalized_value = User.objects.normalize_email(value)
+        if User.objects.filter(email__iexact=normalized_value).exists():
+            raise serializers.ValidationError("Ja existeix un usuari amb aquest correu electrònic.")
+        return normalized_value
 
     def validate_dataCaducitat(self, value):
         if value is not None and value <= timezone.now():
@@ -233,6 +244,7 @@ class InvitacioOrganitzacioCreateSerializer(serializers.Serializer):
         try:
             return create_organisation_invitation(
                 admin=admin,
+                email=validated_data["email"],
                 dataCaducitat=validated_data.get("dataCaducitat"),
             )
         except DjangoValidationError as exc:

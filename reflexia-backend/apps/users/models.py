@@ -240,6 +240,7 @@ class OrganisationMember(models.Model):
 
 class InvitacioOrganitzacio(models.Model):
     token = models.CharField(max_length=36, unique=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(null=True, blank=True)
     idOrganitzacio = models.ForeignKey(
         Organisation,
         on_delete=models.CASCADE,

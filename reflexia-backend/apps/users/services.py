@@ -6,6 +6,7 @@ from django.core.mail import send_mail
 from django.db import transaction
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+from urllib.parse import urlencode
 
 from apps.users.models import (
     InvitacioOrganitzacio,
@@ -28,7 +29,7 @@ def create_organisation(*, name, type):
 
 
 @transaction.atomic
-def create_organisation_invitation(*, admin, dataCaducitat=None):
+def create_organisation_invitation(*, admin, email, dataCaducitat=None):
     membership = admin.organisation_memberships.select_related("organisation").filter(
         is_admin=True,
     ).first()
@@ -43,10 +44,24 @@ def create_organisation_invitation(*, admin, dataCaducitat=None):
             {"detail": ["Les organitzacions individuals no poden generar invitacions."]}
         )
 
-    return InvitacioOrganitzacio.objects.create(
+    normalized_email = User.objects.normalize_email(email)
+    if User.objects.filter(email__iexact=normalized_email).exists():
+        raise DjangoValidationError(
+            {"email": ["Ja existeix un usuari amb aquest correu electrònic."]}
+        )
+
+    invitation = InvitacioOrganitzacio.objects.create(
+        email=normalized_email,
         idOrganitzacio=organisation,
         dataCaducitat=dataCaducitat,
     )
+    invitation_url = build_organisation_invitation_url(invitation)
+    send_organisation_invitation_email(
+        invitation=invitation,
+        admin=admin,
+        invitation_url=invitation_url,
+    )
+    return invitation
 
 
 @transaction.atomic
@@ -114,6 +129,10 @@ def register_therapist(
             raise DjangoValidationError(
                 {"invitation_token": ["La invitació no pertany a una organització clínica."]}
             )
+        if invitation.email and invitation.email.lower() != email.lower():
+            raise DjangoValidationError(
+                {"email": ["Aquest token d'invitació està vinculat a un altre correu electrònic."]}
+            )
     else:
         raise DjangoValidationError({"registration_path": ["Camí de registre no vàlid."]})
 
@@ -177,6 +196,33 @@ def build_account_activation_url(user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     return f"{settings.FRONTEND_URL.rstrip('/')}/activate-account?uid={uid}&token={token}"
+
+
+def build_organisation_invitation_url(invitation):
+    query_params = {"token": invitation.token}
+    if invitation.email:
+        query_params["email"] = invitation.email
+    query = urlencode(query_params)
+    return f"{settings.FRONTEND_URL.rstrip('/')}/register/therapist?{query}"
+
+
+def send_organisation_invitation_email(*, invitation, admin, invitation_url):
+    organisation = invitation.idOrganitzacio
+    subject = f"Invitació per unir-te a {organisation.name} a Reflexia"
+    message = (
+        f"Hola,\n\n"
+        f"{admin.first_name} {admin.last_name} t'ha convidat a unir-te a {organisation.name} a Reflexia.\n"
+        "Fes servir aquest enllaç per completar el registre com a terapeuta:\n\n"
+        f"{invitation_url}\n\n"
+        "Aquest enllaç només es pot utilitzar una vegada."
+    )
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [invitation.email],
+        fail_silently=False,
+    )
 
 
 def send_clinic_admin_activation_email(*, user, organisation, activation_url):

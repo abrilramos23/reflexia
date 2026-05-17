@@ -155,6 +155,31 @@ class TherapistRegistrationTests(APITestCase):
         self.assertIn("invitation_token", response.data)
         self.assertEqual(Therapist.objects.count(), 0)
 
+    def test_register_therapist_rejects_invitation_email_mismatch(self):
+        org = Organisation.objects.create(name="Test Clinic", type=Organisation.Type.CLINIC)
+        invitation = InvitacioOrganitzacio.objects.create(
+            idOrganitzacio=org,
+            email="joan@example.com",
+        )
+
+        response = self.client.post(
+            self.url,
+            {
+                "first_name": "Laura",
+                "last_name": "Gomez",
+                "email": "laura@example.com",
+                "license_number": "30809",
+                "specialty": "Clinical Psychology",
+                "registration_path": "join_organisation",
+                "invitation_token": invitation.token,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
+        self.assertEqual(Therapist.objects.count(), 0)
+
     def test_register_therapist_rejects_unknown_license_number(self):
         payload = {
             "first_name": "Laura",
@@ -172,6 +197,10 @@ class TherapistRegistrationTests(APITestCase):
         self.assertEqual(Therapist.objects.count(), 0)
 
 
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    FRONTEND_URL="http://localhost:5173",
+)
 class OrganisationInvitationTests(APITestCase):
     def setUp(self):
         self.url = "/api/admin/organisations/invitations/"
@@ -221,12 +250,36 @@ class OrganisationInvitationTests(APITestCase):
     def test_clinic_admin_can_create_invitation_for_their_organisation(self):
         self.client.force_authenticate(user=self.admin)
 
-        response = self.client.post(self.url, {}, format="json")
+        response = self.client.post(
+            self.url,
+            {"email": "new-therapist@example.com"},
+            format="json",
+        )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         invitation = InvitacioOrganitzacio.objects.get(token=response.data["token"])
         self.assertEqual(invitation.idOrganitzacio, self.clinic)
+        self.assertEqual(invitation.email, "new-therapist@example.com")
         self.assertFalse(invitation.usat)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["new-therapist@example.com"])
+        self.assertIn("/register/therapist?", mail.outbox[0].body)
+        self.assertIn(f"token={invitation.token}", mail.outbox[0].body)
+        self.assertIn("email=new-therapist%40example.com", mail.outbox[0].body)
+
+    def test_clinic_admin_cannot_invite_existing_user_email(self):
+        self.client.force_authenticate(user=self.admin)
+
+        response = self.client.post(
+            self.url,
+            {"email": self.member.email},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
+        self.assertEqual(InvitacioOrganitzacio.objects.count(), 0)
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_non_admin_cannot_create_invitation(self):
         self.client.force_authenticate(user=self.member)
