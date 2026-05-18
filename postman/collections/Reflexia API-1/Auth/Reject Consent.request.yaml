@@ -5,7 +5,7 @@ description: >-
 
 
   **Auth:** JWT Bearer (IsAuthenticated + patient)
-url: "{{base_url}}/api/auth/consent/reject/"
+url: "{{base_url}}/api/users/consent/reject/"
 method: POST
 headers:
   Content-Type: application/json

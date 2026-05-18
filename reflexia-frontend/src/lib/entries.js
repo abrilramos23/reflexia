@@ -106,7 +106,7 @@ export function formatEntryStatus(entry) {
 
 export function formatRiskLevel(riskLevel) {
   if (!riskLevel) {
-    return 'Sense analisi'
+    return 'Sense anàlisi'
   }
 
   const labels = {

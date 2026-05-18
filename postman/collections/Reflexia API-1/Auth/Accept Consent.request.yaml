@@ -3,7 +3,7 @@ description: |-
   Accept the informed consent. Only callable by a patient user.
 
   **Auth:** JWT Bearer (IsAuthenticated + patient)
-url: "{{base_url}}/api/auth/consent/accept/"
+url: "{{base_url}}/api/users/consent/accept/"
 method: POST
 headers:
   Content-Type: application/json

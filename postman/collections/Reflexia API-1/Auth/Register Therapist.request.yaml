@@ -5,7 +5,7 @@ description: >-
 
 
   **Auth:** Admin user (IsAdminUser)
-url: "{{base_url}}/api/auth/register/therapist/"
+url: "{{base_url}}/api/users/register/therapist/"
 method: POST
 headers:
   Content-Type: application/json

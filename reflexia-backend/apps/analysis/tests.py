@@ -58,7 +58,7 @@ class AnalysisEndpointTests(APITestCase):
     def test_patient_gets_pending_message_when_analysis_does_not_exist(self):
         self.client.force_authenticate(user=self.patient)
 
-        response = self.client.get(f"/api/entries/{self.entry.pk}/analysis/")
+        response = self.client.get(f"/api/analysis/entries/{self.entry.pk}/")
 
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertIsNone(response.data["analysis"])
@@ -67,14 +67,14 @@ class AnalysisEndpointTests(APITestCase):
         self.create_analysis()
         self.client.force_authenticate(user=self.patient)
 
-        response = self.client.get(f"/api/entries/{self.entry.pk}/analysis/")
+        response = self.client.get(f"/api/analysis/entries/{self.entry.pk}/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["primary_emotion"], "Tristesa")
         self.assertEqual(response.data["risk_level"], "low")
         self.assertIn("disclaimer", response.data)
 
-    @patch("apps.entries.views.analyze_journal_entry")
+    @patch("apps.analysis.views.analyze_journal_entry")
     def test_patient_can_request_entry_analysis_generation(self, mocked_analyze):
         def create_mocked_analysis(entry):
             analysis = self.create_analysis(entry=entry)
@@ -83,7 +83,7 @@ class AnalysisEndpointTests(APITestCase):
         mocked_analyze.side_effect = create_mocked_analysis
         self.client.force_authenticate(user=self.patient)
 
-        response = self.client.post(f"/api/entries/{self.entry.pk}/analyze/", {}, format="json")
+        response = self.client.post(f"/api/analysis/entries/{self.entry.pk}/analyze/", {}, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["entry"]["analysis"]["primary_emotion"], "Tristesa")
@@ -126,7 +126,7 @@ class AnalysisEndpointTests(APITestCase):
         self.client.force_authenticate(user=self.therapist)
 
         response = self.client.patch(
-            f"/api/auth/patients/{self.patient.pk}/entries/{self.entry.pk}/analysis/",
+            f"/api/analysis/patients/{self.patient.pk}/entries/{self.entry.pk}/",
             {"therapist_correction": "La lectura correcta es ansietat anticipatoria lleu."},
             format="json",
         )
@@ -145,7 +145,7 @@ class AnalysisEndpointTests(APITestCase):
         self.client.force_authenticate(user=self.therapist)
 
         response = self.client.patch(
-            f"/api/auth/patients/{self.patient.pk}/entries/{self.entry.pk}/analysis/",
+            f"/api/analysis/patients/{self.patient.pk}/entries/{self.entry.pk}/",
             {"therapist_correction": "   "},
             format="json",
         )
@@ -160,7 +160,7 @@ class AnalysisEndpointTests(APITestCase):
         self.client.force_authenticate(user=self.other_therapist)
 
         response = self.client.get(
-            f"/api/auth/patients/{self.patient.pk}/entries/{self.entry.pk}/analysis/"
+            f"/api/analysis/patients/{self.patient.pk}/entries/{self.entry.pk}/"
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

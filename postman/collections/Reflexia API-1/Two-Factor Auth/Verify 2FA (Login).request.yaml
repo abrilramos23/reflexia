@@ -5,7 +5,7 @@ description: >-
 
 
   **Auth:** None (AllowAny)
-url: "{{base_url}}/api/auth/2fa/verify/"
+url: "{{base_url}}/api/users/2fa/verify/"
 method: POST
 headers:
   Content-Type: application/json

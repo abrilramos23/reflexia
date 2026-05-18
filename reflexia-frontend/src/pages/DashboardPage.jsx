@@ -5,19 +5,16 @@ import { EmotionalEvolutionPanel } from '../components/EmotionalEvolutionPanel.j
 import { useAuth } from '../context/AuthContext.jsx'
 import { consentDocumentUrl } from '../lib/api.js'
 import { formatEntryDate } from '../lib/entries.js'
-import { PlatformAdminDashboard } from './PlatformAdminDashboard.jsx'
-import { ClinicAdminDashboard } from './ClinicAdminDashboard.jsx'
 
 function formatRole(role) {
   if (role === 'therapist') return 'Terapeuta'
   if (role === 'patient') return 'Pacient'
-  if (role === 'platform_admin') return 'Admin Plataforma'
   return 'Usuari'
 }
 
 function firstErrorMessage(error) {
   if (!error) {
-    return 'S`ha produït un error inesperat.'
+    return 'S’ha produït un error inesperat.'
   }
 
   if (typeof error === 'string') {
@@ -34,7 +31,7 @@ function firstErrorMessage(error) {
     return firstEntry
   }
 
-  return 'S`ha produït un error inesperat.'
+  return 'S’ha produït un error inesperat.'
 }
 
 function formatShortDate(value) {
@@ -63,7 +60,7 @@ function buildTherapistActivityItem(patient) {
   if (!patient.is_active) {
     return {
       label: 'Compte inactiu',
-      description: 'Aquest pacient té el compte desactivat i no pot accedir a la plataforma.',
+      description: 'Compte desactivat.',
       tone: 'muted',
     }
   }
@@ -71,14 +68,14 @@ function buildTherapistActivityItem(patient) {
   if (!patient.consent_accepted) {
     return {
       label: 'Consentiment pendent',
-      description: 'El pacient ja té el compte actiu, però encara no ha completat el consentiment informat.',
+      description: 'Consentiment pendent.',
       tone: 'pending',
     }
   }
 
   return {
     label: 'Seguiment actiu',
-    description: 'El pacient està actiu i amb el consentiment acceptat.',
+    description: 'Consentiment acceptat.',
     tone: 'active',
   }
 }
@@ -197,14 +194,6 @@ export function DashboardPage() {
     }
   }
 
-  if (user.role === 'platform_admin') {
-    return <PlatformAdminDashboard />
-  }
-
-  if (isClinicAdmin) {
-    // We fall through to show the unified therapist/admin dashboard
-  }
-
   return (
     <div className="screen-shell">
       <div className="profile-grid">
@@ -263,16 +252,10 @@ export function DashboardPage() {
                 {activeQuestion ? (
                   <>
                     <h3 style={{ marginBlockEnd: '0' }}>{activeQuestion.text}</h3>
-                    <p className="muted">
-                      Aquesta és una pregunta personalitzada del teu terapeuta per ajudar-te a aprofundir en el teu procés.
-                    </p>
                   </>
                 ) : (
                   <>
                     <h3 style={{ marginBlockEnd: '0' }}>Cap pregunta activa disponible</h3>
-                    <p className="muted">
-                      Quan el teu terapeuta publiqui una nova pregunta, la veuràs aquí per poder-la respondre.
-                    </p>
                   </>
                 )}
               </div>
@@ -301,7 +284,7 @@ export function DashboardPage() {
                           <div className="item-heading-row">
                             <strong>{formatEntryDate(entry.updated_at)}</strong>
                             <span className="status-pill">
-                              {entry.analysis ? entry.analysis.primary_emotion : 'Sense analisi'}
+                              {entry.analysis ? entry.analysis.primary_emotion : 'Sense anàlisi'}
                             </span>
                           </div>
                           <p className="muted">{entry.preview}</p>
@@ -312,12 +295,6 @@ export function DashboardPage() {
                 ) : (
                   <>
                     <h3>Encara no hi ha entrades disponibles</h3>
-                    <p className="muted">
-                      Quan escriguis les primeres entrades, aquí apareixeran ordenades de la més recent a la més antiga amb el resultat de l&apos;anàlisi emocional.
-                    </p>
-                    <p className="muted">
-                      Et recomanem començar amb una primera entrada per tal que el sistema pugui començar a construir el teu context emocional.
-                    </p>
                   </>
                 )}
               </div>
@@ -332,7 +309,6 @@ export function DashboardPage() {
                 <div className="panel-heading">
                   <p className="eyebrow">Administració</p>
                   <h2>Gestió de la Clínica</h2>
-                  <p className="muted">Com a administrador, tens accés a la configuració de l&apos;entitat i la gestió de l&apos;equip.</p>
                 </div>
                 <div className="button-row">
                   <Link className="button-secondary" style={{ textDecoration: 'none' }} to="/clinic">
@@ -354,25 +330,21 @@ export function DashboardPage() {
                 <div className="dashboard-metric-card dashboard-metric-card--active">
                   <span style={{ fontWeight: 'bold' }}>Pacients actius</span>
                   <strong>{therapistDashboardData?.metrics.active_patients ?? '-'}</strong>
-                  <p>Total de pacients assignats amb accés actiu a la plataforma.</p>
                 </div>
 
                 <div className="dashboard-metric-card">
                   <span style={{ fontWeight: 'bold' }}>Total d&apos;entrades</span>
                   <strong>{therapistDashboardData?.metrics.total_entries ?? '-'}</strong>
-                  <p>Nombre total d&apos;entrades registrades pels teus pacients.</p>
                 </div>
 
                 <div className="dashboard-metric-card">
                   <span style={{ fontWeight: 'bold' }}>Entrades d&apos;avui</span>
                   <strong>{therapistDashboardData?.metrics.entries_today ?? '-'}</strong>
-                  <p>Entrades de journaling realitzades durant el dia d&apos;avui.</p>
                 </div>
 
                 <div className="dashboard-metric-card dashboard-metric-card--pending">
                   <span style={{ fontWeight: 'bold' }}>Anàlisis pendents</span>
                   <strong>{therapistDashboardData?.metrics.pending_analyses ?? '-'}</strong>
-                  <p>Entrades que encara no has revisat o corregit.</p>
                 </div>
               </div>
 

@@ -59,19 +59,16 @@ export function LoginPage() {
         <aside className="screen-card hero-panel">
           <div className="hero-copy">
             <p className="eyebrow">Reflexia</p>
-            <h1>Un únic accés per a terapeutes i pacients.</h1>
-            <p className="hero-lead">Inicia sessió per continuar el seguiment terapèutic.</p>
-          </div>
-          <div className="hero-footer">
-            <p className="muted">Si ets pacient, el teu terapeuta és qui t’ha creat el compte dins de la plataforma.</p>
+            <h1>Inicia sessió</h1>
+            <p className="hero-lead">Seguiment emocional entre pacient i terapeuta.</p>
+            <p>Si ets pacient, contacta amb el teu terapeuta per accedir-hi.</p>
           </div>
         </aside>
 
-        <section className="screen-card form-panel">
+        <div className="auth-form-stack">
+            <section className="screen-card form-panel">
           <div className="panel-heading">
-            <p className="eyebrow">Iniciar sessió</p>
-            <h2>Benvingut/da de nou</h2>
-            <p className="muted">Accedeix amb el teu correu electrònic i la teva contrasenya.</p>
+            <p className="eyebrow eyebrow--flush">Iniciar sessió</p>
           </div>
 
           {successMessage ? <div className="message">{successMessage}</div> : null}
@@ -104,16 +101,25 @@ export function LoginPage() {
               />
             </div>
 
-            <div className="button-row">
+            <div className="button-row button-row--top">
               <button className="button" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Entrant...' : 'Entrar'}
               </button>
               <Link className="text-link" to="/forgot-password">
                 He oblidat la contrasenya
-              </Link>
+              </Link>              
             </div>
           </form>
         </section>
+        <section className="screen-card form-panel">
+            <div className="panel-heading">
+              <p className="eyebrow eyebrow--flush">No tens un compte?</p>
+              <Link className="button auth-register-link" to="/register/therapist">
+                Registre terapeuta
+              </Link>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   )

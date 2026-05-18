@@ -12,10 +12,10 @@ description: >-
 
   - `authenticated` — tokens returned
 
-  - `two_factor_required` — must call `/api/auth/2fa/verify/`
+  - `two_factor_required` — must call `/api/users/2fa/verify/`
 
   - `consent_required` — patient must accept consent before using the app
-url: "{{base_url}}/api/auth/login/"
+url: "{{base_url}}/api/users/login/"
 method: POST
 headers:
   Content-Type: application/json

@@ -16,7 +16,7 @@ export function ForgotPasswordPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await api.post('/auth/password/forgot/', { email })
+      const response = await api.post('/users/password/forgot/', { email })
       setMessage(response.data.message)
     } catch {
       setError('No hem pogut tramitar la recuperació de contrasenya.')
@@ -32,10 +32,7 @@ export function ForgotPasswordPage() {
         <aside className="screen-card hero-panel">
           <div className="hero-copy">
             <p className="eyebrow">Recuperació</p>
-            <h1>Recupera l’accés amb un enllaç segur.</h1>
-            <p className="hero-lead">
-              Introdueix el teu correu i, si existeix, t’enviarem un enllaç temporal per restablir la contrasenya.
-            </p>
+            <h1>Recupera l’accés</h1>
           </div>
         </aside>
 

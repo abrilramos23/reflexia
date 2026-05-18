@@ -6,7 +6,7 @@ description: >-
 
 
   **Auth:** JWT Bearer (IsAuthenticated)
-url: "{{base_url}}/api/auth/2fa/setup/"
+url: "{{base_url}}/api/users/2fa/setup/"
 method: POST
 headers:
   Content-Type: application/json

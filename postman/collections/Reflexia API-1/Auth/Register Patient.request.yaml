@@ -5,7 +5,7 @@ description: >-
 
 
   **Auth:** Therapist JWT (IsTherapistUser)
-url: "{{base_url}}/api/auth/register/patient/"
+url: "{{base_url}}/api/users/register/patient/"
 method: POST
 headers:
   Content-Type: application/json

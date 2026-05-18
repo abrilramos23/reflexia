@@ -139,9 +139,7 @@ export function EntryDetailPage() {
               {entry.is_deleted ? (
                 <div className="content-card section-stack">
                   <h3>Entrada eliminada</h3>
-                  <p className="muted">
-                    Aquesta entrada s’ha conservat només de forma anonimitzada i ja no es pot editar.
-                  </p>
+                  <p className="muted">Conservada de forma anonimitzada.</p>
                 </div>
               ) : null}
 
@@ -164,12 +162,10 @@ export function EntryDetailPage() {
                 <EntryAnalysisPanel analysis={entry.analysis} />
               ) : (
                 <div className="content-card section-stack entries-analysis-card">
-                  <h3>Analisi emocional</h3>
-                  <p className="muted">
-                    L&apos;analisi encara no s&apos;ha generat. Pots generar-la ara per consultar les emocions detectades i el nivell de risc orientatiu.
-                  </p>
+                  <h3>Anàlisi emocional</h3>
+                  <p className="muted">Anàlisi pendent.</p>
                   <button className="button" type="button" disabled={isAnalyzing} onClick={handleAnalyzeEntry}>
-                    {isAnalyzing ? 'Generant analisi...' : 'Generar analisi'}
+                    {isAnalyzing ? 'Generant anàlisi...' : 'Generar anàlisi'}
                   </button>
                 </div>
               )}

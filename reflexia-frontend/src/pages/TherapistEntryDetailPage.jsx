@@ -218,7 +218,7 @@ export function TherapistEntryDetailPage() {
                         value={newNote}
                         onChange={(event) => setNewNote(event.target.value)}
                         rows={4}
-                        placeholder="Afegeix una observació clínica privada..."
+                        placeholder="Nota privada..."
                         autoFocus
                       />
                     </div>
@@ -246,7 +246,7 @@ export function TherapistEntryDetailPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="muted">Encara no has afegit notes privades a aquesta entrada.</p>
+                  <p className="muted">Sense notes privades.</p>
                 )}
               </div>
             </>

@@ -9,7 +9,7 @@ vi.mock('../context/AuthContext', () => ({
 }))
 
 vi.mock('../lib/api.js', () => ({
-  consentDocumentUrl: 'http://localhost/api/auth/consent/document/',
+  consentDocumentUrl: 'http://localhost/api/users/consent/document/',
 }))
 
 function renderConsent(user) {

@@ -13,14 +13,12 @@ import { LoginPage } from './pages/LoginPage.jsx'
 import { PatientsPage } from './pages/PatientsPage.jsx'
 import { ProfilePage } from './pages/ProfilePage.jsx'
 import { ResetPasswordPage } from './pages/ResetPasswordPage.jsx'
+import { TherapistRegisterPage } from './pages/TherapistRegisterPage.jsx'
 import { TwoFactorPage } from './pages/TwoFactorPage.jsx'
 import { ProtectedLayout } from './components/ProtectedLayout.jsx'
 import { PatientDetailPage } from './pages/PatientDetailPage.jsx'
 import { TherapistEntryDetailPage } from './pages/TherapistEntryDetailPage.jsx'
 import { TherapistQuestionDetailPage } from './pages/TherapistQuestionDetailPage.jsx'
-import { PlatformOrganisationsPage } from './pages/PlatformOrganisationsPage.jsx'
-import { PlatformClinicAdminsPage } from './pages/PlatformClinicAdminsPage.jsx'
-import { PlatformTherapistsPage } from './pages/PlatformTherapistsPage.jsx'
 import { ClinicAdminDashboard } from './pages/ClinicAdminDashboard.jsx'
 import { ClinicTherapistsPage } from './pages/ClinicTherapistsPage.jsx'
 import { SupportTherapistsPage } from './pages/SupportTherapistsPage.jsx'
@@ -32,8 +30,7 @@ function LoadingScreen() {
     <div className="screen-shell">
       <div className="screen-card screen-card--centered">
         <p className="eyebrow">Reflexia</p>
-        <h1>Preparant la teva sessió</h1>
-        <p className="muted">Estem comprovant l’autenticació i carregant l’estat del compte.</p>
+        <h1>Carregant</h1>
       </div>
     </div>
   )
@@ -57,6 +54,14 @@ function App() {
         }
       />
       <Route path="/activate-account" element={<ActivateAccountPage />} />
+      <Route
+        path="/register/therapist"
+        element={
+          <PublicRoute>
+            <TherapistRegisterPage />
+          </PublicRoute>
+        }
+      />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route
@@ -179,36 +184,12 @@ function App() {
           </ProtectedLayout>
         }
       />
-      
-      {/* Platform Admin Routes */}
-      <Route
-        path="/admin/organisations"
-        element={
-          <ProtectedLayout>
-            <PlatformOrganisationsPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/admin/clinic-admins"
-        element={
-          <ProtectedLayout>
-            <PlatformClinicAdminsPage />
-          </ProtectedLayout>
-        }
-      />
       {/* Clinic Admin Specific Routes */}
       <Route
         path="/admin/therapists"
         element={
           <ProtectedLayout>
-            {user?.role === 'platform_admin' ? (
-              <PlatformTherapistsPage />
-            ) : isClinicAdmin ? (
-              <ClinicTherapistsPage />
-            ) : (
-              <Navigate to="/dashboard" replace />
-            )}
+            {isClinicAdmin ? <ClinicTherapistsPage /> : <Navigate to="/dashboard" replace />}
           </ProtectedLayout>
         }
       />

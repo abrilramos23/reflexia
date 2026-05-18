@@ -38,7 +38,7 @@ export function ActivateAccountPage() {
     setIsSubmitting(true)
 
     try {
-      await api.post('/auth/activate/account/', {
+      await api.post('/users/activate/account/', {
         uid,
         token,
         password,
@@ -66,10 +66,7 @@ export function ActivateAccountPage() {
         <aside className="screen-card hero-panel">
           <div className="hero-copy">
             <p className="eyebrow">Activació de compte</p>
-            <h1>Defineix la teva contrasenya inicial.</h1>
-            <p className="hero-lead">
-              Aquest pas activa el teu compte de Reflexia i et permet definir la teva contrasenya inicial.
-            </p>
+            <h1>Defineix la contrasenya</h1>
           </div>
         </aside>
 
@@ -77,7 +74,6 @@ export function ActivateAccountPage() {
           <div className="panel-heading">
             <p className="eyebrow">Primer accés</p>
             <h2>Activar compte</h2>
-            <p className="muted">Escull una contrasenya segura per començar.</p>
           </div>
 
           {message ? <div className="message" style={{ marginBottom: '1rem' }}>{message}</div> : null}

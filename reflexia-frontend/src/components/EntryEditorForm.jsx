@@ -53,11 +53,7 @@ export function EntryEditorForm({
     <section className="screen-card dashboard-panel profile-card--wide entries-editor-shell">
       <div className="panel-heading">
         <h1 className="section-title">{entry ? 'Actualitza el contingut de l’entrada' : 'Escriu una nova entrada'}</h1>
-        <p className="muted">
-          {entry
-            ? `Última modificació: ${formatEntryDate(entry.updated_at)}`
-            : 'Pots guardar l’entrada com a esborrany o enviar-la a anàlisi quan estigui llesta.'}
-        </p>
+        {entry ? <p className="muted">Última modificació: {formatEntryDate(entry.updated_at)}</p> : null}
       </div>
 
       {error ? <div className="error-banner">{error}</div> : null}
@@ -74,9 +70,7 @@ export function EntryEditorForm({
             <p className="muted">Disponible des del {formatEntryDate(activeQuestion.created_at)}.</p>
           </>
         ) : (
-          <p className="muted">
-            Quan el teu terapeuta publiqui una nova pregunta de seguiment, la veuràs aquí.
-          </p>
+          <p className="muted">Cap pregunta activa.</p>
         )}
       </div>
       <div className="entries-toolbar">
@@ -107,7 +101,7 @@ export function EntryEditorForm({
         <p className="muted entries-editor-hint">
           {plainTextContent
             ? `${plainTextContent.length} caràcters de contingut.`
-            : 'L’entrada no pot quedar buida.'}
+            : 'Escriu alguna cosa per continuar.'}
         </p>
       </div>
 
@@ -137,9 +131,7 @@ export function EntryEditorForm({
         <div className="item-heading-row" style={{ marginBottom: 0 }}>
           <h3>Avís clínic</h3>
         </div>
-        <p className="muted">
-          L’anàlisi emocional és orientativa, es genera automàticament i serà revisada pel teu terapeuta.
-        </p>
+        <p className="muted">L’anàlisi és orientativa i serà revisada pel teu terapeuta.</p>
       </div>
     </section>
   )

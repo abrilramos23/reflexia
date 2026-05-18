@@ -7,8 +7,11 @@ from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 
 from apps.users.models import (
+    InvitacioOrganitzacio,
     Organisation,
     OrganisationMember,
     Patient,
@@ -22,10 +25,9 @@ from apps.users.services import (
     change_user_password,
     deactivate_patient_by_therapist,
     delete_user_account,
-    register_clinic_admin,
     register_patient,
     register_therapist,
-    create_organisation,
+    create_organisation_invitation,
     reset_user_password,
     send_password_reset_email,
     update_user_profile,
@@ -36,16 +38,6 @@ class OrganisationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organisation
         fields = ("id", "name", "type", "is_active", "created_at")
-
-
-class OrganisationCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Organisation
-        fields = ("id", "name", "type")
-
-    def create(self, validated_data):
-        organisation = create_organisation(**validated_data)
-        return organisation
 
 
 class OrganisationUpdateSerializer(serializers.ModelSerializer):
@@ -96,22 +88,26 @@ class UserSummarySerializer(serializers.ModelSerializer):
             "specialty",
         )
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_consent_accepted(self, obj):
         if hasattr(obj, "patient_profile"):
             return obj.patient_profile.consent_accepted
         return None
 
+    @extend_schema_field(OrganisationSerializer)
     def get_organisation(self, obj):
         organisation = obj.organisation
         if organisation is None:
             return None
         return OrganisationSerializer(organisation).data
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_specialty(self, obj):
         if hasattr(obj, "therapist_profile"):
             return obj.therapist_profile.specialty
         return None
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_license_number(self, obj):
         if hasattr(obj, "therapist_profile"):
             return obj.therapist_profile.license_number
@@ -119,8 +115,21 @@ class UserSummarySerializer(serializers.ModelSerializer):
 
 
 class TherapistRegistrationSerializer(serializers.ModelSerializer):
-    organisation_id = serializers.UUIDField(required=False, write_only=True)
-    is_admin = serializers.BooleanField(required=False, default=False)
+    class RegistrationPath:
+        INDEPENDENT = "independent"
+        CREATE_CLINIC = "create_clinic"
+        JOIN_ORGANISATION = "join_organisation"
+
+    registration_path = serializers.ChoiceField(
+        choices=(
+            RegistrationPath.INDEPENDENT,
+            RegistrationPath.CREATE_CLINIC,
+            RegistrationPath.JOIN_ORGANISATION,
+        ),
+        write_only=True,
+    )
+    organisation_name = serializers.CharField(max_length=255, required=False, write_only=True)
+    invitation_token = serializers.CharField(max_length=36, required=False, write_only=True)
 
     class Meta:
         model = Therapist
@@ -131,8 +140,9 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
             "email",
             "license_number",
             "specialty",
-            "organisation_id",
-            "is_admin",
+            "registration_path",
+            "organisation_name",
+            "invitation_token",
             "registration_date",
             "two_factor_enabled",
         )
@@ -153,77 +163,86 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
         return normalized_value
 
     def validate(self, attrs):
-        organisation = self.context.get("organisation")
-        organisation_id = attrs.get("organisation_id")
-        is_admin = attrs.get("is_admin", False)
+        registration_path = attrs.get("registration_path")
+        organisation_name = attrs.get("organisation_name", "").strip()
+        invitation_token = attrs.get("invitation_token", "").strip()
 
-        if organisation_id and organisation is None:
-            try:
-                organisation = Organisation.objects.get(pk=organisation_id)
-            except Organisation.DoesNotExist as exc:
-                raise serializers.ValidationError({"organisation_id": "Organisation not found."}) from exc
-
-        if is_admin and organisation is None:
+        if registration_path == self.RegistrationPath.CREATE_CLINIC and not organisation_name:
             raise serializers.ValidationError(
-                {"is_admin": "A therapist can only be assigned as organisation admin when linked to an organisation."}
+                {"organisation_name": "El nom de l'organització és obligatori per crear una clínica."}
             )
+
+        if registration_path == self.RegistrationPath.JOIN_ORGANISATION:
+            if not invitation_token:
+                raise serializers.ValidationError(
+                    {"invitation_token": "El token d'invitació és obligatori per unir-se a una organització."}
+                )
+            invitation = InvitacioOrganitzacio.objects.filter(token=invitation_token).first()
+            if invitation is None or not invitation.is_usable:
+                raise serializers.ValidationError(
+                    {"invitation_token": "La invitació no és vàlida, ja s'ha usat o ha caducat."}
+                )
+            if invitation.idOrganitzacio.type != Organisation.Type.CLINIC:
+                raise serializers.ValidationError(
+                    {"invitation_token": "La invitació no pertany a una organització clínica."}
+                )
+            if invitation.email and invitation.email.lower() != attrs.get("email", "").lower():
+                raise serializers.ValidationError(
+                    {"email": "Aquest token d'invitació està vinculat a un altre correu electrònic."}
+                )
+
+        if registration_path != self.RegistrationPath.JOIN_ORGANISATION and invitation_token:
+            raise serializers.ValidationError(
+                {"invitation_token": "El token només es pot usar en el camí d'unir-se a una organització."}
+            )
+
+        attrs["organisation_name"] = organisation_name
 
         return attrs
 
     def create(self, validated_data):
-        organisation_id = validated_data.pop("organisation_id", None)
-        is_admin = validated_data.pop("is_admin", False)
-        organisation = self.context.get("organisation")
-        
-        # If PlatformAdmin provided an organisation_id, use it
-        if organisation_id:
-            try:
-                organisation = Organisation.objects.get(pk=organisation_id)
-            except Organisation.DoesNotExist:
-                raise serializers.ValidationError({"organisation_id": "Organisation not found."})
-
-        therapist, activation_url = register_therapist(
-            organisation=organisation,
-            is_admin=is_admin,
-            **validated_data,
-        )
+        try:
+            therapist, activation_url = register_therapist(**validated_data)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages) from exc
         self.context["activation_url"] = activation_url
         return therapist
 
 
-class ClinicAdminRegistrationSerializer(serializers.Serializer):
-    organisation_id = serializers.UUIDField()
-    therapist_id = serializers.UUIDField()
+class InvitacioOrganitzacioSerializer(serializers.ModelSerializer):
+    idOrganitzacio = serializers.UUIDField(source="idOrganitzacio.id", read_only=True)
 
-    def validate(self, attrs):
-        try:
-            organisation = Organisation.objects.get(pk=attrs["organisation_id"])
-        except Organisation.DoesNotExist as exc:
-            raise serializers.ValidationError({"organisation_id": "Organisation not found."}) from exc
+    class Meta:
+        model = InvitacioOrganitzacio
+        fields = ("token", "email", "idOrganitzacio", "dataCreacio", "dataCaducitat", "usat")
+        read_only_fields = ("token", "idOrganitzacio", "dataCreacio", "usat")
 
-        try:
-            therapist = Therapist.objects.get(pk=attrs["therapist_id"])
-        except Therapist.DoesNotExist as exc:
-            raise serializers.ValidationError({"therapist_id": "Therapist not found."}) from exc
 
-        if therapist.organisation != organisation:
-            raise serializers.ValidationError(
-                {"therapist_id": "This therapist does not belong to the selected organisation."}
-            )
+class InvitacioOrganitzacioCreateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    dataCaducitat = serializers.DateTimeField(required=False, allow_null=True)
 
-        if therapist.is_clinic_admin:
-            raise serializers.ValidationError(
-                {"therapist_id": "This therapist is already a clinic administrator."}
-            )
+    def validate_email(self, value):
+        normalized_value = User.objects.normalize_email(value)
+        if User.objects.filter(email__iexact=normalized_value).exists():
+            raise serializers.ValidationError("Ja existeix un usuari amb aquest correu electrònic.")
+        return normalized_value
 
-        attrs["organisation"] = organisation
-        attrs["therapist"] = therapist
-        return attrs
+    def validate_dataCaducitat(self, value):
+        if value is not None and value <= timezone.now():
+            raise serializers.ValidationError("La data de caducitat ha de ser futura.")
+        return value
 
     def create(self, validated_data):
-        organisation = validated_data["organisation"]
-        therapist = validated_data["therapist"]
-        return register_clinic_admin(therapist=therapist, organisation=organisation)
+        admin = self.context["admin"]
+        try:
+            return create_organisation_invitation(
+                admin=admin,
+                email=validated_data["email"],
+                dataCaducitat=validated_data.get("dataCaducitat"),
+            )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages) from exc
 
 
 class TherapistAdminUpdateSerializer(serializers.Serializer):
@@ -665,7 +684,7 @@ class DeleteAccountSerializer(RefreshTokenSerializer):
         attrs = super().validate(attrs)
         user = self.context["user"]
         if not user.check_password(attrs["password"]):
-            raise serializers.ValidationError({"password": "Current password is incorrect."})
+            raise serializers.ValidationError({"password": "La contrasenya actual no és correcta."})
         return attrs
 
     def save(self, **kwargs):

@@ -94,16 +94,14 @@ const chartOptions = {
 
 export function EmotionalEvolutionPanel({ evolution, isLoading = false }) {
   if (isLoading) {
-    return <p className="muted">Carregant evolucio emocional...</p>
+    return <p className="muted">Carregant evolució...</p>
   }
 
   if (!evolution || !evolution.has_enough_data) {
     return (
       <div className="content-card section-stack entries-summary-card">
         <h3>Encara no hi ha prou informació</h3>
-        <p className="muted">
-          {evolution?.message || 'Calen almenys dues entrades analitzades per construir el grafic d’evolucio emocional.'}
-        </p>
+        <p className="muted">{evolution?.message || 'Calen almenys dues entrades analitzades.'}</p>
       </div>
     )
   }

@@ -38,7 +38,7 @@ export function ResetPasswordPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await api.post('/auth/password/reset/', {
+      const response = await api.post('/users/password/reset/', {
         uid,
         token,
         password,

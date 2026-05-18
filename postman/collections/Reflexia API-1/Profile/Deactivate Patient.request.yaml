@@ -3,7 +3,7 @@ description: |-
   Deactivate (discharge) a patient assigned to the authenticated therapist.
 
   **Auth:** JWT Bearer (IsTherapistUser)
-url: "{{base_url}}/api/auth/patients/deactivate/"
+url: "{{base_url}}/api/users/patients/deactivate/"
 method: POST
 headers:
   Content-Type: application/json

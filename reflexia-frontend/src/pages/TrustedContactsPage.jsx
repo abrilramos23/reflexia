@@ -191,9 +191,7 @@ export function TrustedContactsPage() {
           <div className="panel-heading">
             <p className="eyebrow">Contactes associats</p>
             <h1 className="section-title">Persones de confiança</h1>
-            <p className="muted">
-              Gestiona els teus contactes de confiança. Aquestes persones podran ser contactades en cas de necessitat.
-            </p>
+            <p className="muted">Contactes per a situacions de necessitat.</p>
           </div>
         </section>
 

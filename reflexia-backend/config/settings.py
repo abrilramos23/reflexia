@@ -147,11 +147,22 @@ SPECTACULAR_SETTINGS = {
         'filter': True,
     },
     'TAGS': [
-        {'name': 'auth', 'description': 'Autenticacio, registre, recuperacio i tancament de sessio.'},
-        {'name': 'profile', 'description': 'Gestio del perfil, consentiment i eliminacio de compte.'},
-        {'name': '2fa', 'description': 'Configuracio i verificacio del doble factor d’autenticacio.'},
-        {'name': 'contacts', 'description': 'Gestio de contactes associats i terapeutes de suport.'},
-        {'name': 'documents', 'description': 'Documents legals i recursos descarregables.'},
+        {
+            'name': 'Users',
+            'description': 'Autenticacio, perfil, consentiment, pacients assignats i administracio de clinica.',
+        },
+        {
+            'name': 'Contacts',
+            'description': 'Contactes associats del pacient i terapeutes de suport.',
+        },
+        {
+            'name': 'Entries',
+            'description': 'Entrades de journaling, exportacions, notes privades i preguntes terapeutiques.',
+        },
+        {
+            'name': 'Analysis',
+            'description': 'Analisi emocional, evolucio i correccions cliniques.',
+        },
     ],
 }
 

@@ -9,9 +9,9 @@ from apps.entries.models import JournalEntry
 
 DELETED_ENTRY_PLACEHOLDER = "Aquesta entrada ha estat eliminada i anonimitzada."
 ENTRY_DELETION_EXPLANATION = (
-    "Per obligacio legal de conservacio de la documentacio clinica, l'entrada es deixa de mostrar "
-    "per al pacient pero es mantindra anonimitzada durant el termini minim de retencio. "
-    "Si necessites mes informacio, pots exercir el teu dret d'acces i demanar-la al centre o al teu terapeuta."
+    "Per obligació legal de conservació de la documentació clínica, l'entrada es deixa de mostrar "
+    "per al pacient però es mantindrà anonimitzada durant el termini mínim de retenció. "
+    "Si necessites més informació, pots exercir el teu dret d'accés i demanar-la al centre o al teu terapeuta."
 )
 
 
@@ -56,11 +56,11 @@ def render_entries_pdf(*, title, entries):
 
     for index, entry in enumerate(entries, start=1):
         created_at = timezone.localtime(entry.created_at).strftime("%d/%m/%Y %H:%M")
-        risk_level = getattr(getattr(entry, "analysis", None), "risk_level", "sense analisi")
+        risk_level = getattr(getattr(entry, "analysis", None), "risk_level", "sense anàlisi")
         lines.extend(
             [
                 f"Entrada {index}",
-                f"Data de creacio: {created_at}",
+                f"Data de creació: {created_at}",
                 f"Nivell de risc: {risk_level}",
             ]
         )

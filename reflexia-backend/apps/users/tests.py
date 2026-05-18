@@ -11,6 +11,7 @@ from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, Ou
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.models import (
+    InvitacioOrganitzacio,
     Organisation,
     Patient,
     ProfessionalDirectoryEntry,
@@ -27,39 +28,41 @@ from apps.users.models import (
 )
 class TherapistRegistrationTests(APITestCase):
     def setUp(self):
-        self.org = Organisation.objects.create(
-            name="Test Clinic",
-            type=Organisation.Type.CLINIC,
-        )
         ProfessionalDirectoryEntry.objects.create(
             license_number="30809",
             complete_name="LAURA GOMEZ",
         )
-        self.admin_user = User.objects.create_superuser(
-            email="admin@example.com",
-            password="AdminPass123!",
-            first_name="Admin",
-            last_name="User",
+        ProfessionalDirectoryEntry.objects.create(
+            license_number="21039",
+            complete_name="MARTA LOPEZ",
         )
-        self.url = "/api/auth/register/therapist/"
+        ProfessionalDirectoryEntry.objects.create(
+            license_number="17105",
+            complete_name="JOAN SERRA",
+        )
+        self.url = "/api/users/register/therapist/"
 
-    def test_register_therapist_successfully_for_admin(self):
-        self.client.force_authenticate(user=self.admin_user)
+    def test_register_independent_therapist_creates_individual_organisation(self):
         payload = {
             "first_name": "Laura",
             "last_name": "Gomez",
             "email": "laura@example.com",
             "license_number": "30809",
             "specialty": "Clinical Psychology",
+            "registration_path": "independent",
         }
 
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Therapist.objects.count(), 1)
+        self.assertEqual(Organisation.objects.count(), 1)
         therapist = Therapist.objects.get(email="laura@example.com")
+        organisation = therapist.organisation
         self.assertEqual(therapist.first_name, "Laura")
         self.assertEqual(therapist.license_number, "30809")
+        self.assertEqual(organisation.type, Organisation.Type.INDIVIDUAL)
+        self.assertEqual(OrganisationMember.objects.get(user=therapist).is_admin, False)
         self.assertFalse(therapist.is_active)
         self.assertFalse(therapist.has_usable_password())
         self.assertEqual(len(mail.outbox), 1)
@@ -67,28 +70,124 @@ class TherapistRegistrationTests(APITestCase):
         self.assertEqual(mail.outbox[0].to, ["laura@example.com"])
         self.assertNotIn("password", response.data)
 
-    def test_register_therapist_requires_admin_user(self):
+    def test_register_therapist_can_create_clinic_as_admin(self):
         payload = {
-            "first_name": "Laura",
-            "last_name": "Gomez",
-            "email": "laura@example.com",
-            "license_number": "30809",
+            "first_name": "Marta",
+            "last_name": "Lopez",
+            "email": "marta@example.com",
+            "license_number": "21039",
             "specialty": "Clinical Psychology",
+            "registration_path": "create_clinic",
+            "organisation_name": "Centre Reflexia",
         }
 
         response = self.client.post(self.url, payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        therapist = Therapist.objects.get(email="marta@example.com")
+        organisation = therapist.organisation
+        self.assertEqual(organisation.name, "Centre Reflexia")
+        self.assertEqual(organisation.type, Organisation.Type.CLINIC)
+        self.assertTrue(
+            OrganisationMember.objects.filter(
+                user=therapist,
+                organisation=organisation,
+                is_admin=True,
+            ).exists()
+        )
+        self.assertTrue(response.data["is_clinic_admin"])
+
+    def test_register_therapist_can_join_existing_organisation_with_invitation(self):
+        admin = Therapist.objects.create_user(
+            email="admin-clinic@example.com",
+            password="StrongPass123!",
+            first_name="Admin",
+            last_name="Clinic",
+            license_number="21039",
+            specialty="Clinical Psychology",
+        )
+        org = Organisation.objects.create(name="Test Clinic", type=Organisation.Type.CLINIC)
+        OrganisationMember.objects.create(user=admin, organisation=org, is_admin=True)
+        invitation = InvitacioOrganitzacio.objects.create(idOrganitzacio=org)
+        payload = {
+            "first_name": "Joan",
+            "last_name": "Serra",
+            "email": "joan@example.com",
+            "license_number": "17105",
+            "specialty": "Trauma Therapy",
+            "registration_path": "join_organisation",
+            "invitation_token": invitation.token,
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        therapist = Therapist.objects.get(email="joan@example.com")
+        self.assertTrue(
+            OrganisationMember.objects.filter(
+                user=therapist,
+                organisation=org,
+                is_admin=False,
+            ).exists()
+        )
+        invitation.refresh_from_db()
+        self.assertTrue(invitation.usat)
+
+    def test_register_therapist_rejects_used_invitation(self):
+        org = Organisation.objects.create(name="Test Clinic", type=Organisation.Type.CLINIC)
+        invitation = InvitacioOrganitzacio.objects.create(idOrganitzacio=org, usat=True)
+
+        response = self.client.post(
+            self.url,
+            {
+                "first_name": "Laura",
+                "last_name": "Gomez",
+                "email": "laura@example.com",
+                "license_number": "30809",
+                "specialty": "Clinical Psychology",
+                "registration_path": "join_organisation",
+                "invitation_token": invitation.token,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("invitation_token", response.data)
+        self.assertEqual(Therapist.objects.count(), 0)
+
+    def test_register_therapist_rejects_invitation_email_mismatch(self):
+        org = Organisation.objects.create(name="Test Clinic", type=Organisation.Type.CLINIC)
+        invitation = InvitacioOrganitzacio.objects.create(
+            idOrganitzacio=org,
+            email="joan@example.com",
+        )
+
+        response = self.client.post(
+            self.url,
+            {
+                "first_name": "Laura",
+                "last_name": "Gomez",
+                "email": "laura@example.com",
+                "license_number": "30809",
+                "specialty": "Clinical Psychology",
+                "registration_path": "join_organisation",
+                "invitation_token": invitation.token,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
         self.assertEqual(Therapist.objects.count(), 0)
 
     def test_register_therapist_rejects_unknown_license_number(self):
-        self.client.force_authenticate(user=self.admin_user)
         payload = {
             "first_name": "Laura",
             "last_name": "Gomez",
             "email": "laura@example.com",
             "license_number": "99999",
             "specialty": "Clinical Psychology",
+            "registration_path": "independent",
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -97,30 +196,162 @@ class TherapistRegistrationTests(APITestCase):
         self.assertIn("license_number", response.data)
         self.assertEqual(Therapist.objects.count(), 0)
 
-    def test_register_therapist_can_assign_organisation_admin_role(self):
-        self.client.force_authenticate(user=self.admin_user)
-        payload = {
-            "first_name": "Laura",
-            "last_name": "Gomez",
-            "email": "laura-admin@example.com",
-            "license_number": "30809",
-            "specialty": "Clinical Psychology",
-            "organisation_id": str(self.org.id),
-            "is_admin": True,
-        }
 
-        response = self.client.post(self.url, payload, format="json")
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    FRONTEND_URL="http://localhost:5173",
+)
+class OrganisationInvitationTests(APITestCase):
+    def setUp(self):
+        self.url = "/api/users/admin/organisations/invitations/"
+        self.clinic = Organisation.objects.create(
+            name="Test Clinic",
+            type=Organisation.Type.CLINIC,
+        )
+        self.individual = Organisation.objects.create(
+            name="Independent",
+            type=Organisation.Type.INDIVIDUAL,
+        )
+        self.admin = Therapist.objects.create_user(
+            email="clinic-admin@example.com",
+            password="StrongPass123!",
+            first_name="Marta",
+            last_name="Lopez",
+            license_number="16385",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        OrganisationMember.objects.create(user=self.admin, organisation=self.clinic, is_admin=True)
+        self.member = Therapist.objects.create_user(
+            email="member@example.com",
+            password="StrongPass123!",
+            first_name="Joan",
+            last_name="Serra",
+            license_number="17105",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        OrganisationMember.objects.create(user=self.member, organisation=self.clinic, is_admin=False)
+        self.independent_therapist = Therapist.objects.create_user(
+            email="solo@example.com",
+            password="StrongPass123!",
+            first_name="Solo",
+            last_name="Therapist",
+            license_number="21039",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        OrganisationMember.objects.create(
+            user=self.independent_therapist,
+            organisation=self.individual,
+            is_admin=False,
+        )
+
+    def test_clinic_admin_can_create_invitation_for_their_organisation(self):
+        self.client.force_authenticate(user=self.admin)
+
+        response = self.client.post(
+            self.url,
+            {"email": "new-therapist@example.com"},
+            format="json",
+        )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        therapist = Therapist.objects.get(email="laura-admin@example.com")
-        self.assertTrue(
-            OrganisationMember.objects.filter(
-                user=therapist,
-                organisation=self.org,
-                is_admin=True,
-            ).exists()
+        invitation = InvitacioOrganitzacio.objects.get(token=response.data["token"])
+        self.assertEqual(invitation.idOrganitzacio, self.clinic)
+        self.assertEqual(invitation.email, "new-therapist@example.com")
+        self.assertFalse(invitation.usat)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["new-therapist@example.com"])
+        self.assertIn("/register/therapist?", mail.outbox[0].body)
+        self.assertIn(f"token={invitation.token}", mail.outbox[0].body)
+        self.assertIn("email=new-therapist%40example.com", mail.outbox[0].body)
+
+    def test_clinic_admin_cannot_invite_existing_user_email(self):
+        self.client.force_authenticate(user=self.admin)
+
+        response = self.client.post(
+            self.url,
+            {"email": self.member.email},
+            format="json",
         )
-        self.assertTrue(response.data["is_clinic_admin"])
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
+        self.assertEqual(InvitacioOrganitzacio.objects.count(), 0)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_non_admin_cannot_create_invitation(self):
+        self.client.force_authenticate(user=self.member)
+
+        response = self.client.post(self.url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(InvitacioOrganitzacio.objects.count(), 0)
+
+    def test_individual_organisation_cannot_create_invitation(self):
+        self.client.force_authenticate(user=self.independent_therapist)
+
+        response = self.client.post(self.url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(InvitacioOrganitzacio.objects.count(), 0)
+
+
+class OrganisationMembershipConstraintTests(APITestCase):
+    def setUp(self):
+        self.individual = Organisation.objects.create(
+            name="Individual",
+            type=Organisation.Type.INDIVIDUAL,
+        )
+        self.clinic = Organisation.objects.create(
+            name="Clinic",
+            type=Organisation.Type.CLINIC,
+        )
+        self.therapist = Therapist.objects.create_user(
+            email="therapist-constraint@example.com",
+            password="StrongPass123!",
+            first_name="Marta",
+            last_name="Lopez",
+            license_number="16385",
+            specialty="Clinical Psychology",
+        )
+        self.other_therapist = Therapist.objects.create_user(
+            email="other-constraint@example.com",
+            password="StrongPass123!",
+            first_name="Joan",
+            last_name="Serra",
+            license_number="17105",
+            specialty="Clinical Psychology",
+        )
+
+    def test_individual_organisation_accepts_only_one_member(self):
+        OrganisationMember.objects.create(
+            user=self.therapist,
+            organisation=self.individual,
+            is_admin=False,
+        )
+
+        with self.assertRaises(ValidationError):
+            OrganisationMember.objects.create(
+                user=self.other_therapist,
+                organisation=self.individual,
+                is_admin=False,
+            )
+
+    def test_therapist_can_only_belong_to_one_organisation(self):
+        OrganisationMember.objects.create(
+            user=self.therapist,
+            organisation=self.individual,
+            is_admin=False,
+        )
+
+        with self.assertRaises(ValidationError):
+            OrganisationMember.objects.create(
+                user=self.therapist,
+                organisation=self.clinic,
+                is_admin=False,
+            )
 
 
 @override_settings(
@@ -142,7 +373,7 @@ class PatientRegistrationTests(APITestCase):
             specialty="Clinical Psychology",
         )
         OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
-        self.url = "/api/auth/register/patient/"
+        self.url = "/api/users/register/patient/"
 
     def test_register_patient_successfully_for_therapist(self):
         self.client.force_authenticate(user=self.therapist)
@@ -243,8 +474,8 @@ class TherapistPatientManagementTests(APITestCase):
         )
         # Link patients to therapist (required for therapist patience list)
         TherapistPatient.objects.create(therapist=self.therapist, patient=self.patient)
-        self.list_url = "/api/auth/patients/"
-        self.register_url = "/api/auth/register/patient/"
+        self.list_url = "/api/users/patients/"
+        self.register_url = "/api/users/register/patient/"
 
     def test_therapist_can_list_assigned_patients(self):
         self.client.force_authenticate(user=self.therapist)
@@ -299,7 +530,7 @@ class AccountActivationTests(APITestCase):
         )
         self.therapist.set_unusable_password()
         self.therapist.save(update_fields=["password", "is_active"])
-        self.url = "/api/auth/activate/account/"
+        self.url = "/api/users/activate/account/"
 
     def test_activate_patient_account_successfully(self):
         uid = urlsafe_base64_encode(force_bytes(self.patient.pk))
@@ -394,15 +625,15 @@ class LoginTests(APITestCase):
         )
         self.inactive_patient.set_password("StrongPass123!")
         self.inactive_patient.save(update_fields=["password", "is_active"])
-        self.login_url = "/api/auth/login/"
-        self.logout_url = "/api/auth/logout/"
-        self.me_url = "/api/auth/me/"
-        self.accept_consent_url = "/api/auth/consent/accept/"
-        self.reject_consent_url = "/api/auth/consent/reject/"
-        self.two_factor_setup_url = "/api/auth/2fa/setup/"
-        self.two_factor_enable_url = "/api/auth/2fa/enable/"
-        self.two_factor_verify_url = "/api/auth/2fa/verify/"
-        self.two_factor_disable_url = "/api/auth/2fa/disable/"
+        self.login_url = "/api/users/login/"
+        self.logout_url = "/api/users/logout/"
+        self.me_url = "/api/users/me/"
+        self.accept_consent_url = "/api/users/consent/accept/"
+        self.reject_consent_url = "/api/users/consent/reject/"
+        self.two_factor_setup_url = "/api/users/2fa/setup/"
+        self.two_factor_enable_url = "/api/users/2fa/enable/"
+        self.two_factor_verify_url = "/api/users/2fa/verify/"
+        self.two_factor_disable_url = "/api/users/2fa/disable/"
 
     def test_login_returns_jwt_tokens_for_therapist(self):
         response = self.client.post(
@@ -605,7 +836,7 @@ class LoginTests(APITestCase):
 
 class ConsentDocumentTests(APITestCase):
     def test_consent_document_is_available(self):
-        response = self.client.get("/api/auth/consent/document/")
+        response = self.client.get("/api/users/consent/document/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response["Content-Type"], "application/pdf")
@@ -623,8 +854,8 @@ class PasswordRecoveryTests(APITestCase):
             first_name="Recover",
             last_name="User",
         )
-        self.forgot_url = "/api/auth/password/forgot/"
-        self.reset_url = "/api/auth/password/reset/"
+        self.forgot_url = "/api/users/password/forgot/"
+        self.reset_url = "/api/users/password/reset/"
 
     def test_forgot_password_sends_email_when_user_exists(self):
         response = self.client.post(
@@ -708,10 +939,10 @@ class ProfileManagementTests(APITestCase):
             specialty="Clinical Psychology",
         )
         OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
-        self.patient_me_url = "/api/auth/me/"
-        self.change_password_url = "/api/auth/change-password/"
-        self.delete_account_url = "/api/auth/delete-account/"
-        self.patient_deactivate_url = "/api/auth/patients/deactivate/"
+        self.patient_me_url = "/api/users/me/"
+        self.change_password_url = "/api/users/change-password/"
+        self.delete_account_url = "/api/users/delete-account/"
+        self.patient_deactivate_url = "/api/users/patients/deactivate/"
 
     def test_patient_can_update_email(self):
         refresh = RefreshToken.for_user(self.patient)
@@ -891,12 +1122,6 @@ class MultiTenancyAndAdminTests(APITestCase):
             name="Test Clinic",
             type=Organisation.Type.CLINIC,
         )
-        self.platform_admin = User.objects.create_superuser(
-            email="platform@example.com",
-            password="AdminPass123!",
-            first_name="Platform",
-            last_name="Admin",
-        )
         self.therapist = Therapist.objects.create_user(
             email="therapist@example.com",
             password="StrongPass123!",
@@ -909,31 +1134,7 @@ class MultiTenancyAndAdminTests(APITestCase):
         OrganisationMember.objects.create(
             user=self.therapist, organisation=self.org, is_admin=True
         )
-        self.stats_platform_url = "/api/admin/stats/platform/"
-        self.stats_clinic_url = "/api/admin/stats/clinic/"
-        self.organisations_url = "/api/admin/organisations/"
-        self.clinic_admins_url = "/api/admin/users/clinic-admins/"
-        self.register_clinic_admin_url = "/api/admin/register/clinic-admin/"
-        self.therapists_url = "/api/admin/users/therapists/"
-
-    def test_platform_admin_can_get_platform_stats(self):
-        self.client.force_authenticate(user=self.platform_admin)
-
-        response = self.client.get(self.stats_platform_url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("total_organisations", response.data)
-        self.assertIn("total_users", response.data)
-        self.assertEqual(response.data["total_clinic_admins"], 1)
-        self.assertEqual(response.data["users_by_role"]["therapist"], 1)
-        self.assertIn("users_by_role", response.data)
-
-    def test_therapist_cannot_access_platform_stats(self):
-        self.client.force_authenticate(user=self.therapist)
-
-        response = self.client.get(self.stats_platform_url)
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.stats_clinic_url = "/api/users/admin/stats/clinic/"
 
     def test_clinic_admin_can_get_clinic_stats(self):
         active_patient = Patient.objects.create_user(
@@ -989,49 +1190,8 @@ class MultiTenancyAndAdminTests(APITestCase):
         self.assertEqual(response.data["total_therapists"], 1)
         self.assertEqual(response.data["total_patients"], 1)
 
-    def test_platform_admin_can_list_organisations(self):
-        self.client.force_authenticate(user=self.platform_admin)
-
-        response = self.client.get(self.organisations_url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["name"], "Test Clinic")
-
-    def test_platform_admin_can_create_organisation(self):
-        self.client.force_authenticate(user=self.platform_admin)
-
-        response = self.client.post(
-            self.organisations_url,
-            {"name": "Nova Clínica", "type": Organisation.Type.CLINIC},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Organisation.objects.count(), 2)
-        self.assertEqual(response.data["name"], "Nova Clínica")
-
-    def test_therapist_cannot_access_organisation_list(self):
+    def test_clinic_admin_can_assign_existing_therapist_as_clinic_admin(self):
         self.client.force_authenticate(user=self.therapist)
-
-        response = self.client.get(self.organisations_url)
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_platform_admin_lists_include_flat_organisation_fields(self):
-        self.client.force_authenticate(user=self.platform_admin)
-
-        admins_response = self.client.get(self.clinic_admins_url)
-        therapists_response = self.client.get(self.therapists_url)
-
-        self.assertEqual(admins_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(therapists_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(admins_response.data[0]["organisation"]["name"], "Test Clinic")
-        self.assertTrue(admins_response.data[0]["is_clinic_admin"])
-        self.assertEqual(therapists_response.data[0]["organisation"]["name"], "Test Clinic")
-
-    def test_platform_admin_can_assign_existing_therapist_as_clinic_admin(self):
-        self.client.force_authenticate(user=self.platform_admin)
         therapist_to_assign = Therapist.objects.create_user(
             email="clinic-admin@example.com",
             password="StrongPass123!",
@@ -1047,16 +1207,13 @@ class MultiTenancyAndAdminTests(APITestCase):
             is_admin=False,
         )
 
-        response = self.client.post(
-            self.register_clinic_admin_url,
-            {
-                "organisation_id": str(self.org.id),
-                "therapist_id": str(therapist_to_assign.id),
-            },
+        response = self.client.patch(
+            f"/api/users/admin/therapists/{therapist_to_assign.id}/",
+            {"is_admin": True},
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         therapist_to_assign.refresh_from_db()
         self.assertEqual(therapist_to_assign.license_number, "17105")
         self.assertEqual(therapist_to_assign.specialty, "Psicologia Clínica")
@@ -1115,12 +1272,12 @@ class AccessControlTests(APITestCase):
     def test_patient_cannot_access_patient_list(self):
         self.client.force_authenticate(user=self.patient)
 
-        response = self.client.get("/api/auth/patients/")
+        response = self.client.get("/api/users/patients/")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_cannot_access_me(self):
-        response = self.client.get("/api/auth/me/")
+        response = self.client.get("/api/users/me/")
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -1128,7 +1285,7 @@ class AccessControlTests(APITestCase):
         self.client.force_authenticate(user=self.patient)
 
         response = self.client.post(
-            "/api/auth/patients/deactivate/",
+            "/api/users/patients/deactivate/",
             {"patient_id": str(self.patient.pk)},
             format="json",
         )
@@ -1139,7 +1296,7 @@ class AccessControlTests(APITestCase):
         TherapistPatient.objects.create(therapist=self.therapist, patient=self.patient)
         self.client.force_authenticate(user=self.therapist)
 
-        response = self.client.get(f"/api/auth/patients/{self.patient.pk}/")
+        response = self.client.get(f"/api/users/patients/{self.patient.pk}/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["email"], self.patient.email)
@@ -1147,7 +1304,7 @@ class AccessControlTests(APITestCase):
     def test_therapist_cannot_get_unassigned_patient_detail(self):
         self.client.force_authenticate(user=self.therapist)
 
-        response = self.client.get(f"/api/auth/patients/{self.patient.pk}/")
+        response = self.client.get(f"/api/users/patients/{self.patient.pk}/")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -1161,12 +1318,6 @@ class AdminEntityManagementTests(APITestCase):
         self.other_org = Organisation.objects.create(
             name="Other Clinic",
             type=Organisation.Type.CLINIC,
-        )
-        self.platform_admin = User.objects.create_superuser(
-            email="platform@example.com",
-            password="StrongPass123!",
-            first_name="Platform",
-            last_name="Admin",
         )
         self.clinic_admin = Therapist.objects.create_user(
             email="clinic-admin@example.com",
@@ -1213,7 +1364,7 @@ class AdminEntityManagementTests(APITestCase):
         self.client.force_authenticate(user=self.clinic_admin)
 
         response = self.client.patch(
-            f"/api/admin/organisations/{self.org.pk}/",
+            f"/api/users/admin/organisations/{self.org.pk}/",
             {"name": "Central Clinic Updated"},
             format="json",
         )
@@ -1226,7 +1377,7 @@ class AdminEntityManagementTests(APITestCase):
         self.client.force_authenticate(user=self.clinic_admin)
 
         response = self.client.patch(
-            f"/api/admin/organisations/{self.other_org.pk}/",
+            f"/api/users/admin/organisations/{self.other_org.pk}/",
             {"name": "Forbidden"},
             format="json",
         )
@@ -1237,7 +1388,7 @@ class AdminEntityManagementTests(APITestCase):
         self.client.force_authenticate(user=self.clinic_admin)
 
         response = self.client.patch(
-            f"/api/admin/users/therapists/{self.therapist.pk}/",
+            f"/api/users/admin/therapists/{self.therapist.pk}/",
             {"specialty": "Trauma"},
             format="json",
         )
@@ -1250,27 +1401,31 @@ class AdminEntityManagementTests(APITestCase):
         self.client.force_authenticate(user=self.clinic_admin)
 
         response = self.client.patch(
-            f"/api/admin/users/therapists/{self.other_therapist.pk}/",
+            f"/api/users/admin/therapists/{self.other_therapist.pk}/",
             {"specialty": "Forbidden"},
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_platform_admin_can_soft_delete_organisation(self):
-        self.client.force_authenticate(user=self.platform_admin)
+    def test_clinic_admin_can_soft_delete_own_organisation(self):
+        self.client.force_authenticate(user=self.clinic_admin)
 
-        response = self.client.delete(f"/api/admin/organisations/{self.org.pk}/")
+        response = self.client.delete(f"/api/users/admin/organisations/{self.org.pk}/")
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.org.refresh_from_db()
         self.assertFalse(self.org.is_active)
 
-    def test_platform_admin_can_revoke_clinic_admin_role(self):
-        self.client.force_authenticate(user=self.platform_admin)
+    def test_clinic_admin_can_revoke_clinic_admin_role(self):
+        self.client.force_authenticate(user=self.clinic_admin)
 
-        response = self.client.delete(f"/api/admin/users/clinic-admins/{self.clinic_admin.pk}/")
+        response = self.client.patch(
+            f"/api/users/admin/therapists/{self.second_admin.pk}/",
+            {"is_admin": False},
+            format="json",
+        )
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        membership = OrganisationMember.objects.get(user=self.clinic_admin, organisation=self.org)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        membership = OrganisationMember.objects.get(user=self.second_admin, organisation=self.org)
         self.assertFalse(membership.is_admin)
