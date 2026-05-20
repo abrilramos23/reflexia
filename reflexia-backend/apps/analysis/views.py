@@ -119,6 +119,7 @@ class TherapistPatientAnalysisMixin:
             Patient,
             pk=patient_id,
             therapist_links__therapist=therapist,
+            therapist_links__is_active=True,
         )
 
 

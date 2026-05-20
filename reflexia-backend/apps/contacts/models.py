@@ -2,6 +2,7 @@ import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from apps.users.models import Patient, Therapist
 
@@ -57,6 +58,11 @@ class DefaultContact(models.Model):
 
 
 class SupportTherapist(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        ACCEPTED = "accepted", "Accepted"
+        REJECTED = "rejected", "Rejected"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     therapist = models.ForeignKey(
         Therapist,
@@ -68,10 +74,14 @@ class SupportTherapist(models.Model):
         on_delete=models.CASCADE,
         related_name="supported_by_links",
     )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    requested_at = models.DateTimeField(default=timezone.now)
+    responded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = "support therapist relationship"
         verbose_name_plural = "support therapist relationships"
+        ordering = ("-requested_at",)
         constraints = [
             models.UniqueConstraint(
                 fields=("therapist", "support"),
@@ -86,3 +96,15 @@ class SupportTherapist(models.Model):
     def clean(self):
         if self.therapist_id == self.support_id:
             raise ValidationError("A therapist cannot be their own support therapist.")
+
+    def accept(self):
+        self.status = self.Status.ACCEPTED
+        self.responded_at = timezone.now()
+        self.save(update_fields=["status", "responded_at"])
+        return self
+
+    def reject(self):
+        self.status = self.Status.REJECTED
+        self.responded_at = timezone.now()
+        self.save(update_fields=["status", "responded_at"])
+        return self

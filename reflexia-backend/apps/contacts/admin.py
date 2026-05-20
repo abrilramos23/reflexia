@@ -18,7 +18,8 @@ class DefaultContactAdmin(admin.ModelAdmin):
 
 @admin.register(SupportTherapist)
 class SupportTherapistAdmin(admin.ModelAdmin):
-    list_display = ("therapist", "support")
+    list_display = ("therapist", "support", "status", "requested_at", "responded_at")
+    list_filter = ("status",)
     search_fields = (
         "therapist__email",
         "therapist__license_number",

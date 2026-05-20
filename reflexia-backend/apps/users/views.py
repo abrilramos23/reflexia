@@ -24,6 +24,8 @@ from apps.users.serializers import (
     PatientConsentAcceptSerializer,
     PatientConsentRejectSerializer,
     PatientRegistrationSerializer,
+    PatientTherapistChangeSerializer,
+    PatientTherapistOptionSerializer,
     RefreshTokenSerializer,
     ProfileUpdateSerializer,
     TherapistRegistrationSerializer,
@@ -140,8 +142,6 @@ class PatientRegistrationView(APIView):
                     "last_name": serializers.CharField(),
                     "email": serializers.EmailField(),
                     "birth_date": serializers.DateField(),
-                    "consent_accepted": serializers.BooleanField(),
-                    "consent_date": serializers.DateTimeField(allow_null=True),
                     "registration_date": serializers.DateTimeField(),
                     "two_factor_enabled": serializers.BooleanField(),
                     "activation_email_sent": serializers.BooleanField(),
@@ -157,7 +157,6 @@ class PatientRegistrationView(APIView):
                     "last_name": "Sanchez",
                     "email": "patient@example.com",
                     "birth_date": "2001-01-10",
-                    "consent_accepted": False,
                 },
                 request_only=True,
             )
@@ -249,7 +248,7 @@ class LoginView(APIView):
                         "email": "therapist@example.com",
                         "two_factor_enabled": True,
                         "is_active": True,
-                        "consent_accepted": None,
+                        "legal_terms_accepted": True,
                         "role": "therapist",
                     },
                     "access": None,
@@ -493,7 +492,8 @@ class TherapistPatientListView(APIView):
     )
     def get(self, request):
         patients = Patient.objects.filter(
-            therapist_links__therapist=request.user.therapist_profile
+            therapist_links__therapist=request.user.therapist_profile,
+            therapist_links__is_active=True,
         ).order_by("first_name", "last_name")
         return Response(
             TherapistPatientSummarySerializer(patients, many=True).data,
@@ -513,7 +513,8 @@ class TherapistPatientDetailView(APIView):
         patient = get_object_or_404(
             Patient,
             pk=patient_id,
-            therapist_links__therapist=request.user.therapist_profile
+            therapist_links__therapist=request.user.therapist_profile,
+            therapist_links__is_active=True,
         )
         return Response(
             TherapistPatientSummarySerializer(patient).data,
@@ -547,6 +548,7 @@ class TherapistDashboardView(APIView):
     def get(self, request):
         therapist = request.user.therapist_profile
         patients = Patient.objects.filter(therapist_links__therapist=therapist)
+        patients = patients.filter(therapist_links__is_active=True)
         
         # Metrics
         active_patients = patients.filter(is_active=True)
@@ -610,11 +612,11 @@ class PatientConsentAcceptView(APIView):
 
     @extend_schema(
         tags=["Users"],
-        summary="Acceptar consentiment informat",
+        summary="Acceptar document legal",
         request=None,
         responses={
             200: inline_serializer(
-                name="PatientConsentAcceptResponse",
+                name="LegalConsentAcceptResponse",
                 fields={
                     "message": serializers.CharField(),
                     "user": UserSummarySerializer(),
@@ -623,18 +625,12 @@ class PatientConsentAcceptView(APIView):
         },
     )
     def post(self, request):
-        if not hasattr(request.user, "patient_profile"):
-            return Response(
-                {"detail": "Only patients can accept informed consent."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        serializer = PatientConsentAcceptSerializer(context={"patient": request.user.patient_profile})
-        patient = serializer.save()
+        serializer = PatientConsentAcceptSerializer(context={"user": request.user})
+        user = serializer.save()
         return Response(
             {
                 "message": "Consent accepted successfully.",
-                "user": UserSummarySerializer(patient).data,
+                "user": UserSummarySerializer(user).data,
             },
             status=status.HTTP_200_OK,
         )
@@ -645,26 +641,82 @@ class PatientConsentRejectView(APIView):
 
     @extend_schema(
         tags=["Users"],
-        summary="Rebutjar consentiment informat",
+        summary="Rebutjar document legal",
         request=RefreshTokenSerializer,
         responses={200: inline_serializer(name="PatientConsentRejectResponse", fields={"message": serializers.CharField()})},
     )
     def post(self, request):
-        if not hasattr(request.user, "patient_profile"):
-            return Response(
-                {"detail": "Only patients can reject informed consent."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         serializer = PatientConsentRejectSerializer(
             data=request.data,
-            context={"patient": request.user.patient_profile},
+            context={"user": request.user},
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(
             {
                 "message": "Consent rejected. The account has been deactivated.",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class PatientTherapistChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Users"],
+        summary="Consultar terapeutes disponibles per canvi",
+        responses={200: PatientTherapistOptionSerializer(many=True)},
+    )
+    def get(self, request):
+        if not hasattr(request.user, "patient_profile"):
+            return Response(
+                {"detail": "Only patients can request therapist changes."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        patient = request.user.patient_profile
+        active_link = patient.therapist_links.filter(is_active=True).select_related("therapist").first()
+        if active_link is None:
+            return Response([], status=status.HTTP_200_OK)
+
+        therapists = Therapist.objects.filter(
+            organisation_memberships__organisation=active_link.therapist.organisation,
+            is_active=True,
+        ).exclude(pk=active_link.therapist_id).order_by("first_name", "last_name")
+        return Response(PatientTherapistOptionSerializer(therapists, many=True).data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        tags=["Users"],
+        summary="Canviar el terapeuta assignat",
+        request=PatientTherapistChangeSerializer,
+        responses={
+            200: inline_serializer(
+                name="PatientTherapistChangeResponse",
+                fields={
+                    "message": serializers.CharField(),
+                    "therapist": PatientTherapistOptionSerializer(),
+                },
+            ),
+        },
+    )
+    def post(self, request):
+        if not hasattr(request.user, "patient_profile"):
+            return Response(
+                {"detail": "Only patients can request therapist changes."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = PatientTherapistChangeSerializer(
+            data=request.data,
+            context={"patient": request.user.patient_profile},
+        )
+        serializer.is_valid(raise_exception=True)
+        new_link = serializer.save()
+        return Response(
+            {
+                "message": "Therapist changed successfully.",
+                "therapist": PatientTherapistOptionSerializer(new_link.therapist).data,
             },
             status=status.HTTP_200_OK,
         )
@@ -798,14 +850,25 @@ class ConsentDocumentView(APIView):
         },
     )
     def get(self, request):
-        pdf_path = Path(__file__).resolve().parent / "data" / "Reflexia_ Consentiment Informat.pdf"
+        role = request.query_params.get("role", "patient")
+        filename = (
+            "Reflexia_ Consentiment professional.pdf"
+            if role == User.Role.THERAPIST
+            else "Reflexia_ Consentiment Informat.pdf"
+        )
+        download_name = (
+            "Reflexia_Consentiment_Professional.pdf"
+            if role == User.Role.THERAPIST
+            else "Reflexia_Consentiment_Informat.pdf"
+        )
+        pdf_path = Path(__file__).resolve().parent / "data" / filename
         if not pdf_path.exists():
             raise Http404("Consent document not found.")
 
         return FileResponse(
             pdf_path.open("rb"),
             content_type="application/pdf",
-            filename="Reflexia_Consentiment_Informat.pdf",
+            filename=download_name,
         )
 
 

@@ -140,16 +140,12 @@ def register_patient(
     last_name,
     email,
     birth_date,
-    consent_accepted=False,
-    consent_date=None,
 ):
     patient = Patient(
         first_name=first_name,
         last_name=last_name,
         email=email,
         birth_date=birth_date,
-        consent_accepted=consent_accepted,
-        consent_date=consent_date,
         role=User.Role.PATIENT,
         is_active=False,
     )
@@ -183,6 +179,9 @@ def send_organisation_invitation_email(*, invitation, admin, invitation_url):
         f"{admin.first_name} {admin.last_name} t'ha convidat a unir-te a {organisation.name} a Reflexia.\n"
         "Fes servir aquest enllaç per completar el registre com a terapeuta:\n\n"
         f"{invitation_url}\n\n"
+        "Abans d'accedir-hi hauràs d'acceptar les condicions professionals, "
+        "el deure de confidencialitat i la política de protecció de dades aplicable "
+        "al tractament de dades de salut.\n\n"
         "Aquest enllaç només es pot utilitzar una vegada."
     )
     send_mail(
@@ -217,6 +216,8 @@ def send_therapist_activation_email(*, therapist, activation_url):
     message = (
         f"Hola {therapist.first_name},\n\n"
         "Un administrador ha creat el teu compte de terapeuta a Reflexia.\n"
+        "En el primer accés hauràs d'acceptar les condicions professionals, confidencialitat "
+        "i normativa de protecció de dades abans d'entrar al panell.\n"
         "Utilitza aquest enllaç per definir la contrasenya i activar l'accés:\n\n"
         f"{activation_url}\n\n"
         "Si no esperaves aquest correu, pots ignorar-lo."
@@ -288,6 +289,47 @@ def send_account_deleted_email(*, user_email):
     )
 
 
+def send_patient_therapist_changed_email(*, patient, previous_therapist, new_therapist):
+    subject = "Canvi de terapeuta a Reflexia"
+    message = (
+        f"Hola {patient.first_name},\n\n"
+        "Hem registrat el canvi de terapeuta a Reflexia.\n"
+        f"Terapeuta anterior: {previous_therapist.first_name} {previous_therapist.last_name}.\n"
+        f"Nou terapeuta: {new_therapist.first_name} {new_therapist.last_name}.\n\n"
+        "El terapeuta anterior deixa de tenir accés ordinari a les teves dades dins la plataforma. "
+        "La documentació clínica es conserva segons les obligacions legals aplicables."
+    )
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [patient.email],
+        fail_silently=False,
+    )
+
+
+@transaction.atomic
+def change_patient_therapist(*, patient, current_link, new_therapist):
+    current_link = TherapistPatient.objects.select_for_update().select_related("therapist").get(
+        pk=current_link.pk,
+    )
+    previous_therapist = current_link.therapist
+    current_link.is_active = False
+    current_link.save(update_fields=["is_active"])
+
+    new_link, _ = TherapistPatient.objects.update_or_create(
+        therapist=new_therapist,
+        patient=patient,
+        defaults={"is_active": True},
+    )
+    send_patient_therapist_changed_email(
+        patient=patient,
+        previous_therapist=previous_therapist,
+        new_therapist=new_therapist,
+    )
+    return new_link
+
+
 @transaction.atomic
 def activate_user_account(*, user, password):
     validate_password(password, user=user)
@@ -344,6 +386,7 @@ def delete_user_account(*, user):
     if hasattr(user, "therapist_profile"):
         active_patient_links = TherapistPatient.objects.filter(
             therapist=user.therapist_profile,
+            is_active=True,
             patient__is_active=True,
         ).select_related("patient")
         active_patients_count = active_patient_links.count()

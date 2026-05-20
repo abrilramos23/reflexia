@@ -12,6 +12,8 @@ from apps.contacts.serializers import (
     AvailableTherapistSerializer,
     SupportTherapistCreateSerializer,
     SupportTherapistListSerializer,
+    SupportTherapistRequestSerializer,
+    SupportTherapistResponseSerializer,
 )
 from apps.users.models import Therapist
 from apps.users.permissions import IsTherapistUser
@@ -216,6 +218,52 @@ class SupportTherapistListCreateView(APIView):
         return Response(SupportTherapistListSerializer(link).data, status=status.HTTP_201_CREATED)
 
 
+class SupportTherapistRequestListView(APIView):
+    permission_classes = [IsTherapistUser]
+
+    @extend_schema(
+        tags=["Contacts"],
+        summary="Llistar sol·licituds pendents per ser terapeuta de suport",
+        responses={200: SupportTherapistRequestSerializer(many=True)},
+    )
+    def get(self, request):
+        therapist = request.user.therapist_profile
+        requests = SupportTherapist.objects.filter(
+            support=therapist,
+            status=SupportTherapist.Status.PENDING,
+        ).select_related("therapist")
+        return Response(SupportTherapistRequestSerializer(requests, many=True).data, status=status.HTTP_200_OK)
+
+
+class SupportTherapistRequestRespondView(APIView):
+    permission_classes = [IsTherapistUser]
+
+    @extend_schema(
+        tags=["Contacts"],
+        summary="Acceptar o rebutjar una sol·licitud de suport",
+        request=SupportTherapistResponseSerializer,
+        responses={200: SupportTherapistRequestSerializer},
+    )
+    def post(self, request, request_id):
+        link = SupportTherapist.objects.filter(
+            pk=request_id,
+            support=request.user.therapist_profile,
+            status=SupportTherapist.Status.PENDING,
+        ).select_related("therapist").first()
+
+        if link is None:
+            return Response({"detail": "Support request not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = SupportTherapistResponseSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if serializer.validated_data["action"] == "accept":
+            link.accept()
+        else:
+            link.reject()
+
+        return Response(SupportTherapistRequestSerializer(link).data, status=status.HTTP_200_OK)
+
+
 class SupportTherapistDeleteView(APIView):
     permission_classes = [IsTherapistUser]
 
@@ -266,7 +314,10 @@ class AvailableSupportTherapistListView(APIView):
         if not therapist.organisation_memberships.filter(organisation__type='clinic').exists():
             return Response([], status=status.HTTP_200_OK)
 
-        assigned_ids = SupportTherapist.objects.filter(therapist=therapist).values_list("support_id", flat=True)
+        assigned_ids = SupportTherapist.objects.filter(
+            therapist=therapist,
+            status__in=[SupportTherapist.Status.PENDING, SupportTherapist.Status.ACCEPTED],
+        ).values_list("support_id", flat=True)
         therapists = Therapist.objects.filter(
             organisation_memberships__organisation=therapist.organisation,
         ).exclude(pk=therapist.pk).exclude(pk__in=assigned_ids)

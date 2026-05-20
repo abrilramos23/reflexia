@@ -67,6 +67,9 @@ class UserSummarySerializer(serializers.ModelSerializer):
     consent_accepted = serializers.SerializerMethodField()
     specialty = serializers.SerializerMethodField()
     license_number = serializers.SerializerMethodField()
+    legal_terms_accepted = serializers.BooleanField(read_only=True)
+    legal_terms_accepted_at = serializers.DateTimeField(read_only=True)
+    legal_terms_version = serializers.CharField(read_only=True)
 
     class Meta:
         model = User
@@ -84,15 +87,16 @@ class UserSummarySerializer(serializers.ModelSerializer):
             "two_factor_enabled",
             "is_active",
             "consent_accepted",
+            "legal_terms_accepted",
+            "legal_terms_accepted_at",
+            "legal_terms_version",
             "license_number",
             "specialty",
         )
 
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_consent_accepted(self, obj):
-        if hasattr(obj, "patient_profile"):
-            return obj.patient_profile.consent_accepted
-        return None
+        return obj.legal_terms_accepted
 
     @extend_schema_field(OrganisationSerializer)
     def get_organisation(self, obj):
@@ -209,6 +213,75 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
         return therapist
 
 
+class PatientTherapistOptionSerializer(serializers.ModelSerializer):
+    organisation_name = serializers.CharField(source="organisation.name", read_only=True)
+
+    class Meta:
+        model = Therapist
+        fields = (
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "license_number",
+            "specialty",
+            "organisation_name",
+        )
+
+
+class PatientTherapistChangeSerializer(serializers.Serializer):
+    therapist_id = serializers.UUIDField()
+
+    def validate(self, attrs):
+        patient = self.context["patient"]
+        try:
+            new_therapist = Therapist.objects.get(pk=attrs["therapist_id"], is_active=True)
+        except Therapist.DoesNotExist as exc:
+            raise serializers.ValidationError({"therapist_id": "Therapist not found."}) from exc
+
+        active_link = (
+            patient.therapist_links.filter(is_active=True)
+            .select_related("therapist")
+            .first()
+        )
+        if active_link is None:
+            raise serializers.ValidationError(
+                {"therapist_id": "Aquest pacient no té cap terapeuta actiu assignat."}
+            )
+        if active_link.therapist_id == new_therapist.pk:
+            raise serializers.ValidationError(
+                {"therapist_id": "Aquest terapeuta ja és el teu terapeuta actual."}
+            )
+        current_organisation = active_link.therapist.organisation
+        new_organisation = new_therapist.organisation
+        if (
+            current_organisation is None
+            or new_organisation is None
+            or current_organisation.id != new_organisation.id
+        ):
+            raise serializers.ValidationError(
+                {
+                    "therapist_id": (
+                        "Per protecció de dades, el canvi automàtic només està permès "
+                        "dins la mateixa organització clínica."
+                    )
+                }
+            )
+
+        attrs["current_link"] = active_link
+        attrs["new_therapist"] = new_therapist
+        return attrs
+
+    def save(self, **kwargs):
+        from apps.users.services import change_patient_therapist
+
+        return change_patient_therapist(
+            patient=self.context["patient"],
+            current_link=self.validated_data["current_link"],
+            new_therapist=self.validated_data["new_therapist"],
+        )
+
+
 class InvitacioOrganitzacioSerializer(serializers.ModelSerializer):
     idOrganitzacio = serializers.UUIDField(source="idOrganitzacio.id", read_only=True)
 
@@ -290,8 +363,6 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
             "last_name",
             "email",
             "birth_date",
-            "consent_accepted",
-            "consent_date",
             "registration_date",
             "two_factor_enabled",
         )
@@ -302,15 +373,6 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A user with this email already exists.")
         return value
 
-    def validate(self, attrs):
-        consent_accepted = attrs.get("consent_accepted", False)
-        consent_date = attrs.get("consent_date")
-        if consent_accepted and consent_date is None:
-            raise serializers.ValidationError(
-                {"consent_date": "Consent date is required when consent is accepted."}
-            )
-        return attrs
-
     def create(self, validated_data):
         therapist = self.context["therapist"]
         patient, activation_url = register_patient(therapist=therapist, **validated_data)
@@ -319,6 +381,9 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
 
 
 class TherapistPatientSummarySerializer(serializers.ModelSerializer):
+    consent_accepted = serializers.BooleanField(source="legal_terms_accepted", read_only=True)
+    consent_date = serializers.DateTimeField(source="legal_terms_accepted_at", read_only=True)
+
     class Meta:
         model = Patient
         fields = (
@@ -406,7 +471,7 @@ class LoginSerializer(serializers.Serializer):
 
         refresh = RefreshToken.for_user(user)
         login_status = "authenticated"
-        if hasattr(user, "patient_profile") and not user.patient_profile.consent_accepted:
+        if not user.legal_terms_accepted:
             login_status = "consent_required"
 
         return {
@@ -434,21 +499,22 @@ class RefreshTokenSerializer(serializers.Serializer):
 
 class PatientConsentAcceptSerializer(serializers.Serializer):
     def save(self, **kwargs):
-        patient = self.context["patient"]
-        patient.consent_accepted = True
-        patient.consent_date = timezone.now()
-        patient.save(update_fields=["consent_accepted", "consent_date"])
-        return patient
+        user = self.context["user"]
+        user.legal_terms_accepted = True
+        user.legal_terms_accepted_at = timezone.now()
+        user.legal_terms_version = User.LEGAL_TERMS_VERSION
+        user.save(update_fields=["legal_terms_accepted", "legal_terms_accepted_at", "legal_terms_version"])
+        return user
 
 
 class PatientConsentRejectSerializer(RefreshTokenSerializer):
     def save(self, **kwargs):
-        patient = self.context["patient"]
-        patient.consent_accepted = False
-        patient.is_active = False
-        patient.save(update_fields=["consent_accepted", "is_active"])
+        user = self.context["user"]
+        user.legal_terms_accepted = False
+        user.is_active = False
+        user.save(update_fields=["legal_terms_accepted", "is_active"])
         self.blacklist()
-        return patient
+        return user
 
 
 class TwoFactorSetupSerializer(serializers.Serializer):
@@ -529,7 +595,7 @@ class TwoFactorVerifySerializer(serializers.Serializer):
         user = self.validated_data["user"]
         refresh = RefreshToken.for_user(user)
         login_status = "authenticated"
-        if hasattr(user, "patient_profile") and not user.patient_profile.consent_accepted:
+        if not user.legal_terms_accepted:
             login_status = "consent_required"
 
         return {

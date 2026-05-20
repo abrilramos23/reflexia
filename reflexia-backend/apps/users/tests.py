@@ -315,6 +315,7 @@ class OrganisationMembershipConstraintTests(APITestCase):
             last_name="Lopez",
             license_number="16385",
             specialty="Clinical Psychology",
+            legal_terms_accepted=True,
         )
         self.other_therapist = Therapist.objects.create_user(
             email="other-constraint@example.com",
@@ -371,6 +372,7 @@ class PatientRegistrationTests(APITestCase):
             last_name="Lopez",
             license_number="16385",
             specialty="Clinical Psychology",
+            legal_terms_accepted=True,
         )
         OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
         self.url = "/api/users/register/patient/"
@@ -382,8 +384,6 @@ class PatientRegistrationTests(APITestCase):
             "last_name": "Martin",
             "email": "pablo@example.com",
             "birth_date": "2000-05-10",
-            "consent_accepted": True,
-            "consent_date": "2026-03-29T12:00:00Z",
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -489,7 +489,7 @@ class TherapistPatientManagementTests(APITestCase):
         self.assertIn("email", response.data[0])
         self.assertEqual(Patient.objects.count(), 2)
 
-    def test_register_patient_requires_consent_date_when_consent_accepted(self):
+    def test_registered_patient_starts_with_pending_legal_acceptance(self):
         self.client.force_authenticate(user=self.therapist)
         response = self.client.post(
             self.register_url,
@@ -498,14 +498,13 @@ class TherapistPatientManagementTests(APITestCase):
                 "last_name": "Martin",
                 "email": "pablo@example.com",
                 "birth_date": "2000-05-10",
-                "consent_accepted": True,
             },
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("consent_date", response.data)
-        self.assertEqual(Patient.objects.count(), 2)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        patient = Patient.objects.get(email="pablo@example.com")
+        self.assertFalse(patient.legal_terms_accepted)
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
@@ -604,6 +603,7 @@ class LoginTests(APITestCase):
             last_name="Lopez",
             license_number="16385",
             specialty="Clinical Psychology",
+            legal_terms_accepted=True,
         )
         OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
 
@@ -649,8 +649,8 @@ class LoginTests(APITestCase):
         self.assertEqual(response.data["user"]["role"], "therapist")
 
     def test_login_returns_jwt_tokens_for_patient_with_consent(self):
-        self.patient.consent_accepted = True
-        self.patient.save(update_fields=["consent_accepted"])
+        self.patient.legal_terms_accepted = True
+        self.patient.save(update_fields=["legal_terms_accepted"])
 
         response = self.client.post(
             self.login_url,
@@ -664,7 +664,10 @@ class LoginTests(APITestCase):
         self.assertIn("refresh", response.data)
         self.assertEqual(response.data["user"]["role"], "patient")
 
-    def test_login_requires_patient_consent_before_home(self):
+    def test_login_requires_legal_acceptance_before_home(self):
+        self.patient.legal_terms_accepted = False
+        self.patient.save(update_fields=["legal_terms_accepted"])
+
         response = self.client.post(
             self.login_url,
             {"email": "patient@example.com", "password": "StrongPass123!"},
@@ -675,6 +678,19 @@ class LoginTests(APITestCase):
         self.assertEqual(response.data["login_status"], "consent_required")
         self.assertIn("access", response.data)
         self.assertIn("refresh", response.data)
+
+    def test_login_requires_therapist_legal_acceptance_before_home(self):
+        self.therapist.legal_terms_accepted = False
+        self.therapist.save(update_fields=["legal_terms_accepted"])
+
+        response = self.client.post(
+            self.login_url,
+            {"email": "therapist@example.com", "password": "StrongPass123!"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["login_status"], "consent_required")
 
     def test_login_flags_two_factor_when_enabled(self):
         self.therapist.two_factor_enabled = True
@@ -731,7 +747,7 @@ class LoginTests(APITestCase):
         outstanding_token = OutstandingToken.objects.get(user=self.therapist)
         self.assertTrue(BlacklistedToken.objects.filter(token=outstanding_token).exists())
 
-    def test_patient_can_accept_consent(self):
+    def test_user_can_accept_consent(self):
         refresh = RefreshToken.for_user(self.patient)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
 
@@ -739,10 +755,11 @@ class LoginTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.patient.refresh_from_db()
-        self.assertTrue(self.patient.consent_accepted)
-        self.assertIsNotNone(self.patient.consent_date)
+        self.assertTrue(self.patient.legal_terms_accepted)
+        self.assertIsNotNone(self.patient.legal_terms_accepted_at)
+        self.assertEqual(self.patient.legal_terms_version, User.LEGAL_TERMS_VERSION)
 
-    def test_patient_can_reject_consent_and_account_becomes_inactive(self):
+    def test_user_can_reject_consent_and_account_becomes_inactive(self):
         refresh = RefreshToken.for_user(self.patient)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
 
@@ -754,7 +771,7 @@ class LoginTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.patient.refresh_from_db()
-        self.assertFalse(self.patient.consent_accepted)
+        self.assertFalse(self.patient.legal_terms_accepted)
         self.assertFalse(self.patient.is_active)
         outstanding_token = OutstandingToken.objects.get(user=self.patient)
         self.assertTrue(BlacklistedToken.objects.filter(token=outstanding_token).exists())
@@ -837,6 +854,12 @@ class LoginTests(APITestCase):
 class ConsentDocumentTests(APITestCase):
     def test_consent_document_is_available(self):
         response = self.client.get("/api/users/consent/document/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+
+    def test_professional_consent_document_is_available(self):
+        response = self.client.get("/api/users/consent/document/?role=therapist")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response["Content-Type"], "application/pdf")
@@ -1429,3 +1452,97 @@ class AdminEntityManagementTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         membership = OrganisationMember.objects.get(user=self.second_admin, organisation=self.org)
         self.assertFalse(membership.is_admin)
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class PatientTherapistChangeTests(APITestCase):
+    def setUp(self):
+        self.org = Organisation.objects.create(name="Central Clinic", type=Organisation.Type.CLINIC)
+        self.other_org = Organisation.objects.create(name="Other Clinic", type=Organisation.Type.CLINIC)
+        self.current_therapist = Therapist.objects.create_user(
+            email="current@example.com",
+            password="StrongPass123!",
+            first_name="Marta",
+            last_name="Lopez",
+            license_number="30001",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        self.new_therapist = Therapist.objects.create_user(
+            email="new@example.com",
+            password="StrongPass123!",
+            first_name="Joan",
+            last_name="Serra",
+            license_number="30002",
+            specialty="Trauma Therapy",
+            is_active=True,
+        )
+        self.external_therapist = Therapist.objects.create_user(
+            email="external@example.com",
+            password="StrongPass123!",
+            first_name="Laura",
+            last_name="Gomez",
+            license_number="30003",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        OrganisationMember.objects.create(user=self.current_therapist, organisation=self.org, is_admin=True)
+        OrganisationMember.objects.create(user=self.new_therapist, organisation=self.org, is_admin=False)
+        OrganisationMember.objects.create(user=self.external_therapist, organisation=self.other_org, is_admin=False)
+        self.patient = Patient.objects.create_user(
+            email="patient-change@example.com",
+            password="StrongPass123!",
+            first_name="Paula",
+            last_name="Sanchez",
+            birth_date="2001-01-10",
+            is_active=True,
+        )
+        self.current_link = TherapistPatient.objects.create(
+            therapist=self.current_therapist,
+            patient=self.patient,
+            is_active=True,
+        )
+        self.url = "/api/users/patient/therapist-change/"
+
+    def test_patient_can_list_same_organisation_therapists(self):
+        self.client.force_authenticate(user=self.patient)
+
+        response = self.client.get(self.url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], str(self.new_therapist.pk))
+
+    def test_patient_can_change_to_same_organisation_therapist(self):
+        self.client.force_authenticate(user=self.patient)
+
+        response = self.client.post(
+            self.url,
+            {"therapist_id": str(self.new_therapist.pk)},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.current_link.refresh_from_db()
+        self.assertFalse(self.current_link.is_active)
+        self.assertTrue(
+            TherapistPatient.objects.filter(
+                therapist=self.new_therapist,
+                patient=self.patient,
+                is_active=True,
+            ).exists()
+        )
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_patient_cannot_change_to_other_organisation_therapist(self):
+        self.client.force_authenticate(user=self.patient)
+
+        response = self.client.post(
+            self.url,
+            {"therapist_id": str(self.external_therapist.pk)},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.current_link.refresh_from_db()
+        self.assertTrue(self.current_link.is_active)
