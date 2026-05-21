@@ -17,6 +17,16 @@
   align-items: start;
 }
 
+.login-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 0 32px;
+}
+
 .register-screen-grid {
   display: flex;
   justify-content: center;
@@ -84,7 +94,9 @@
 }
 
 .auth-form-stack {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  width: 40%;
   gap: 20px;
 }
 

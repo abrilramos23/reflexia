@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { FaUserSlash } from 'react-icons/fa'
+import { FaExchangeAlt, FaUserSlash } from 'react-icons/fa'
 import { Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { useAuth } from '../context/AuthContext.jsx'
-import { consentDocumentUrl } from '../lib/api.js'
+import { consentDocumentUrlForRole } from '../lib/api.js'
 
 function firstErrorMessage(error) {
   if (!error) {
@@ -38,6 +38,8 @@ export function ProfilePage() {
     disableTwoFactor,
     deleteAccount,
     deactivatePatient,
+    listTherapistChangeOptions,
+    changePatientTherapist,
     logout,
   } = useAuth()
   const navigate = useNavigate()
@@ -66,6 +68,11 @@ export function ProfilePage() {
   const [deleteMessage, setDeleteMessage] = useState('')
   const [busyPatientId, setBusyPatientId] = useState('')
   const [soleAdminOrgs, setSoleAdminOrgs] = useState([])
+  const [therapistOptions, setTherapistOptions] = useState([])
+  const [selectedTherapistId, setSelectedTherapistId] = useState('')
+  const [therapistChangeMessage, setTherapistChangeMessage] = useState('')
+  const [therapistChangeError, setTherapistChangeError] = useState('')
+  const [isChangingTherapist, setIsChangingTherapist] = useState(false)
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -111,6 +118,33 @@ export function ProfilePage() {
     setEmail(user?.email || '')
     setSpecialty(user?.role === 'therapist' ? (user.specialty || '') : '')
   }, [user?.email, user?.role, user?.specialty])
+
+  useEffect(() => {
+    let isCancelled = false
+
+    async function loadTherapistOptions() {
+      if (user?.role !== 'patient') {
+        return
+      }
+
+      try {
+        const options = await listTherapistChangeOptions()
+        if (!isCancelled) {
+          setTherapistOptions(options)
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setTherapistChangeError(firstErrorMessage(error.response?.data || error))
+        }
+      }
+    }
+
+    loadTherapistOptions()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [user?.role, listTherapistChangeOptions])
 
   async function handleProfileSubmit(event) {
     event.preventDefault()
@@ -234,6 +268,28 @@ export function ProfilePage() {
       setDeleteError(firstErrorMessage(error.response?.data || error))
     } finally {
       setBusyPatientId('')
+    }
+  }
+
+  async function handleTherapistChange(event) {
+    event.preventDefault()
+    setTherapistChangeError('')
+    setTherapistChangeMessage('')
+    setIsChangingTherapist(true)
+
+    try {
+      const response = await changePatientTherapist(selectedTherapistId)
+      setTherapistChangeMessage(
+        `Canvi registrat. Ara el teu terapeuta assignat és ${response.therapist.first_name} ${response.therapist.last_name}.`,
+      )
+      setTherapistOptions((currentOptions) =>
+        currentOptions.filter((therapist) => therapist.id !== selectedTherapistId),
+      )
+      setSelectedTherapistId('')
+    } catch (error) {
+      setTherapistChangeError(firstErrorMessage(error.response?.data || error))
+    } finally {
+      setIsChangingTherapist(false)
     }
   }
 
@@ -375,7 +431,6 @@ export function ProfilePage() {
         <section className="screen-card profile-card">
           <div className="panel-heading">
             <p className="eyebrow">Doble factor</p>
-            <h3>Configurar 2FA</h3>
           </div>
 
           {twoFactorMessage ? <div className="message">{twoFactorMessage}</div> : null}
@@ -383,9 +438,9 @@ export function ProfilePage() {
 
           {!user.two_factor_enabled ? (
             <>
-              <div className="button-row button-row--padded">
-                <button className="button-secondary" type="button" onClick={handleTwoFactorSetup}>
-                  Generar configuració 2FA
+              <div className="button-row button-row--small-top">
+                <button className="button-ghost" type="button" onClick={handleTwoFactorSetup}>
+                  Configurar 2FA
                 </button>
               </div>
 
@@ -459,23 +514,72 @@ export function ProfilePage() {
           )}
         </section>
 
-        <section className="screen-card dashboard-panel panel-fit">
+        <section className="screen-card profile-card">
           <div className="panel-heading">
-            <p className="eyebrow">Accions ràpides</p>
-            <h2>Seguretat i legal</h2>
+            <p className="eyebrow" style={{marginBottom: "24px"}}>Accions ràpides</p>
           </div>
 
           <div className="button-row">
-            <a className="button-ghost link-clean" href={consentDocumentUrl} target="_blank" rel="noreferrer">
+            <a className="button-ghost link-clean" href={consentDocumentUrlForRole(user.role)} target="_blank" rel="noreferrer">
               Veure consentiment PDF
             </a>
           </div>
         </section>
 
+        {user.role === 'patient' ? (
+          <section className="screen-card dashboard-panel panel-fit">
+            <div className="panel-heading">
+              <p className="eyebrow">Atenció terapèutica</p>
+              <h2>Canviar de terapeuta</h2>
+            </div>
+
+            {therapistChangeMessage ? <div className="message">{therapistChangeMessage}</div> : null}
+            {therapistChangeError ? <div className="error-banner">{therapistChangeError}</div> : null}
+
+            <form className="form-stack" onSubmit={handleTherapistChange}>
+              <p className="muted">
+                Pots canviar de terapeuta dins la mateixa organització. El terapeuta anterior deixarà de tenir accés ordinari
+                i el canvi quedarà registrat.
+              </p>
+              <div className="field-group">
+                <label htmlFor="new-therapist">Nou terapeuta</label>
+                <select
+                  id="new-therapist"
+                  value={selectedTherapistId}
+                  onChange={(event) => setSelectedTherapistId(event.target.value)}
+                  disabled={therapistOptions.length === 0}
+                  required
+                >
+                  <option value="">
+                    {therapistOptions.length === 0 ? 'No hi ha terapeutes disponibles' : 'Selecciona un terapeuta'}
+                  </option>
+                  {therapistOptions.map((therapist) => (
+                    <option key={therapist.id} value={therapist.id}>
+                      {therapist.first_name} {therapist.last_name} · {therapist.specialty}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="button-row">
+                <button
+                  className="button-secondary"
+                  type="submit"
+                  disabled={!selectedTherapistId || isChangingTherapist}
+                >
+                  {isChangingTherapist ? 'Registrant canvi...' : (
+                    <>
+                      <FaExchangeAlt /> Canviar terapeuta
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </section>
+        ) : null}
+
         <section className="screen-card profile-card">
           <div className="panel-heading">
             <p className="eyebrow">Sessió</p>
-            <h3>Tancar sessió</h3>
           </div>
 
           <div className="button-row button-row--small-top">
@@ -488,7 +592,6 @@ export function ProfilePage() {
         <section className="screen-card profile-card">
           <div className="panel-heading">
             <p className="eyebrow">Eliminar perfil</p>
-            <h3>Tancar compte</h3>
           </div>
 
           {deleteMessage ? <div className="message">{deleteMessage}</div> : null}
@@ -497,6 +600,7 @@ export function ProfilePage() {
           <div className="section-stack plain-section">
             <p className="muted delete-account-note">
               Les dades no clíniques s&apos;eliminaran i la resta quedarà subjecta al període legal de conservació.
+              Si ets terapeuta, abans cal reassignar o tancar correctament els pacients actius.
             </p>
           </div>
 

@@ -8,7 +8,7 @@ export function PublicRoute({ children }) {
     return children
   }
 
-  if (user?.role === 'patient' && user.consent_accepted === false) {
+  if (user?.legal_terms_accepted === false) {
     return <Navigate to="/consent" replace />
   }
 

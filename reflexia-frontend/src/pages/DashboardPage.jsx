@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { FaPlus } from 'react-icons/fa'
 import { EmotionalEvolutionPanel } from '../components/EmotionalEvolutionPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { consentDocumentUrl } from '../lib/api.js'
 import { formatEntryDate } from '../lib/entries.js'
 
 function formatRole(role) {
@@ -222,13 +221,7 @@ export function DashboardPage() {
             </div>
             <div className="stat-card">
               <span>Consentiment</span>
-              <strong>
-                {user.role === 'patient'
-                  ? user.consent_accepted
-                    ? 'Acceptat'
-                    : 'Pendent'
-                  : 'No aplica'}
-              </strong>
+              <strong>{user.legal_terms_accepted ? 'Acceptat' : 'Pendent'}</strong>
             </div>
           </div>
         </section>
@@ -255,7 +248,7 @@ export function DashboardPage() {
                   </>
                 ) : (
                   <>
-                    <h3 style={{ marginBlockEnd: '0' }}>Cap pregunta activa disponible</h3>
+                    <p className="muted" style={{ marginBlockEnd: '0' }}>Cap pregunta activa disponible</p>
                   </>
                 )}
               </div>

@@ -4,6 +4,9 @@ const rawBaseUrl = 'http://127.0.0.1:8000/api'
 
 export const apiBaseUrl = rawBaseUrl.replace(/\/$/, '')
 export const consentDocumentUrl = `${apiBaseUrl}/users/consent/document/`
+export function consentDocumentUrlForRole(role = 'patient') {
+  return `${consentDocumentUrl}?role=${encodeURIComponent(role)}`
+}
 
 const accessTokenStorageKey = 'reflexia.accessToken'
 
