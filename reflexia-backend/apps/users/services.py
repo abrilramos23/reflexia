@@ -289,47 +289,6 @@ def send_account_deleted_email(*, user_email):
     )
 
 
-def send_patient_therapist_changed_email(*, patient, previous_therapist, new_therapist):
-    subject = "Canvi de terapeuta a Reflexia"
-    message = (
-        f"Hola {patient.first_name},\n\n"
-        "Hem registrat el canvi de terapeuta a Reflexia.\n"
-        f"Terapeuta anterior: {previous_therapist.first_name} {previous_therapist.last_name}.\n"
-        f"Nou terapeuta: {new_therapist.first_name} {new_therapist.last_name}.\n\n"
-        "El terapeuta anterior deixa de tenir accés ordinari a les teves dades dins la plataforma. "
-        "La documentació clínica es conserva segons les obligacions legals aplicables."
-    )
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [patient.email],
-        fail_silently=False,
-    )
-
-
-@transaction.atomic
-def change_patient_therapist(*, patient, current_link, new_therapist):
-    current_link = TherapistPatient.objects.select_for_update().select_related("therapist").get(
-        pk=current_link.pk,
-    )
-    previous_therapist = current_link.therapist
-    current_link.is_active = False
-    current_link.save(update_fields=["is_active"])
-
-    new_link, _ = TherapistPatient.objects.update_or_create(
-        therapist=new_therapist,
-        patient=patient,
-        defaults={"is_active": True},
-    )
-    send_patient_therapist_changed_email(
-        patient=patient,
-        previous_therapist=previous_therapist,
-        new_therapist=new_therapist,
-    )
-    return new_link
-
-
 @transaction.atomic
 def activate_user_account(*, user, password):
     validate_password(password, user=user)

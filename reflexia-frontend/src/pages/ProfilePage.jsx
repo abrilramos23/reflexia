@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FaExchangeAlt, FaUserSlash } from 'react-icons/fa'
+import { FaUserSlash } from 'react-icons/fa'
 import { Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -38,8 +38,6 @@ export function ProfilePage() {
     disableTwoFactor,
     deleteAccount,
     deactivatePatient,
-    listTherapistChangeOptions,
-    changePatientTherapist,
     logout,
   } = useAuth()
   const navigate = useNavigate()
@@ -68,11 +66,6 @@ export function ProfilePage() {
   const [deleteMessage, setDeleteMessage] = useState('')
   const [busyPatientId, setBusyPatientId] = useState('')
   const [soleAdminOrgs, setSoleAdminOrgs] = useState([])
-  const [therapistOptions, setTherapistOptions] = useState([])
-  const [selectedTherapistId, setSelectedTherapistId] = useState('')
-  const [therapistChangeMessage, setTherapistChangeMessage] = useState('')
-  const [therapistChangeError, setTherapistChangeError] = useState('')
-  const [isChangingTherapist, setIsChangingTherapist] = useState(false)
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -118,33 +111,6 @@ export function ProfilePage() {
     setEmail(user?.email || '')
     setSpecialty(user?.role === 'therapist' ? (user.specialty || '') : '')
   }, [user?.email, user?.role, user?.specialty])
-
-  useEffect(() => {
-    let isCancelled = false
-
-    async function loadTherapistOptions() {
-      if (user?.role !== 'patient') {
-        return
-      }
-
-      try {
-        const options = await listTherapistChangeOptions()
-        if (!isCancelled) {
-          setTherapistOptions(options)
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          setTherapistChangeError(firstErrorMessage(error.response?.data || error))
-        }
-      }
-    }
-
-    loadTherapistOptions()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [user?.role, listTherapistChangeOptions])
 
   async function handleProfileSubmit(event) {
     event.preventDefault()
@@ -268,28 +234,6 @@ export function ProfilePage() {
       setDeleteError(firstErrorMessage(error.response?.data || error))
     } finally {
       setBusyPatientId('')
-    }
-  }
-
-  async function handleTherapistChange(event) {
-    event.preventDefault()
-    setTherapistChangeError('')
-    setTherapistChangeMessage('')
-    setIsChangingTherapist(true)
-
-    try {
-      const response = await changePatientTherapist(selectedTherapistId)
-      setTherapistChangeMessage(
-        `Canvi registrat. Ara el teu terapeuta assignat és ${response.therapist.first_name} ${response.therapist.last_name}.`,
-      )
-      setTherapistOptions((currentOptions) =>
-        currentOptions.filter((therapist) => therapist.id !== selectedTherapistId),
-      )
-      setSelectedTherapistId('')
-    } catch (error) {
-      setTherapistChangeError(firstErrorMessage(error.response?.data || error))
-    } finally {
-      setIsChangingTherapist(false)
     }
   }
 
@@ -525,57 +469,6 @@ export function ProfilePage() {
             </a>
           </div>
         </section>
-
-        {user.role === 'patient' ? (
-          <section className="screen-card dashboard-panel panel-fit">
-            <div className="panel-heading">
-              <p className="eyebrow">Atenció terapèutica</p>
-              <h2>Canviar de terapeuta</h2>
-            </div>
-
-            {therapistChangeMessage ? <div className="message">{therapistChangeMessage}</div> : null}
-            {therapistChangeError ? <div className="error-banner">{therapistChangeError}</div> : null}
-
-            <form className="form-stack" onSubmit={handleTherapistChange}>
-              <p className="muted">
-                Pots canviar de terapeuta dins la mateixa organització. El terapeuta anterior deixarà de tenir accés ordinari
-                i el canvi quedarà registrat.
-              </p>
-              <div className="field-group">
-                <label htmlFor="new-therapist">Nou terapeuta</label>
-                <select
-                  id="new-therapist"
-                  value={selectedTherapistId}
-                  onChange={(event) => setSelectedTherapistId(event.target.value)}
-                  disabled={therapistOptions.length === 0}
-                  required
-                >
-                  <option value="">
-                    {therapistOptions.length === 0 ? 'No hi ha terapeutes disponibles' : 'Selecciona un terapeuta'}
-                  </option>
-                  {therapistOptions.map((therapist) => (
-                    <option key={therapist.id} value={therapist.id}>
-                      {therapist.first_name} {therapist.last_name} · {therapist.specialty}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="button-row">
-                <button
-                  className="button-secondary"
-                  type="submit"
-                  disabled={!selectedTherapistId || isChangingTherapist}
-                >
-                  {isChangingTherapist ? 'Registrant canvi...' : (
-                    <>
-                      <FaExchangeAlt /> Canviar terapeuta
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </section>
-        ) : null}
 
         <section className="screen-card profile-card">
           <div className="panel-heading">

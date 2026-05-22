@@ -24,8 +24,6 @@ from apps.users.serializers import (
     PatientConsentAcceptSerializer,
     PatientConsentRejectSerializer,
     PatientRegistrationSerializer,
-    PatientTherapistChangeSerializer,
-    PatientTherapistOptionSerializer,
     RefreshTokenSerializer,
     ProfileUpdateSerializer,
     TherapistRegistrationSerializer,
@@ -655,68 +653,6 @@ class PatientConsentRejectView(APIView):
         return Response(
             {
                 "message": "Consent rejected. The account has been deactivated.",
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class PatientTherapistChangeView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        tags=["Users"],
-        summary="Consultar terapeutes disponibles per canvi",
-        responses={200: PatientTherapistOptionSerializer(many=True)},
-    )
-    def get(self, request):
-        if not hasattr(request.user, "patient_profile"):
-            return Response(
-                {"detail": "Only patients can request therapist changes."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        patient = request.user.patient_profile
-        active_link = patient.therapist_links.filter(is_active=True).select_related("therapist").first()
-        if active_link is None:
-            return Response([], status=status.HTTP_200_OK)
-
-        therapists = Therapist.objects.filter(
-            organisation_memberships__organisation=active_link.therapist.organisation,
-            is_active=True,
-        ).exclude(pk=active_link.therapist_id).order_by("first_name", "last_name")
-        return Response(PatientTherapistOptionSerializer(therapists, many=True).data, status=status.HTTP_200_OK)
-
-    @extend_schema(
-        tags=["Users"],
-        summary="Canviar el terapeuta assignat",
-        request=PatientTherapistChangeSerializer,
-        responses={
-            200: inline_serializer(
-                name="PatientTherapistChangeResponse",
-                fields={
-                    "message": serializers.CharField(),
-                    "therapist": PatientTherapistOptionSerializer(),
-                },
-            ),
-        },
-    )
-    def post(self, request):
-        if not hasattr(request.user, "patient_profile"):
-            return Response(
-                {"detail": "Only patients can request therapist changes."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        serializer = PatientTherapistChangeSerializer(
-            data=request.data,
-            context={"patient": request.user.patient_profile},
-        )
-        serializer.is_valid(raise_exception=True)
-        new_link = serializer.save()
-        return Response(
-            {
-                "message": "Therapist changed successfully.",
-                "therapist": PatientTherapistOptionSerializer(new_link.therapist).data,
             },
             status=status.HTTP_200_OK,
         )

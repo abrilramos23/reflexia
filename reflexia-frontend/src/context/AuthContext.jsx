@@ -415,18 +415,6 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
-  async function listTherapistChangeOptions() {
-    const response = await api.get('/users/patient/therapist-change/')
-    return response.data
-  }
-
-  async function changePatientTherapist(therapistId) {
-    const response = await api.post('/users/patient/therapist-change/', {
-      therapist_id: therapistId,
-    })
-    return response.data
-  }
-
   async function getClinicStats() {
     const response = await api.get('/users/admin/stats/clinic/')
     return response.data
@@ -575,8 +563,6 @@ export function AuthProvider({ children }) {
     disableTwoFactor,
     deleteAccount,
     deactivatePatient,
-    listTherapistChangeOptions,
-    changePatientTherapist,
     listPatientEntries,
     getPatientEntry,
     exportPatientEntryPdf,
