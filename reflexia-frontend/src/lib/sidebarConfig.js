@@ -1,4 +1,4 @@
-import { FaUser, FaUsers, FaBook, FaHome, FaBuilding, FaQuestionCircle } from 'react-icons/fa'
+import { FaUser, FaUsers, FaBook, FaHome, FaBuilding, FaQuestionCircle, FaBell } from 'react-icons/fa'
 
 export const sidebarConfig = [
   {
@@ -41,6 +41,13 @@ export const sidebarConfig = [
     path: '/questions',
     roles: ['therapist'],
     icon: FaQuestionCircle,
+    section: 'Compte',
+  },
+  {
+    label: 'Alertes',
+    path: '/alerts',
+    roles: ['therapist'],
+    icon: FaBell,
     section: 'Compte',
   },
   {

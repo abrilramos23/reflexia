@@ -519,6 +519,7 @@ export function AuthProvider({ children }) {
   const isClinicAdmin = user?.is_clinic_admin ?? user?.memberships?.some((m) => m.is_admin) ?? false
 
   const value = {
+    api,
     user,
     role: user?.role,
     isClinicAdmin,
