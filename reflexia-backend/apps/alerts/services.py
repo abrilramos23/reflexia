@@ -5,17 +5,6 @@ from apps.alerts.models import Alert, AlertNotification
 
 
 def send_alert_email_to_contact(alert, contact):
-    """
-    Send alert notification to associated contact.
-    RGPD: Only send patient first name + risk level, NOT full content.
-
-    Args:
-        alert: Alert instance
-        contact: AssociatedContact instance
-
-    Raises:
-        Exception: If email sending fails
-    """
     subject = f"Alerta de suport emocional per a {alert.patient.first_name}"
 
     message = (
@@ -41,22 +30,5 @@ def send_alert_email_to_contact(alert, contact):
 
 
 def notify_escalation_level(alert):
-    """
-    Escalate alert notification if not responded.
-    Called by celery task or management command periodically.
-
-    Levels:
-    - 0: Created (initial state)
-    - 1: 1 hour passed - re-notify support therapist
-    - 2: 4 hours passed - notify clinic admin
-    - 3: 24 hours passed - critical, notify supervisor
-
-    Args:
-        alert: Alert instance
-    """
     # This is a placeholder for future escalation logic
-    # When implemented, should:
-    # 1. Check time elapsed since creation
-    # 2. Determine escalation level
-    # 3. Send notifications to support therapist / admin
     pass

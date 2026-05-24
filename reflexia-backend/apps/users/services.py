@@ -365,7 +365,6 @@ def delete_user_account(*, user):
                 }
             )
 
-    # Check if user is the sole admin of any organisation
     sole_admin_orgs = []
     memberships = user.organisation_memberships.filter(is_admin=True)
     for membership in memberships:
@@ -374,7 +373,6 @@ def delete_user_account(*, user):
             is_admin=True
         ).count()
         if admin_count <= 1:
-            # Es bloqueja només si hi ha altres membres que quedarien sense administrador.
             member_count = OrganisationMember.objects.filter(organisation=membership.organisation).count()
             if member_count > 1:
                 sole_admin_orgs.append(membership.organisation)

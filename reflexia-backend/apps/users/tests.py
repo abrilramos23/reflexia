@@ -472,7 +472,6 @@ class TherapistPatientManagementTests(APITestCase):
             birth_date="2000-03-15",
             is_active=True,
         )
-        # Link patients to therapist (required for therapist patience list)
         TherapistPatient.objects.create(therapist=self.therapist, patient=self.patient)
         self.list_url = "/api/users/patients/"
         self.register_url = "/api/users/register/patient/"

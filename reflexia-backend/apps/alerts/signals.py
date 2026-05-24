@@ -7,12 +7,6 @@ from apps.alerts.models import Alert
 
 @receiver(post_save, sender=EmotionalAnalysis)
 def create_alert_on_high_risk(sender, instance, created, **kwargs):
-    """
-    Create an alert when emotional analysis detects high risk level.
-    This signal is triggered after EmotionalAnalysis.post_save.
-    Alert creation is synchronous (fast), but email notifications
-    are handled asynchronously via Celery tasks.
-    """
     if created and instance.risk_level == EmotionalAnalysis.HIGH:
         Alert.objects.get_or_create(
             emotional_analysis=instance,

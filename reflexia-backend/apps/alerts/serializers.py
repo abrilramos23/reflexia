@@ -119,7 +119,6 @@ class AlertDetailSerializer(serializers.ModelSerializer):
 
     def get_entry_content(self, obj):
         entry = obj.emotional_analysis.entry
-        # Return first 500 chars of content to preview
         content = entry.content
         return content[:500] + "..." if len(content) > 500 else content
 

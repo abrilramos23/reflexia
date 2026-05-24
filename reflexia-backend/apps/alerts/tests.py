@@ -10,7 +10,6 @@ from apps.alerts.models import Alert, AlertNotification
 
 class AlertAutoGenerationTestCase(TestCase):
     def setUp(self):
-        # Create therapist
         self.therapist = Therapist.objects.create_user(
             email="therapist@test.com",
             password="test123",
@@ -20,7 +19,6 @@ class AlertAutoGenerationTestCase(TestCase):
             specialty="Psychology",
         )
 
-        # Create patient
         self.patient = Patient.objects.create_user(
             email="patient@test.com",
             password="test123",
@@ -30,13 +28,11 @@ class AlertAutoGenerationTestCase(TestCase):
         )
 
     def test_alert_created_on_high_risk_analysis(self):
-        """Test that alert is automatically created when emotional analysis has HIGH risk."""
         journal_entry = JournalEntry.objects.create(
             patient=self.patient,
             content="Test entry content",
         )
 
-        # Create analysis with HIGH risk
         analysis = EmotionalAnalysis.objects.create(
             entry=journal_entry,
             risk_level=EmotionalAnalysis.HIGH,
@@ -45,7 +41,6 @@ class AlertAutoGenerationTestCase(TestCase):
             emotions={"sadness": 0.8, "anxiety": 0.6},
         )
 
-        # Check that alert was created
         alert = Alert.objects.filter(emotional_analysis=analysis).first()
         self.assertIsNotNone(alert)
         self.assertEqual(alert.status, Alert.Status.PENDING)
@@ -53,13 +48,11 @@ class AlertAutoGenerationTestCase(TestCase):
         self.assertEqual(alert.patient, self.patient)
 
     def test_no_alert_created_on_low_risk(self):
-        """Test that alert is NOT created when risk_level is not HIGH."""
         journal_entry = JournalEntry.objects.create(
             patient=self.patient,
             content="Test entry content",
         )
 
-        # Create analysis with LOW risk
         analysis = EmotionalAnalysis.objects.create(
             entry=journal_entry,
             risk_level=EmotionalAnalysis.LOW,
@@ -68,12 +61,10 @@ class AlertAutoGenerationTestCase(TestCase):
             emotions={"happiness": 0.7},
         )
 
-        # Check that no alert was created
         alert = Alert.objects.filter(emotional_analysis=analysis).first()
         self.assertIsNone(alert)
 
     def test_alert_validation(self):
-        """Test alert validation workflow."""
         journal_entry = JournalEntry.objects.create(
             patient=self.patient,
             content="Test entry",
@@ -89,7 +80,6 @@ class AlertAutoGenerationTestCase(TestCase):
 
         alert = Alert.objects.get(emotional_analysis=analysis)
 
-        # Validate alert
         alert.status = Alert.Status.VALIDATED
         alert.validating_therapist = self.therapist
         alert.validation_note = "Patient needs immediate support"
@@ -102,8 +92,6 @@ class AlertAutoGenerationTestCase(TestCase):
         self.assertIn("immediate support", alert.validation_note)
 
     def test_alert_query_filters(self):
-        """Test querying alerts with filters."""
-        # Create multiple entries with different risk levels
         for i in range(3):
             journal_entry = JournalEntry.objects.create(
                 patient=self.patient,
@@ -118,15 +106,12 @@ class AlertAutoGenerationTestCase(TestCase):
                 emotions={"sadness": 0.7 + i * 0.1},
             )
 
-        # Query all alerts
         all_alerts = Alert.objects.all()
         self.assertEqual(all_alerts.count(), 3)
 
-        # Query only PENDING alerts
         pending = Alert.objects.filter(status=Alert.Status.PENDING)
         self.assertEqual(pending.count(), 3)
 
-        # Validate one and check filters
         first_alert = all_alerts.first()
         first_alert.status = Alert.Status.VALIDATED
         first_alert.save()
@@ -137,13 +122,11 @@ class AlertAutoGenerationTestCase(TestCase):
         self.assertEqual(pending.count(), 2)
 
     def test_alert_created_on_high_risk_analysis(self):
-        """Test that alert is automatically created when emotional analysis has HIGH risk."""
         journal_entry = JournalEntry.objects.create(
             patient=self.patient,
             content="Test entry content",
         )
 
-        # Create analysis with HIGH risk
         analysis = EmotionalAnalysis.objects.create(
             entry=journal_entry,
             risk_level=EmotionalAnalysis.HIGH,
@@ -152,7 +135,6 @@ class AlertAutoGenerationTestCase(TestCase):
             emotions={"sadness": 0.8, "anxiety": 0.6},
         )
 
-        # Check that alert was created
         alert = Alert.objects.filter(emotional_analysis=analysis).first()
         self.assertIsNotNone(alert)
         self.assertEqual(alert.status, Alert.Status.PENDING)
@@ -160,13 +142,11 @@ class AlertAutoGenerationTestCase(TestCase):
         self.assertEqual(alert.patient, self.patient)
 
     def test_no_alert_created_on_low_risk(self):
-        """Test that alert is NOT created when risk_level is not HIGH."""
         journal_entry = JournalEntry.objects.create(
             patient=self.patient,
             content="Test entry content",
         )
 
-        # Create analysis with LOW risk
         analysis = EmotionalAnalysis.objects.create(
             entry=journal_entry,
             risk_level=EmotionalAnalysis.LOW,
@@ -175,12 +155,10 @@ class AlertAutoGenerationTestCase(TestCase):
             emotions={"happiness": 0.7},
         )
 
-        # Check that no alert was created
         alert = Alert.objects.filter(emotional_analysis=analysis).first()
         self.assertIsNone(alert)
 
     def test_alert_validation(self):
-        """Test alert validation workflow."""
         journal_entry = JournalEntry.objects.create(
             patient=self.patient,
             content="Test entry",
@@ -196,7 +174,6 @@ class AlertAutoGenerationTestCase(TestCase):
 
         alert = Alert.objects.get(emotional_analysis=analysis)
 
-        # Validate alert
         alert.status = Alert.Status.VALIDATED
         alert.validating_therapist = self.therapist
         alert.validation_note = "Patient needs immediate support"
@@ -209,8 +186,6 @@ class AlertAutoGenerationTestCase(TestCase):
         self.assertIn("immediate support", alert.validation_note)
 
     def test_alert_query_filters(self):
-        """Test querying alerts with filters."""
-        # Create multiple entries with different risk levels
         for i in range(3):
             journal_entry = JournalEntry.objects.create(
                 patient=self.patient,
@@ -225,15 +200,12 @@ class AlertAutoGenerationTestCase(TestCase):
                 emotions={"sadness": 0.7 + i * 0.1},
             )
 
-        # Query all alerts
         all_alerts = Alert.objects.all()
         self.assertEqual(all_alerts.count(), 3)
 
-        # Query only PENDING alerts
         pending = Alert.objects.filter(status=Alert.Status.PENDING)
         self.assertEqual(pending.count(), 3)
 
-        # Validate one and check filters
         first_alert = all_alerts.first()
         first_alert.status = Alert.Status.VALIDATED
         first_alert.save()

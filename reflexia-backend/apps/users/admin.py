@@ -5,7 +5,6 @@ from apps.users.models import (
     InvitacioOrganitzacio,
     Organisation,
     OrganisationMember,
-    # Subscription,
     Patient,
     ProfessionalDirectoryEntry,
     Therapist,
@@ -19,15 +18,7 @@ class OrganisationAdmin(admin.ModelAdmin):
     list_display  = ("name", "type", "is_active", "created_at")
     list_filter   = ("type", "is_active")
     search_fields = ("name",)
-
-
-"""
-@admin.register(Subscription)
-class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ("organisation", "plan", "status", "ini_date", "end_date")
-    list_filter = ("plan", "status")
-"""
-
+    
 
 @admin.register(OrganisationMember)
 class OrganisationMemberAdmin(admin.ModelAdmin):

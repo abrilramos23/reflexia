@@ -548,7 +548,6 @@ class TherapistDashboardView(APIView):
         patients = Patient.objects.filter(therapist_links__therapist=therapist)
         patients = patients.filter(therapist_links__is_active=True)
         
-        # Metrics
         active_patients = patients.filter(is_active=True)
         
         from apps.entries.models import JournalEntry
@@ -568,7 +567,6 @@ class TherapistDashboardView(APIView):
             reviewed_by_therapist=False
         ).count()
         
-        # Recent Activity
         recent_entries = JournalEntry.objects.filter(
             patient_id__in=patient_ids
         ).select_related('patient', 'analysis').order_by('-updated_at')[:5]
