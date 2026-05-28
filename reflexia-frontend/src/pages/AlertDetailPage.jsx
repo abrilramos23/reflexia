@@ -300,8 +300,7 @@ export function AlertDetailPage() {
         {canNotify ? (
           <section className="screen-card dashboard-panel profile-card--wide">
             <div className="panel-heading">
-              <p className="eyebrow">Contactes</p>
-              <h2>Notificar contactes</h2>
+              <p className="eyebrow">Notificar contactes</p>
             </div>
 
             {associatedContacts.length > 0 ? (
@@ -328,9 +327,9 @@ export function AlertDetailPage() {
                           }}
                         />
                         <span>
-                          <strong>{contact.name}</strong>
+                          <strong>{contact.name}  </strong>
                           <span className="muted">
-                            {formatContactRelation(contact.relation)} · {contact.email || contact.phone}
+                            {contact.email || contact.phone}  ({formatContactRelation(contact.relation)})
                           </span>
                         </span>
                       </label>
@@ -359,7 +358,6 @@ export function AlertDetailPage() {
           <section className="screen-card dashboard-panel profile-card--wide">
             <div className="panel-heading">
               <p className="eyebrow">Historial</p>
-              <h2>Historial de notificacions</h2>
             </div>
             <ul className="patient-list">
               {notifications.map((notification) => (

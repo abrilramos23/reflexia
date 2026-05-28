@@ -164,7 +164,6 @@ export function TherapistQuestionsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <FaUser className="muted" size={14} />
                         <Link to={`/patients/${q.patient_id}`} style={{ fontWeight: 'bold', color: 'var(--brand-primary)', textDecoration: 'none' }}>
                           {q.patient_name}
                         </Link>

@@ -209,12 +209,11 @@ export function DashboardPage() {
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
-            <p className="eyebrow">Tauler inicial</p>
             <h1 className="section-title">
               {user.role === 'therapist'
-                ? 'Resum de la teva activitat.'
+                ? 'Resum de la teva activitat'
                 : user.role === 'patient'
-                  ? 'El teu espai personal.'
+                  ? 'El teu espai personal'
                   : 'Compte actiu'}
             </h1>
           </div>
@@ -298,7 +297,7 @@ export function DashboardPage() {
                   </ul>
                 ) : (
                   <>
-                    <h3>Encara no hi ha entrades disponibles</h3>
+                    <p className="muted">Encara no hi ha entrades disponibles</p>
                   </>
                 )}
               </div>
