@@ -76,13 +76,6 @@ def escalate_pending_alerts():
 
 @shared_task
 def batch_send_alerts_to_contacts(alert_id, contact_ids):
-    """
-    Batch task to send alert to multiple contacts.
-
-    Args:
-        alert_id: Alert UUID
-        contact_ids: List of AssociatedContact UUIDs
-    """
     from apps.contacts.models import AssociatedContact
 
     try:
