@@ -1,6 +1,6 @@
 # Reflexia
 
-Reflexia és una aplicació web orientada al seguiment terapèutic entre pacients i terapeutes. El projecte permet que els pacients escriguin entrades, que el sistema generi una anàlisi emocional orientativa i que el terapeuta pugui revisar l'evolució, afegir notes privades i crear preguntes de seguiment.
+Reflexia és una aplicació web orientada al seguiment terapèutic entre pacients i terapeutes. El projecte permet que els pacients escriguin entrades, que el sistema generi una anàlisi emocional orientativa i que el terapeuta pugui revisar l'evolució, afegir notes privades, crear preguntes de seguiment i gestionar alertes clíniques quan es detecta risc alt.
 
 ## Estructura
 
@@ -16,6 +16,7 @@ El backend organitza la lògica en aplicacions Django:
 - `entries`: entrades de journaling, preguntes del terapeuta i notes privades.
 - `analysis`: anàlisi emocional automatitzada i revisió posterior per part del terapeuta.
 - `contacts`: contactes associats i terapeutes de suport.
+- `alerts`: alertes clíniques generades a partir d'anàlisis de risc alt, validació professional, escalat i notificació de contactes associats.
 
 La base de dades és PostgreSQL. La configuració es llegeix des de variables d'entorn, definides al fitxer `.env` del backend.
 
@@ -30,6 +31,14 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+Per processar notificacions i escalats d'alertes cal tenir Redis disponible i executar Celery:
+
+```bash
+cd reflexia-backend
+celery -A config worker -l info
+celery -A config beat -l info
+```
+
 ## Frontend
 
 El frontend implementa les pantalles principals per a pacients, terapeutes i administradors de clínica. Inclou:
@@ -39,6 +48,8 @@ El frontend implementa les pantalles principals per a pacients, terapeutes i adm
 - edició i consulta d'entrades;
 - visualització de l'anàlisi emocional;
 - gestió de pacients, preguntes i notes privades;
+- llista, detall, validació i notificació d'alertes clíniques;
+- gestió de terapeutes de suport i contactes associats;
 - panell de clínica per a organitzacions.
 
 ### Execució del frontend
