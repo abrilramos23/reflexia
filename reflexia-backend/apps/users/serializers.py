@@ -19,6 +19,35 @@ from apps.users.models import (
     Therapist,
     User,
 )
+
+
+def validate_therapist_name_against_directory(license_number, first_name, last_name):
+    """
+    Validates that first_name and last_name match the directory entry for the license_number.
+    Uses word-level, case-insensitive matching.
+
+    Returns the ProfessionalDirectoryEntry if valid, raises ValidationError if names don't match.
+    """
+    try:
+        directory_entry = ProfessionalDirectoryEntry.objects.get(
+            license_number=license_number.strip().upper()
+        )
+    except ProfessionalDirectoryEntry.DoesNotExist:
+        return None
+
+    directory_name_words = set(directory_entry.complete_name.strip().split())
+    user_name = f"{first_name} {last_name}".strip().upper()
+    user_name_words = set(user_name.split())
+
+    if not user_name_words.issubset(directory_name_words):
+        missing_words = user_name_words - directory_name_words
+        raise serializers.ValidationError(
+            f"The name provided does not match the directory entry. "
+            f"Directory has: {directory_entry.complete_name}. "
+            f"Missing: {', '.join(missing_words)}"
+        )
+
+    return directory_entry
 from apps.users.services import (
     activate_user_account,
     build_password_reset_url,
@@ -167,6 +196,13 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
         return normalized_value
 
     def validate(self, attrs):
+        license_number = attrs.get("license_number")
+        first_name = attrs.get("first_name")
+        last_name = attrs.get("last_name")
+
+        if license_number and first_name and last_name:
+            validate_therapist_name_against_directory(license_number, first_name, last_name)
+
         registration_path = attrs.get("registration_path")
         organisation_name = attrs.get("organisation_name", "").strip()
         invitation_token = attrs.get("invitation_token", "").strip()
@@ -343,6 +379,22 @@ class TherapistAdminUpdateSerializer(serializers.Serializer):
         if Therapist.objects.filter(license_number=normalized_value).exclude(pk=therapist.pk).exists():
             raise serializers.ValidationError("This license number is already assigned to another therapist.")
         return normalized_value
+
+    def validate(self, attrs):
+        therapist = self.context["therapist"]
+        license_number = attrs.get("license_number")
+        first_name = attrs.get("first_name")
+        last_name = attrs.get("last_name")
+
+        if license_number:
+            if not first_name:
+                first_name = therapist.first_name
+            if not last_name:
+                last_name = therapist.last_name
+
+            validate_therapist_name_against_directory(license_number, first_name, last_name)
+
+        return attrs
 
     def validate_organisation_id(self, value):
         if value is None:

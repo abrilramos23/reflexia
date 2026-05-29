@@ -196,6 +196,51 @@ class TherapistRegistrationTests(APITestCase):
         self.assertIn("license_number", response.data)
         self.assertEqual(Therapist.objects.count(), 0)
 
+    def test_register_therapist_validates_name_matches_directory(self):
+        payload = {
+            "first_name": "Laura",
+            "last_name": "Gomez",
+            "email": "laura@example.com",
+            "license_number": "30809",
+            "specialty": "Clinical Psychology",
+            "registration_path": "independent",
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Therapist.objects.count(), 1)
+
+    def test_register_therapist_rejects_mismatched_name(self):
+        payload = {
+            "first_name": "Maria",
+            "last_name": "Gomez",
+            "email": "laura@example.com",
+            "license_number": "30809",
+            "specialty": "Clinical Psychology",
+            "registration_path": "independent",
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Therapist.objects.count(), 0)
+
+    def test_register_therapist_rejects_mismatched_last_name(self):
+        payload = {
+            "first_name": "Laura",
+            "last_name": "Lopez",
+            "email": "laura@example.com",
+            "license_number": "30809",
+            "specialty": "Clinical Psychology",
+            "registration_path": "independent",
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Therapist.objects.count(), 0)
+
 
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
