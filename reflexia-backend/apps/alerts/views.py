@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
@@ -25,6 +26,18 @@ from apps.contacts.models import DefaultContact
 class AlertListView(APIView):
     permission_classes = [IsTherapistUser]
 
+    @extend_schema(
+        tags=["Alerts"],
+        summary="Llistar alertes del terapeuta",
+        description="Obté un llistat d'alertes dels pacients associats al terapeuta. Permet filtrar per estat (pending, validated, dismissed), nivell de risc (high, medium, low) i pacient.",
+        parameters=[
+            OpenApiParameter(name="status", description="Filtrar per estat de l'alerta: pending, validated, dismissed", required=False, type=str),
+            OpenApiParameter(name="risk_level", description="Filtrar per nivell de risc: high, medium, low", required=False, type=str),
+            OpenApiParameter(name="patient_id", description="Filtrar per ID del pacient", required=False, type=str),
+            OpenApiParameter(name="order_by", description="Ordenar resultats (per defecte: -created_at)", required=False, type=str),
+        ],
+        responses={200: AlertListSerializer(many=True)},
+    )
     def get(self, request):
         therapist = request.user.therapist_profile
 
@@ -64,11 +77,24 @@ class AlertDetailView(APIView):
             patient__therapist_links__is_active=True,
         )
 
+    @extend_schema(
+        tags=["Alerts"],
+        summary="Obtenir detall d'una alerta",
+        description="Obté la informació completa d'una alerta, incloent l'anàlisi emocional, dades del pacient i contactes associats.",
+        responses={200: AlertDetailSerializer},
+    )
     def get(self, request, alert_id):
         alert = self._get_alert_for_therapist(request, alert_id)
         serializer = AlertDetailSerializer(alert)
         return Response(serializer.data)
 
+    @extend_schema(
+        tags=["Alerts"],
+        summary="Validar o desestimar una alerta",
+        description="Valida o desestima una alerta. S'ha de proporcionar l'acció (VALIDATE o DISMISS) i opcionalment una nota de validació.",
+        request=AlertValidationSerializer,
+        responses={200: AlertDetailSerializer},
+    )
     def patch(self, request, alert_id):
         alert = self._get_alert_for_therapist(request, alert_id)
 
@@ -101,6 +127,13 @@ class AlertDetailView(APIView):
 class AlertNotifyContactsView(APIView):
     permission_classes = [IsTherapistUser]
 
+    @extend_schema(
+        tags=["Alerts"],
+        summary="Notificar contactes d'una alerta validada",
+        description="Envia notificacions als contactes especificats d'una alerta que ha estat validada. La alerta ha d'estar en estat VALIDATED per usar aquest endpoint.",
+        request=AlertNotifyContactsSerializer,
+        responses={200: None},
+    )
     def post(self, request, alert_id):
         therapist = request.user.therapist_profile
 
@@ -154,6 +187,12 @@ class AlertNotifyContactsView(APIView):
 class AlertHistoryView(APIView):
     permission_classes = [IsTherapistUser]
 
+    @extend_schema(
+        tags=["Alerts"],
+        summary="Obtenir historial de notificacions d'una alerta",
+        description="Recupera l'historial de totes les notificacions enviades per a una alerta específica.",
+        responses={200: AlertNotificationSerializer(many=True)},
+    )
     def get(self, request, alert_id):
         therapist = request.user.therapist_profile
         alert = get_object_or_404(
@@ -171,6 +210,12 @@ class AlertHistoryView(APIView):
 class PatientAlertListView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["Alerts"],
+        summary="Llistar alertes validades del pacient",
+        description="Obté un llistat d'alertes validades pel terapeuta i que el pacient ha de conèixer. Només els pacients poden accedir a aquest endpoint.",
+        responses={200: AlertListSerializer(many=True)},
+    )
     def get(self, request):
         user = request.user
 

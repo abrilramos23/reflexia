@@ -22,12 +22,7 @@ from apps.users.models import (
 
 
 def validate_therapist_name_against_directory(license_number, first_name, last_name):
-    """
-    Validates that first_name and last_name match the directory entry for the license_number.
-    Uses word-level, case-insensitive matching.
 
-    Returns the ProfessionalDirectoryEntry if valid, raises ValidationError if names don't match.
-    """
     try:
         directory_entry = ProfessionalDirectoryEntry.objects.get(
             license_number=license_number.strip().upper()

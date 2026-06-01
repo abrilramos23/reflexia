@@ -145,9 +145,12 @@ export function AlertDetailPage() {
       const response = await api.post(`/alerts/${alertId}/notify-contacts/`, {
         contact_ids: selectedContacts,
       })
+      const failedCount = response.data.failed_count
 
       setSuccessMessage(
-        `Notificacions enviades: ${response.data.notified_count}. Fallides: ${response.data.failed_count}.`,
+        typeof failedCount === 'number'
+          ? `Notificacions enviades: ${response.data.notified_count}. Fallides: ${failedCount}.`
+          : `Notificacions enviades: ${response.data.notified_count}.`,
       )
 
       const historyResponse = await api.get(`/alerts/${alertId}/history/`)
