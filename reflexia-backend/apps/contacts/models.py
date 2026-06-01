@@ -30,7 +30,7 @@ class AssociatedContact(models.Model):
 
     def clean(self):
         if not self.email and not self.phone:
-            raise ValidationError("At least one contact method is required.")
+            raise ValidationError("Cal indicar com a mínim un mètode de contacte.")
 
 
 class DefaultContact(models.Model):
@@ -95,7 +95,7 @@ class SupportTherapist(models.Model):
 
     def clean(self):
         if self.therapist_id == self.support_id:
-            raise ValidationError("A therapist cannot be their own support therapist.")
+            raise ValidationError("Un terapeuta no pot ser el seu propi terapeuta de suport.")
 
     def accept(self):
         self.status = self.Status.ACCEPTED

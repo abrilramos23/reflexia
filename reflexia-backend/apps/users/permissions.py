@@ -2,7 +2,7 @@ from rest_framework.permissions import BasePermission
 
 
 class IsTherapistUser(BasePermission):
-    message = "Only therapists can perform this action."
+    message = "Només els terapeutas poden realitzar aquesta acció."
 
     def has_permission(self, request, view):
         user = request.user
@@ -10,7 +10,7 @@ class IsTherapistUser(BasePermission):
 
 
 class IsClinicAdminUser(BasePermission):
-    message = "Only clinic administrators can perform this action."
+    message = "Només els administradors de clínica poden realitzar aquesta acció."
 
     def has_permission(self, request, view):
         user = request.user

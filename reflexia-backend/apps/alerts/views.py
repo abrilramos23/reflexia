@@ -146,7 +146,7 @@ class AlertNotifyContactsView(APIView):
 
         if alert.status != Alert.Status.VALIDATED:
             raise PermissionDenied(
-                "Can only notify contacts for validated alerts."
+                "Només es pot notificar als contactes per a alertes validades."
             )
 
         serializer = AlertNotifyContactsSerializer(data=request.data)
@@ -160,7 +160,7 @@ class AlertNotifyContactsView(APIView):
         ).select_related("contact")
 
         if not contacts.exists():
-            raise ValidationError("No valid contacts found for this patient.")
+            raise ValidationError("No s'han trobat contactes vàlids per a aquest pacient.")
 
         from apps.alerts.tasks import batch_send_alerts_to_contacts
 
@@ -220,7 +220,7 @@ class PatientAlertListView(APIView):
         user = request.user
 
         if not user.is_patient:
-            raise PermissionDenied("Only patients can view their alerts.")
+            raise PermissionDenied("Només els pacients poden veure les seves alertes.")
 
         patient = user.patient_profile
 

@@ -147,7 +147,7 @@ class AlertValidationSerializer(serializers.Serializer):
 
     def validate_action(self, value):
         if value not in ["VALIDATE", "DISMISS"]:
-            raise serializers.ValidationError("Invalid action. Use 'VALIDATE' or 'DISMISS'.")
+            raise serializers.ValidationError("Acció no vàlida. Utilitza 'VALIDATE' o 'DISMISS'.")
         return value
 
 
@@ -159,5 +159,5 @@ class AlertNotifyContactsSerializer(serializers.Serializer):
 
     def validate_contact_ids(self, value):
         if not value:
-            raise serializers.ValidationError("At least one contact must be selected.")
+            raise serializers.ValidationError("Cal seleccionar almenys un contacte.")
         return value

@@ -41,7 +41,7 @@ class PatientEntriesMixin:
         patient = self.get_patient(request)
         if patient is None:
             return None, Response(
-                {"detail": "Only patients can manage journal entries."},
+                {"detail": "Només els pacients poden gestionar les entrades de journaling."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         return patient, None

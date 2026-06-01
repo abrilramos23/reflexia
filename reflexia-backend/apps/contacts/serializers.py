@@ -27,7 +27,7 @@ class AssociatedContactSerializer(serializers.ModelSerializer):
 
         if not email and not phone:
             raise serializers.ValidationError(
-                {"non_field_errors": ["At least one contact method is required."]}
+                {"non_field_errors": ["Cal indicar com a mínim un mètode de contacte."]}
             )
         return attrs
 
@@ -150,11 +150,11 @@ class SupportTherapistCreateSerializer(serializers.Serializer):
         try:
             support_therapist = Therapist.objects.get(pk=attrs["support_id"])
         except Therapist.DoesNotExist as exc:
-            raise serializers.ValidationError({"support_id": "Therapist not found."}) from exc
+            raise serializers.ValidationError({"support_id": "Terapeuta no trobat."}) from exc
 
         if therapist.pk == support_therapist.pk:
             raise serializers.ValidationError(
-                {"support_id": "A therapist cannot be their own support therapist."}
+                {"support_id": "Un terapeuta no pot ser el seu propi terapeuta de suport."}
             )
 
         existing_link = SupportTherapist.objects.filter(

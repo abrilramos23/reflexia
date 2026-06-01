@@ -32,7 +32,7 @@ class AssociatedContactListCreateView(APIView):
     )
     def get(self, request):
         if not hasattr(request.user, "patient_profile"):
-            return Response({"detail": "Only patients can manage associated contacts."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "Només els pacients poden gestionar contactes associats."}, status=status.HTTP_403_FORBIDDEN)
 
         patient = request.user.patient_profile
         links = DefaultContact.objects.filter(patient=patient).select_related("contact").order_by("-is_default", "contact__name")
@@ -71,7 +71,7 @@ class AssociatedContactListCreateView(APIView):
     )
     def post(self, request):
         if not hasattr(request.user, "patient_profile"):
-            return Response({"detail": "Only patients can manage associated contacts."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "Només els pacients poden gestionar contactes associats."}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = AssociatedContactSerializer(data=request.data, context={"patient": request.user.patient_profile})
         serializer.is_valid(raise_exception=True)
@@ -120,11 +120,11 @@ class AssociatedContactDetailView(APIView):
     )
     def patch(self, request, contact_id):
         if not hasattr(request.user, "patient_profile"):
-            return Response({"detail": "Only patients can manage associated contacts."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "Només els pacients poden gestionar contactes associats."}, status=status.HTTP_403_FORBIDDEN)
 
         contact = self.get_object(request, contact_id)
         if contact is None:
-            return Response({"detail": "Contact not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Contacte no trobat."}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = AssociatedContactSerializer(
             contact,
@@ -158,11 +158,11 @@ class AssociatedContactDetailView(APIView):
     )
     def delete(self, request, contact_id):
         if not hasattr(request.user, "patient_profile"):
-            return Response({"detail": "Only patients can manage associated contacts."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "Només els pacients poden gestionar contactes associats."}, status=status.HTTP_403_FORBIDDEN)
 
         contact = self.get_object(request, contact_id)
         if contact is None:
-            return Response({"detail": "Contact not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Contacte no trobat."}, status=status.HTTP_404_NOT_FOUND)
 
         deleted_links, _ = DefaultContact.objects.filter(
             patient=request.user.patient_profile,
@@ -172,7 +172,7 @@ class AssociatedContactDetailView(APIView):
         if deleted_links and not DefaultContact.objects.filter(contact=contact).exists():
             contact.delete()
 
-        return Response({"message": "Associated contact deleted successfully."}, status=status.HTTP_200_OK)
+        return Response({"message": "Contacte associat eliminat correctament."}, status=status.HTTP_200_OK)
 
 
 class SupportTherapistListCreateView(APIView):
@@ -252,7 +252,7 @@ class SupportTherapistRequestRespondView(APIView):
         ).select_related("therapist").first()
 
         if link is None:
-            return Response({"detail": "Support request not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Sol·licitud de suport no trobada."}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = SupportTherapistResponseSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -293,9 +293,9 @@ class SupportTherapistDeleteView(APIView):
         ).delete()
 
         if not deleted:
-            return Response({"detail": "Support therapist not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Terapeuta de suport no trobat."}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response({"message": "Support therapist deleted successfully."}, status=status.HTTP_200_OK)
+        return Response({"message": "Terapeuta de suport eliminat correctament."}, status=status.HTTP_200_OK)
 
 
 class AvailableSupportTherapistListView(APIView):

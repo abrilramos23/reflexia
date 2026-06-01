@@ -37,9 +37,9 @@ def validate_therapist_name_against_directory(license_number, first_name, last_n
     if not user_name_words.issubset(directory_name_words):
         missing_words = user_name_words - directory_name_words
         raise serializers.ValidationError(
-            f"The name provided does not match the directory entry. "
-            f"Directory has: {directory_entry.complete_name}. "
-            f"Missing: {', '.join(missing_words)}"
+            f"El nom proporcionat no coincideix amb el directori. "
+            f"Directori: {directory_entry.complete_name}. "
+            f"Mancant: {', '.join(missing_words)}"
         )
 
     return directory_entry
@@ -178,16 +178,16 @@ class TherapistRegistrationSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
+            raise serializers.ValidationError("Ja existeix un usuari amb aquest correu electrònic.")
         return value
 
     def validate_license_number(self, value):
         normalized_value = value.strip().upper()
 
         if not ProfessionalDirectoryEntry.objects.filter(license_number=normalized_value).exists():
-            raise serializers.ValidationError("This license number is not present in the Catalonia directory.")
+            raise serializers.ValidationError("Aquesta llicència no està present al directori de professionals de Catalunya.")
         if Therapist.objects.filter(license_number=normalized_value).exists():
-            raise serializers.ValidationError("This license number is already assigned to another therapist.")
+            raise serializers.ValidationError("Aquesta llicència ja està assignada a un altre terapeuta.")
         return normalized_value
 
     def validate(self, attrs):
@@ -268,7 +268,7 @@ class PatientTherapistChangeSerializer(serializers.Serializer):
         try:
             new_therapist = Therapist.objects.get(pk=attrs["therapist_id"], is_active=True)
         except Therapist.DoesNotExist as exc:
-            raise serializers.ValidationError({"therapist_id": "Therapist not found."}) from exc
+            raise serializers.ValidationError({"therapist_id": "Terapeuta no trobat."}) from exc
 
         active_link = (
             patient.therapist_links.filter(is_active=True)
@@ -362,7 +362,7 @@ class TherapistAdminUpdateSerializer(serializers.Serializer):
     def validate_email(self, value):
         therapist = self.context["therapist"]
         if User.objects.filter(email__iexact=value).exclude(pk=therapist.pk).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
+            raise serializers.ValidationError("Ja existeix un usuari amb aquest correu electrònic.")
         return value
 
     def validate_license_number(self, value):
@@ -370,9 +370,9 @@ class TherapistAdminUpdateSerializer(serializers.Serializer):
         normalized_value = value.strip().upper()
 
         if not ProfessionalDirectoryEntry.objects.filter(license_number=normalized_value).exists():
-            raise serializers.ValidationError("This license number is not present in the Catalonia directory.")
+            raise serializers.ValidationError("Aquesta llicència no està present al directori de professionals de Catalunya.")
         if Therapist.objects.filter(license_number=normalized_value).exclude(pk=therapist.pk).exists():
-            raise serializers.ValidationError("This license number is already assigned to another therapist.")
+            raise serializers.ValidationError("Aquesta llicència ja està assignada a un altre terapeuta.")
         return normalized_value
 
     def validate(self, attrs):
@@ -398,7 +398,7 @@ class TherapistAdminUpdateSerializer(serializers.Serializer):
         try:
             return Organisation.objects.get(pk=value)
         except Organisation.DoesNotExist as exc:
-            raise serializers.ValidationError("Organisation not found.") from exc
+            raise serializers.ValidationError("Organització no trobada.") from exc
 
 
 class PatientRegistrationSerializer(serializers.ModelSerializer):
@@ -417,7 +417,7 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
+            raise serializers.ValidationError("Ja existeix un usuari amb aquest correu electrònic.")
         return value
 
     def create(self, validated_data):
@@ -454,13 +454,13 @@ class AccountActivationSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:
-            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+            raise serializers.ValidationError({"password_confirm": "Les contrasenyes no coincideixen."})
 
         user = self._get_user(attrs["uid"])
         if user is None:
-            raise serializers.ValidationError({"uid": "Invalid activation identifier."})
+            raise serializers.ValidationError({"uid": "Identificador d'activació no vàlid."})
         if not default_token_generator.check_token(user, attrs["token"]):
-            raise serializers.ValidationError({"token": "Invalid or expired activation token."})
+            raise serializers.ValidationError({"token": "Token d'activació no vàlid o expirat."})
 
         attrs["user"] = user
         return attrs
@@ -491,10 +491,10 @@ class LoginSerializer(serializers.Serializer):
         try:
             user = User.objects.get(email__iexact=email)
         except User.DoesNotExist as exc:
-            raise serializers.ValidationError({"detail": "Invalid email or password."}) from exc
+            raise serializers.ValidationError({"detail": "Correu electrònic o contrasenya no vàlida."}) from exc
 
         if not user.is_active:
-            raise serializers.ValidationError({"detail": "This account is inactive. Please activate it first."})
+            raise serializers.ValidationError({"detail": "Compte inactiu. Si us plau, activa'l primer."})
 
         authenticated_user = authenticate(
             request=self.context.get("request"),
@@ -502,7 +502,7 @@ class LoginSerializer(serializers.Serializer):
             password=password,
         )
         if authenticated_user is None:
-            raise serializers.ValidationError({"detail": "Invalid email or password."})
+            raise serializers.ValidationError({"detail": "Correu electrònic o contrasenya no vàlida."})
 
         attrs["user"] = authenticated_user
         return attrs
@@ -513,7 +513,7 @@ class LoginSerializer(serializers.Serializer):
             return {
                 "login_status": "two_factor_required",
                 "user": user,
-                "message": "Two-factor verification is required to complete login.",
+                "message": "Es requereix verificació de dos factors per completar l'inici de sessió.",
             }
 
         refresh = RefreshToken.for_user(user)
@@ -536,7 +536,7 @@ class RefreshTokenSerializer(serializers.Serializer):
         try:
             RefreshToken(value)
         except Exception as exc:
-            raise serializers.ValidationError("Invalid refresh token.") from exc
+            raise serializers.ValidationError("Token de renovació no vàlid.") from exc
         return value
 
     def blacklist(self):
@@ -587,11 +587,11 @@ class TwoFactorEnableSerializer(serializers.Serializer):
     def validate(self, attrs):
         user = self.context["user"]
         if not user.two_factor_pending_secret:
-            raise serializers.ValidationError({"detail": "Two-factor setup has not been started."})
+            raise serializers.ValidationError({"detail": "L'autenticació de dos factors no ha estat iniciada."})
 
         totp = pyotp.TOTP(user.two_factor_pending_secret)
         if not totp.verify(attrs["code"], valid_window=1):
-            raise serializers.ValidationError({"code": "Invalid verification code."})
+            raise serializers.ValidationError({"code": "Codi de verificació no vàlid."})
         return attrs
 
     def save(self, **kwargs):
@@ -616,12 +616,12 @@ class TwoFactorVerifySerializer(serializers.Serializer):
         try:
             user = User.objects.get(email__iexact=email)
         except User.DoesNotExist as exc:
-            raise serializers.ValidationError({"detail": "Invalid credentials or verification code."}) from exc
+            raise serializers.ValidationError({"detail": "Credencials o codi de verificació no vàlids."}) from exc
 
         if not user.is_active:
-            raise serializers.ValidationError({"detail": "This account is inactive. Please activate it first."})
+            raise serializers.ValidationError({"detail": "Compte inactiu. Si us plau, activa'l primer."})
         if not user.two_factor_enabled or not user.two_factor_secret:
-            raise serializers.ValidationError({"detail": "Two-factor authentication is not enabled for this user."})
+            raise serializers.ValidationError({"detail": "L'autenticació de dos factors no està habilitada per a aquest usuari."})
 
         authenticated_user = authenticate(
             request=self.context.get("request"),
@@ -629,11 +629,11 @@ class TwoFactorVerifySerializer(serializers.Serializer):
             password=password,
         )
         if authenticated_user is None:
-            raise serializers.ValidationError({"detail": "Invalid credentials or verification code."})
+            raise serializers.ValidationError({"detail": "Credencials o codi de verificació no vàlids."})
 
         totp = pyotp.TOTP(user.two_factor_secret)
         if not totp.verify(code, valid_window=1):
-            raise serializers.ValidationError({"code": "Invalid verification code."})
+            raise serializers.ValidationError({"code": "Codi de verificació no vàlid."})
 
         attrs["user"] = authenticated_user
         return attrs
@@ -660,7 +660,7 @@ class TwoFactorDisableSerializer(serializers.Serializer):
     def validate(self, attrs):
         user = self.context["user"]
         if not user.two_factor_enabled or not user.two_factor_secret:
-            raise serializers.ValidationError({"detail": "Two-factor authentication is not enabled."})
+            raise serializers.ValidationError({"detail": "L'autenticació de dos factors no està habilitada."})
 
         authenticated_user = authenticate(
             request=self.context.get("request"),
@@ -668,11 +668,11 @@ class TwoFactorDisableSerializer(serializers.Serializer):
             password=attrs["password"],
         )
         if authenticated_user is None:
-            raise serializers.ValidationError({"detail": "Invalid password or verification code."})
+            raise serializers.ValidationError({"detail": "Contrasenya o codi de verificació no vàlid."})
 
         totp = pyotp.TOTP(user.two_factor_secret)
         if not totp.verify(attrs["code"], valid_window=1):
-            raise serializers.ValidationError({"code": "Invalid verification code."})
+            raise serializers.ValidationError({"code": "Codi de verificació no vàlid."})
         return attrs
 
     def save(self, **kwargs):
@@ -707,13 +707,13 @@ class PasswordResetSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:
-            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+            raise serializers.ValidationError({"password_confirm": "Les contrasenyes no coincideixen."})
 
         user = self._get_user(attrs["uid"])
         if user is None:
-            raise serializers.ValidationError({"uid": "Invalid reset identifier."})
+            raise serializers.ValidationError({"uid": "Identificador de restabliment no vàlid."})
         if not default_token_generator.check_token(user, attrs["token"]):
-            raise serializers.ValidationError({"token": "Invalid or expired reset token."})
+            raise serializers.ValidationError({"token": "Token de restabliment no vàlid o expirat."})
 
         attrs["user"] = user
         return attrs
@@ -750,12 +750,12 @@ class ProfileUpdateSerializer(serializers.Serializer):
         invalid_fields = set(attrs.keys()) - allowed_fields
         if invalid_fields:
             raise serializers.ValidationError(
-                {field: "This field cannot be updated for this user." for field in invalid_fields}
+                {field: "Aquest camp no es pot actualitzar per a aquest usuari." for field in invalid_fields}
             )
 
         email = attrs.get("email")
         if email and User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
-            raise serializers.ValidationError({"email": "A user with this email already exists."})
+            raise serializers.ValidationError({"email": "Ja existeix un usuari amb aquest correu electrònic."})
 
         return attrs
 
@@ -775,7 +775,7 @@ class ChangePasswordSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs["new_password"] != attrs["new_password_confirm"]:
-            raise serializers.ValidationError({"new_password_confirm": "Passwords do not match."})
+            raise serializers.ValidationError({"new_password_confirm": "Les contrasenyes no coincideixen."})
         return attrs
 
     def save(self, **kwargs):

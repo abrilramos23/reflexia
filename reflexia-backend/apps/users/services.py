@@ -426,7 +426,7 @@ def deactivate_patient_by_therapist(*, therapist, patient):
         patient=patient,
     ).exists()
     if not relation_exists:
-        raise DjangoValidationError({"patient": ["This patient is not assigned to the authenticated therapist."]})
+        raise DjangoValidationError({"patient": ["Aquest pacient no està assignat al terapeuta autenticat."]})
 
     patient.email = f"deleted-{patient.pk}@deleted.reflexia.local"
     patient.first_name = "Pacient"

@@ -207,7 +207,7 @@ class AccountActivationView(APIView):
                 "id": str(user.pk),
                 "email": user.email,
                 "is_active": user.is_active,
-                "message": "Account activated successfully.",
+                "message": "Compte activat correctament.",
             },
             status=status.HTTP_200_OK,
         )
@@ -251,7 +251,7 @@ class LoginView(APIView):
                     },
                     "access": None,
                     "refresh": None,
-                    "message": "Two-factor verification is required to complete login.",
+                    "message": "Es requereix verificació de dos factors per completar l'inici de sessió.",
                 },
                 response_only=True,
             )
@@ -287,7 +287,7 @@ class LogoutView(APIView):
         serializer = RefreshTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.blacklist()
-        return Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
+        return Response({"message": "Sessió tancada correctament."}, status=status.HTTP_200_OK)
 
 
 class PasswordForgotView(APIView):
@@ -314,7 +314,7 @@ class PasswordForgotView(APIView):
         serializer.save()
         return Response(
             {
-                "message": "If the email exists, a password reset link has been sent.",
+                "message": "Si l'adreça de correu existeix, s'ha enviat un enllaç de restabliment de contrasenya.",
             },
             status=status.HTTP_200_OK,
         )
@@ -337,7 +337,7 @@ class PasswordResetView(APIView):
         serializer.save()
         return Response(
             {
-                "message": "Password updated successfully.",
+                "message": "Contrasenya actualitzada correctament.",
             },
             status=status.HTTP_200_OK,
         )
@@ -374,7 +374,7 @@ class MeView(APIView):
         user = serializer.save()
         return Response(
             {
-                "message": "Profile updated successfully.",
+                "message": "Perfil actualitzat correctament.",
                 "user": UserSummarySerializer(user).data,
             },
             status=status.HTTP_200_OK,
@@ -398,7 +398,7 @@ class ChangePasswordView(APIView):
         serializer.save()
         return Response(
             {
-                "message": "Password updated successfully.",
+                "message": "Contrasenya actualitzada correctament.",
             },
             status=status.HTTP_200_OK,
         )
@@ -441,7 +441,7 @@ class DeleteAccountView(APIView):
         serializer.save()
         return Response(
             {
-                "message": "Account deleted successfully.",
+                "message": "Compte eliminat correctament.",
             },
             status=status.HTTP_200_OK,
         )
@@ -625,7 +625,7 @@ class PatientConsentAcceptView(APIView):
         user = serializer.save()
         return Response(
             {
-                "message": "Consent accepted successfully.",
+                "message": "Consentiment acceptat correctament.",
                 "user": UserSummarySerializer(user).data,
             },
             status=status.HTTP_200_OK,
@@ -650,7 +650,7 @@ class PatientConsentRejectView(APIView):
         serializer.save()
         return Response(
             {
-                "message": "Consent rejected. The account has been deactivated.",
+                "message": "Consentiment rebutjat. El compte ha estat desactivat.",
             },
             status=status.HTTP_200_OK,
         )
@@ -702,7 +702,7 @@ class TwoFactorEnableView(APIView):
         user = serializer.save()
         return Response(
             {
-                "message": "Two-factor authentication enabled successfully.",
+                "message": "Autenticació de dos factors habilitada correctament.",
                 "user": UserSummarySerializer(user).data,
             },
             status=status.HTTP_200_OK,
@@ -766,7 +766,7 @@ class TwoFactorDisableView(APIView):
         user = serializer.save()
         return Response(
             {
-                "message": "Two-factor authentication disabled successfully.",
+                "message": "Autenticació de dos factors deshabilitada correctament.",
                 "user": UserSummarySerializer(user).data,
             },
             status=status.HTTP_200_OK,
@@ -797,7 +797,7 @@ class ConsentDocumentView(APIView):
         )
         pdf_path = Path(__file__).resolve().parent / "data" / filename
         if not pdf_path.exists():
-            raise Http404("Consent document not found.")
+            raise Http404("Document de consentiment no trobat.")
 
         return FileResponse(
             pdf_path.open("rb"),
@@ -823,7 +823,7 @@ class ClinicStatsView(APIView):
     def get(self, request):
         membership = request.user.organisation_memberships.filter(is_admin=True).first()
         if not membership:
-            return Response({"detail": "User is not an admin of any organisation."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "No ets administrador de cap organització."}, status=status.HTTP_403_FORBIDDEN)
         
         organisation = membership.organisation
         
@@ -1088,7 +1088,7 @@ class ClinicTherapistListView(APIView):
     def get(self, request):
         membership = request.user.organisation_memberships.filter(is_admin=True).first()
         if not membership:
-            return Response({"detail": "User is not an admin of any organisation."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "No ets administrador de cap organització."}, status=status.HTTP_403_FORBIDDEN)
         
         organisation = membership.organisation
         
