@@ -1,0 +1,12 @@
+$kind: http-request
+description: >-
+  List all follow-up questions for a patient.
+
+  **Query parameters:**
+  - `ordering` (string, optional): `-created_at` for newest first
+  - `status` (string, optional): `pending`, `answered`, `resolved`
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
+url: "{{base_url}}/api/entries/patients/{{patient_id}}/questions/"
+method: GET
+order: 2050

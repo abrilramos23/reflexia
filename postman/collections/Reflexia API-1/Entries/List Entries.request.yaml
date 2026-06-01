@@ -1,0 +1,13 @@
+$kind: http-request
+description: >-
+  List all journal entries for the authenticated patient.
+
+  **Query parameters:**
+  - `ordering` (string, optional): `-created_at` for newest first (default), `created_at` for oldest first
+  - `limit` (integer, optional): Number of entries per page
+  - `offset` (integer, optional): Pagination offset
+
+  **Auth:** JWT Bearer (IsAuthenticated - Patient only)
+url: "{{base_url}}/api/entries/?ordering=-created_at"
+method: GET
+order: 1030

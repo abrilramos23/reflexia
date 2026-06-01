@@ -1,0 +1,9 @@
+$kind: http-request
+description: >-
+  Analyze a patient's journal entry to generate emotional insights.
+  Triggers asynchronous analysis if not already completed.
+
+  **Auth:** JWT Bearer (IsAuthenticated - Patient can analyze their own entries)
+url: "{{base_url}}/api/analysis/entries/{{entry_id}}/analyze/"
+method: POST
+order: 3010

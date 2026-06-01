@@ -1,0 +1,9 @@
+$kind: http-request
+description: >-
+  Get the emotional analysis results for a specific entry.
+  Returns emotional dimensions, sentiment analysis, and key themes detected.
+
+  **Auth:** JWT Bearer (IsAuthenticated - Patient can view analysis of their entries)
+url: "{{base_url}}/api/analysis/entries/{{entry_id}}/"
+method: GET
+order: 3020

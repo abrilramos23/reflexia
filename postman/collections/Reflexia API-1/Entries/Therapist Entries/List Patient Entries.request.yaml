@@ -1,0 +1,13 @@
+$kind: http-request
+description: >-
+  List all entries for a specific patient (therapist view).
+
+  **Query parameters:**
+  - `ordering` (string, optional): `-created_at` for newest first (default)
+  - `limit` (integer, optional): Number of entries per page
+  - `offset` (integer, optional): Pagination offset
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
+url: "{{base_url}}/api/entries/patients/{{patient_id}}/"
+method: GET
+order: 2010

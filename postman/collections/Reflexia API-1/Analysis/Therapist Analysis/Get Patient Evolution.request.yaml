@@ -1,0 +1,12 @@
+$kind: http-request
+description: >-
+  Get a patient's emotional evolution over time (therapist view).
+  Includes trends, risk patterns, and alerts triggered.
+
+  **Query parameters:**
+  - `days` (integer, optional): Number of days to include (default: 30)
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
+url: "{{base_url}}/api/analysis/patients/{{patient_id}}/evolution/"
+method: GET
+order: 4020

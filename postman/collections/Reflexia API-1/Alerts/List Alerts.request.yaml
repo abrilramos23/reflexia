@@ -1,0 +1,16 @@
+$kind: http-request
+description: >-
+  List all clinical alerts (therapist view).
+  Shows alerts from all assigned patients.
+
+  **Query parameters:**
+  - `status` (string, optional): `open`, `validated`, `dismissed`, `resolved`
+  - `risk_level` (string, optional): `high`, `medium`, `low`
+  - `ordering` (string, optional): `-created_at` for newest first
+  - `limit` (integer, optional): Number of alerts per page
+  - `offset` (integer, optional): Pagination offset
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist only)
+url: "{{base_url}}/api/alerts/"
+method: GET
+order: 5010

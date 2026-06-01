@@ -1,0 +1,9 @@
+$kind: http-request
+description: >-
+  Get the analysis of a patient's entry (therapist view).
+  Returns emotional dimensions, sentiment, themes, and therapist review status.
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
+url: "{{base_url}}/api/analysis/patients/{{patient_id}}/entries/{{entry_id}}/"
+method: GET
+order: 4010
