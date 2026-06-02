@@ -759,7 +759,7 @@ class LoginTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(str(response.data["detail"][0]), "This account is inactive. Please activate it first.")
+        self.assertEqual(str(response.data["detail"][0]), "Compte inactiu. Si us plau, activa'l primer.")
 
     def test_login_rejects_invalid_credentials(self):
         response = self.client.post(
@@ -769,7 +769,7 @@ class LoginTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(str(response.data["detail"][0]), "Invalid email or password.")
+        self.assertEqual(str(response.data["detail"][0]), "Correu electrònic o contrasenya no vàlida.")
 
     def test_me_returns_authenticated_user(self):
         refresh = RefreshToken.for_user(self.therapist)

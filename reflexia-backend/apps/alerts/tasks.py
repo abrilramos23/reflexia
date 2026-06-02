@@ -1,10 +1,52 @@
+from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
+from django.conf import settings
 
 from apps.alerts.models import Alert, AlertNotification
-from apps.alerts.services import send_alert_email_to_contact
+from apps.alerts.services import send_alert_email_to_contact, send_reminder_email
+import logging
 
+logger = logging.getLogger(__name__)
+
+@shared_task
+def send_inactivity_reminders():
+    from apps.entries.models import JournalEntry
+    from apps.users.models import Patient
+
+    days = 3
+    threshold = timezone.now() - timedelta(days=days)
+
+    active_patients = Patient.objects.filter(
+        is_active=True,
+        legal_terms_accepted=True,
+    )
+
+    reminders_sent = 0
+
+    for patient in active_patients:
+        has_any_entry = JournalEntry.objects.filter(
+            patient=patient,
+        ).exclude(
+            status=JournalEntry.STATUS_DELETED,
+        ).exists()
+
+        if not has_any_entry:
+            continue
+
+        last_entry = JournalEntry.objects.filter(
+            patient=patient,
+        ).exclude(
+            status=JournalEntry.STATUS_DELETED,
+        ).order_by('-created_at').first()
+
+        if last_entry and last_entry.created_at < threshold:
+            send_reminder_email(patient, days, last_entry.created_at)
+            reminders_sent += 1
+
+    logger.info(f"Recordatoris d'inactivitat enviats: {reminders_sent}")
+    return reminders_sent
 
 @shared_task(bind=True, max_retries=3)
 def send_alert_to_contact_task(self, alert_id, contact_id):

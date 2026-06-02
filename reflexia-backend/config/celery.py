@@ -15,6 +15,10 @@ app.conf.beat_schedule = {
         'task': 'apps.alerts.tasks.escalate_pending_alerts',
         'schedule': crontab(minute='*/30'), 
     },
+    'send-inactivity-reminders': {
+        'task': 'apps.alerts.tasks.send_inactivity_reminders',
+        'schedule': crontab(hour=10, minute=0),
+    },
 }
 
 

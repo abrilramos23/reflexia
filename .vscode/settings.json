@@ -9,5 +9,9 @@
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
     "files.autoSaveWhenNoErrors": true,
-    "files.autoSaveWorkspaceFilesOnly": true
+    "files.autoSaveWorkspaceFilesOnly": true,
+    "python.analysis.extraPaths": [
+        "./reflexia-backend/apps",
+        "./reflexia-backend"
+    ]
 }
