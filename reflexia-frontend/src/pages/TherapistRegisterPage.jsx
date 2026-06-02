@@ -3,6 +3,7 @@ import { FaHospital, FaTicketAlt, FaUser } from 'react-icons/fa'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { consentDocumentUrlForRole } from '../lib/api.js'
 
 function firstErrorMessage(error) {
   if (!error) {
@@ -103,6 +104,17 @@ export function TherapistRegisterPage() {
             <h1>Registre de terapeutes</h1>
             <p className="hero-lead">Tria el teu tipus de registre per començar.</p>
           </div>
+
+          <div className="hero-copy">
+              <p className="eyebrow" style={{ margin: 0 }}>Protecció de dades i pràctica professional</p>
+              <p className="muted" style={{ margin: 0 }}>
+                Reflexia tracta dades de salut. Abans d&apos;entrar al panell hauràs de llegir i acceptar el document
+                legal aplicable al teu rol professional.
+              </p>
+              <a className="text-link" href={consentDocumentUrlForRole('therapist')} target="_blank" rel="noreferrer">
+                Veure el PDF de consentiment professional
+              </a>
+            </div>
         </aside>
 
         <div style={{ display: "grid", gap: "20px" }}>
@@ -237,7 +249,6 @@ export function TherapistRegisterPage() {
         <section className="screen-card form-panel">
             <div className="panel-heading">
               <p className="eyebrow" style={{ margin: "0" }}>Ja tens un compte?</p>
-              <p style={{ margin: "0 0 1rem 0" }}>Inicia sessió per accedir al teu compte.</p>
               <button className="button" style={{ justifySelf: "center" }} onClick={() => navigate('/login')}>
                 Inicia sessió
               </button>

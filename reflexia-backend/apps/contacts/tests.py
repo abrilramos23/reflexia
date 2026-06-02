@@ -101,9 +101,33 @@ class SupportTherapistTests(APITestCase):
 
         self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(create_response.data["support_id"], str(self.other_therapist.pk))
+        self.assertEqual(create_response.data["status"], SupportTherapist.Status.PENDING)
         list_response = self.client.get(self.url, format="json")
         self.assertEqual(list_response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(list_response.data), 1)
+
+    def test_support_therapist_can_accept_request(self):
+        link = SupportTherapist.objects.create(
+            therapist=self.therapist,
+            support=self.other_therapist,
+        )
+        self.client.force_authenticate(user=self.other_therapist)
+
+        list_response = self.client.get("/api/contacts/support-therapists/requests/", format="json")
+
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_response.data), 1)
+
+        response = self.client.post(
+            f"/api/contacts/support-therapists/requests/{link.pk}/respond/",
+            {"action": "accept"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        link.refresh_from_db()
+        self.assertEqual(link.status, SupportTherapist.Status.ACCEPTED)
+        self.assertIsNotNone(link.responded_at)
 
     def test_therapist_cannot_add_self_as_support(self):
         self.client.force_authenticate(user=self.therapist)

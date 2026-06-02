@@ -3,7 +3,7 @@ import { FaUserSlash } from 'react-icons/fa'
 import { Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { useAuth } from '../context/AuthContext.jsx'
-import { consentDocumentUrl } from '../lib/api.js'
+import { consentDocumentUrlForRole } from '../lib/api.js'
 
 function firstErrorMessage(error) {
   if (!error) {
@@ -375,7 +375,6 @@ export function ProfilePage() {
         <section className="screen-card profile-card">
           <div className="panel-heading">
             <p className="eyebrow">Doble factor</p>
-            <h3>Configurar 2FA</h3>
           </div>
 
           {twoFactorMessage ? <div className="message">{twoFactorMessage}</div> : null}
@@ -383,9 +382,9 @@ export function ProfilePage() {
 
           {!user.two_factor_enabled ? (
             <>
-              <div className="button-row button-row--padded">
-                <button className="button-secondary" type="button" onClick={handleTwoFactorSetup}>
-                  Generar configuració 2FA
+              <div className="button-row button-row--small-top">
+                <button className="button-ghost" type="button" onClick={handleTwoFactorSetup}>
+                  Configurar 2FA
                 </button>
               </div>
 
@@ -459,14 +458,13 @@ export function ProfilePage() {
           )}
         </section>
 
-        <section className="screen-card dashboard-panel panel-fit">
+        <section className="screen-card profile-card">
           <div className="panel-heading">
-            <p className="eyebrow">Accions ràpides</p>
-            <h2>Seguretat i legal</h2>
+            <p className="eyebrow" style={{marginBottom: "24px"}}>Accions ràpides</p>
           </div>
 
           <div className="button-row">
-            <a className="button-ghost link-clean" href={consentDocumentUrl} target="_blank" rel="noreferrer">
+            <a className="button-ghost link-clean" href={consentDocumentUrlForRole(user.role)} target="_blank" rel="noreferrer">
               Veure consentiment PDF
             </a>
           </div>
@@ -475,7 +473,6 @@ export function ProfilePage() {
         <section className="screen-card profile-card">
           <div className="panel-heading">
             <p className="eyebrow">Sessió</p>
-            <h3>Tancar sessió</h3>
           </div>
 
           <div className="button-row button-row--small-top">
@@ -488,7 +485,6 @@ export function ProfilePage() {
         <section className="screen-card profile-card">
           <div className="panel-heading">
             <p className="eyebrow">Eliminar perfil</p>
-            <h3>Tancar compte</h3>
           </div>
 
           {deleteMessage ? <div className="message">{deleteMessage}</div> : null}
@@ -497,6 +493,7 @@ export function ProfilePage() {
           <div className="section-stack plain-section">
             <p className="muted delete-account-note">
               Les dades no clíniques s&apos;eliminaran i la resta quedarà subjecta al període legal de conservació.
+              Si ets terapeuta, abans cal reassignar o tancar correctament els pacients actius.
             </p>
           </div>
 

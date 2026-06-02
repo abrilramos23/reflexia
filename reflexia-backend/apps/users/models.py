@@ -66,6 +66,8 @@ class PatientManager(UserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    LEGAL_TERMS_VERSION = "2026-05-20"
+
     class Role(models.TextChoices):
         THERAPIST      = 'therapist',      'Therapist'
         PATIENT        = 'patient',        'Patient'
@@ -88,6 +90,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     two_factor_pending_secret= models.CharField(max_length=64, blank=True)
     is_active                = models.BooleanField(default=True)
     is_staff                 = models.BooleanField(default=False)
+    legal_terms_accepted     = models.BooleanField(default=False)
+    legal_terms_accepted_at  = models.DateTimeField(null=True, blank=True)
+    legal_terms_version      = models.CharField(max_length=30, blank=True)
 
     objects = UserManager()
 
@@ -257,8 +262,6 @@ class Patient(User):
                            related_name='patient_profile',
                        )
     birth_date       = models.DateField()
-    consent_accepted = models.BooleanField(default=False)
-    consent_date     = models.DateTimeField(null=True, blank=True)
 
     objects = PatientManager()
 

@@ -23,18 +23,22 @@ export function SupportTherapistsPage() {
     user,
     listSupportTherapists,
     listAvailableSupportTherapists,
+    listIncomingSupportTherapistRequests,
     createSupportTherapist,
+    respondSupportTherapistRequest,
     deleteSupportTherapist,
   } = useAuth()
 
   const [supportTherapists, setSupportTherapists] = useState([])
   const [availableSupportTherapists, setAvailableSupportTherapists] = useState([])
+  const [incomingRequests, setIncomingRequests] = useState([])
   const [selectedSupportId, setSelectedSupportId] = useState('')
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false)
   const [supportMessage, setSupportMessage] = useState('')
   const [supportError, setSupportError] = useState('')
   const [isSubmittingSupport, setIsSubmittingSupport] = useState(false)
   const [busySupportId, setBusySupportId] = useState('')
+  const [busyRequestId, setBusyRequestId] = useState('')
 
   const canHaveSupport =
     user?.role === 'therapist' && user?.memberships?.some((m) => m.organisation.type === 'clinic')
@@ -52,14 +56,16 @@ export function SupportTherapistsPage() {
 
     async function loadSupportData() {
       try {
-        const [currentSupportTherapists, availableTherapists] = await Promise.all([
+        const [currentSupportTherapists, availableTherapists, requests] = await Promise.all([
           listSupportTherapists(),
           listAvailableSupportTherapists(),
+          listIncomingSupportTherapistRequests(),
         ])
 
         if (!isCancelled) {
           setSupportTherapists(sortTherapists(currentSupportTherapists))
           setAvailableSupportTherapists(sortTherapists(availableTherapists))
+          setIncomingRequests(sortTherapists(requests))
         }
       } catch (error) {
         if (!isCancelled) {
@@ -73,7 +79,7 @@ export function SupportTherapistsPage() {
     return () => {
       isCancelled = true
     }
-  }, [listSupportTherapists, listAvailableSupportTherapists])
+  }, [listSupportTherapists, listAvailableSupportTherapists, listIncomingSupportTherapistRequests])
 
   async function handleSupportTherapistSubmit(event) {
     event.preventDefault()
@@ -93,11 +99,33 @@ export function SupportTherapistsPage() {
         currentTherapists.filter((therapist) => therapist.id !== selectedSupportId),
       )
       setSelectedSupportId('')
-      setSupportMessage('Terapeuta de suport afegit correctament.')
+      setSupportMessage('Sol·licitud enviada. El terapeuta haurà d’acceptar-la abans de quedar assignat.')
     } catch (error) {
       setSupportError(firstErrorMessage(error.response?.data || error))
     } finally {
       setIsSubmittingSupport(false)
+    }
+  }
+
+  async function handleRespondRequest(request, action) {
+    setSupportError('')
+    setSupportMessage('')
+    setBusyRequestId(request.id)
+
+    try {
+      await respondSupportTherapistRequest(request.id, action)
+      setIncomingRequests((currentRequests) =>
+        currentRequests.filter((currentRequest) => currentRequest.id !== request.id),
+      )
+      setSupportMessage(
+        action === 'accept'
+          ? 'Has acceptat ser terapeuta de suport.'
+          : 'Has rebutjat la sol·licitud de suport.',
+      )
+    } catch (error) {
+      setSupportError(firstErrorMessage(error.response?.data || error))
+    } finally {
+      setBusyRequestId('')
     }
   }
 
@@ -248,7 +276,9 @@ export function SupportTherapistsPage() {
                         <strong>
                           {supportTherapist.first_name} {supportTherapist.last_name}
                         </strong>
-                        <span className="status-pill">Suport actiu</span>
+                        <span className={`status-pill ${supportTherapist.status === 'accepted' ? 'dashboard-status-pill--active' : 'dashboard-status-pill--pending'}`}>
+                          {supportTherapist.status === 'accepted' ? 'Suport actiu' : 'Pendent d’acceptació'}
+                        </span>
                       </div>
                       <p className="muted" style={{ fontWeight: 'bold', margin: '0.5rem 0' }}>
                         {supportTherapist.email}
@@ -268,6 +298,67 @@ export function SupportTherapistsPage() {
                         aria-label="Eliminar"
                       >
                         {busySupportId === supportTherapist.support_id ? '...' : <FaTrash />}
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="screen-card dashboard-panel profile-card--wide">
+          <div className="panel-heading">
+            <p className="eyebrow" style={{ marginBottom: '0rem' }}>
+              Sol·licituds rebudes
+            </p>
+          </div>
+
+          {incomingRequests.length === 0 ? (
+            <p className="muted">No tens sol·licituds pendents per ser terapeuta de suport.</p>
+          ) : (
+            <ul className="patient-list">
+              {incomingRequests.map((request) => (
+                <li className="compact-list-item" key={request.id}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      padding: '14px 16px',
+                      width: '100%',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div className="item-heading-row">
+                        <strong>
+                          {request.first_name} {request.last_name}
+                        </strong>
+                        <span className="status-pill dashboard-status-pill--pending">Pendent</span>
+                      </div>
+                      <p className="muted" style={{ fontWeight: 'bold', margin: '0.5rem 0' }}>
+                        {request.email}
+                      </p>
+                      <p className="muted" style={{ margin: 0 }}>
+                        Si acceptes, quedaràs associat com a suport en casos de risc extrem i l’accés quedarà auditat.
+                      </p>
+                    </div>
+
+                    <div className="list-actions" style={{ marginLeft: '1rem' }}>
+                      <button
+                        className="button-secondary"
+                        type="button"
+                        disabled={busyRequestId === request.id}
+                        onClick={() => handleRespondRequest(request, 'accept')}
+                      >
+                        Acceptar
+                      </button>
+                      <button
+                        className="button-ghost"
+                        type="button"
+                        disabled={busyRequestId === request.id}
+                        onClick={() => handleRespondRequest(request, 'reject')}
+                      >
+                        Rebutjar
                       </button>
                     </div>
                   </div>

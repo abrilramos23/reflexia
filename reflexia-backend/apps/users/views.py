@@ -140,8 +140,6 @@ class PatientRegistrationView(APIView):
                     "last_name": serializers.CharField(),
                     "email": serializers.EmailField(),
                     "birth_date": serializers.DateField(),
-                    "consent_accepted": serializers.BooleanField(),
-                    "consent_date": serializers.DateTimeField(allow_null=True),
                     "registration_date": serializers.DateTimeField(),
                     "two_factor_enabled": serializers.BooleanField(),
                     "activation_email_sent": serializers.BooleanField(),
@@ -157,7 +155,6 @@ class PatientRegistrationView(APIView):
                     "last_name": "Sanchez",
                     "email": "patient@example.com",
                     "birth_date": "2001-01-10",
-                    "consent_accepted": False,
                 },
                 request_only=True,
             )
@@ -210,7 +207,7 @@ class AccountActivationView(APIView):
                 "id": str(user.pk),
                 "email": user.email,
                 "is_active": user.is_active,
-                "message": "Account activated successfully.",
+                "message": "Compte activat correctament.",
             },
             status=status.HTTP_200_OK,
         )
@@ -249,12 +246,12 @@ class LoginView(APIView):
                         "email": "therapist@example.com",
                         "two_factor_enabled": True,
                         "is_active": True,
-                        "consent_accepted": None,
+                        "legal_terms_accepted": True,
                         "role": "therapist",
                     },
                     "access": None,
                     "refresh": None,
-                    "message": "Two-factor verification is required to complete login.",
+                    "message": "Es requereix verificació de dos factors per completar l'inici de sessió.",
                 },
                 response_only=True,
             )
@@ -290,7 +287,7 @@ class LogoutView(APIView):
         serializer = RefreshTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.blacklist()
-        return Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
+        return Response({"message": "Sessió tancada correctament."}, status=status.HTTP_200_OK)
 
 
 class PasswordForgotView(APIView):
@@ -317,7 +314,7 @@ class PasswordForgotView(APIView):
         serializer.save()
         return Response(
             {
-                "message": "If the email exists, a password reset link has been sent.",
+                "message": "Si l'adreça de correu existeix, s'ha enviat un enllaç de restabliment de contrasenya.",
             },
             status=status.HTTP_200_OK,
         )
@@ -340,7 +337,7 @@ class PasswordResetView(APIView):
         serializer.save()
         return Response(
             {
-                "message": "Password updated successfully.",
+                "message": "Contrasenya actualitzada correctament.",
             },
             status=status.HTTP_200_OK,
         )
@@ -377,7 +374,7 @@ class MeView(APIView):
         user = serializer.save()
         return Response(
             {
-                "message": "Profile updated successfully.",
+                "message": "Perfil actualitzat correctament.",
                 "user": UserSummarySerializer(user).data,
             },
             status=status.HTTP_200_OK,
@@ -401,7 +398,7 @@ class ChangePasswordView(APIView):
         serializer.save()
         return Response(
             {
-                "message": "Password updated successfully.",
+                "message": "Contrasenya actualitzada correctament.",
             },
             status=status.HTTP_200_OK,
         )
@@ -444,7 +441,7 @@ class DeleteAccountView(APIView):
         serializer.save()
         return Response(
             {
-                "message": "Account deleted successfully.",
+                "message": "Compte eliminat correctament.",
             },
             status=status.HTTP_200_OK,
         )
@@ -493,7 +490,8 @@ class TherapistPatientListView(APIView):
     )
     def get(self, request):
         patients = Patient.objects.filter(
-            therapist_links__therapist=request.user.therapist_profile
+            therapist_links__therapist=request.user.therapist_profile,
+            therapist_links__is_active=True,
         ).order_by("first_name", "last_name")
         return Response(
             TherapistPatientSummarySerializer(patients, many=True).data,
@@ -513,7 +511,8 @@ class TherapistPatientDetailView(APIView):
         patient = get_object_or_404(
             Patient,
             pk=patient_id,
-            therapist_links__therapist=request.user.therapist_profile
+            therapist_links__therapist=request.user.therapist_profile,
+            therapist_links__is_active=True,
         )
         return Response(
             TherapistPatientSummarySerializer(patient).data,
@@ -547,8 +546,8 @@ class TherapistDashboardView(APIView):
     def get(self, request):
         therapist = request.user.therapist_profile
         patients = Patient.objects.filter(therapist_links__therapist=therapist)
+        patients = patients.filter(therapist_links__is_active=True)
         
-        # Metrics
         active_patients = patients.filter(is_active=True)
         
         from apps.entries.models import JournalEntry
@@ -568,7 +567,6 @@ class TherapistDashboardView(APIView):
             reviewed_by_therapist=False
         ).count()
         
-        # Recent Activity
         recent_entries = JournalEntry.objects.filter(
             patient_id__in=patient_ids
         ).select_related('patient', 'analysis').order_by('-updated_at')[:5]
@@ -610,11 +608,11 @@ class PatientConsentAcceptView(APIView):
 
     @extend_schema(
         tags=["Users"],
-        summary="Acceptar consentiment informat",
+        summary="Acceptar document legal",
         request=None,
         responses={
             200: inline_serializer(
-                name="PatientConsentAcceptResponse",
+                name="LegalConsentAcceptResponse",
                 fields={
                     "message": serializers.CharField(),
                     "user": UserSummarySerializer(),
@@ -623,18 +621,12 @@ class PatientConsentAcceptView(APIView):
         },
     )
     def post(self, request):
-        if not hasattr(request.user, "patient_profile"):
-            return Response(
-                {"detail": "Only patients can accept informed consent."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        serializer = PatientConsentAcceptSerializer(context={"patient": request.user.patient_profile})
-        patient = serializer.save()
+        serializer = PatientConsentAcceptSerializer(context={"user": request.user})
+        user = serializer.save()
         return Response(
             {
-                "message": "Consent accepted successfully.",
-                "user": UserSummarySerializer(patient).data,
+                "message": "Consentiment acceptat correctament.",
+                "user": UserSummarySerializer(user).data,
             },
             status=status.HTTP_200_OK,
         )
@@ -645,26 +637,20 @@ class PatientConsentRejectView(APIView):
 
     @extend_schema(
         tags=["Users"],
-        summary="Rebutjar consentiment informat",
+        summary="Rebutjar document legal",
         request=RefreshTokenSerializer,
         responses={200: inline_serializer(name="PatientConsentRejectResponse", fields={"message": serializers.CharField()})},
     )
     def post(self, request):
-        if not hasattr(request.user, "patient_profile"):
-            return Response(
-                {"detail": "Only patients can reject informed consent."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         serializer = PatientConsentRejectSerializer(
             data=request.data,
-            context={"patient": request.user.patient_profile},
+            context={"user": request.user},
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(
             {
-                "message": "Consent rejected. The account has been deactivated.",
+                "message": "Consentiment rebutjat. El compte ha estat desactivat.",
             },
             status=status.HTTP_200_OK,
         )
@@ -716,7 +702,7 @@ class TwoFactorEnableView(APIView):
         user = serializer.save()
         return Response(
             {
-                "message": "Two-factor authentication enabled successfully.",
+                "message": "Autenticació de dos factors habilitada correctament.",
                 "user": UserSummarySerializer(user).data,
             },
             status=status.HTTP_200_OK,
@@ -780,7 +766,7 @@ class TwoFactorDisableView(APIView):
         user = serializer.save()
         return Response(
             {
-                "message": "Two-factor authentication disabled successfully.",
+                "message": "Autenticació de dos factors deshabilitada correctament.",
                 "user": UserSummarySerializer(user).data,
             },
             status=status.HTTP_200_OK,
@@ -798,14 +784,25 @@ class ConsentDocumentView(APIView):
         },
     )
     def get(self, request):
-        pdf_path = Path(__file__).resolve().parent / "data" / "Reflexia_ Consentiment Informat.pdf"
+        role = request.query_params.get("role", "patient")
+        filename = (
+            "Reflexia_ Consentiment professional.pdf"
+            if role == User.Role.THERAPIST
+            else "Reflexia_ Consentiment Informat.pdf"
+        )
+        download_name = (
+            "Reflexia_Consentiment_Professional.pdf"
+            if role == User.Role.THERAPIST
+            else "Reflexia_Consentiment_Informat.pdf"
+        )
+        pdf_path = Path(__file__).resolve().parent / "data" / filename
         if not pdf_path.exists():
-            raise Http404("Consent document not found.")
+            raise Http404("Document de consentiment no trobat.")
 
         return FileResponse(
             pdf_path.open("rb"),
             content_type="application/pdf",
-            filename="Reflexia_Consentiment_Informat.pdf",
+            filename=download_name,
         )
 
 
@@ -826,7 +823,7 @@ class ClinicStatsView(APIView):
     def get(self, request):
         membership = request.user.organisation_memberships.filter(is_admin=True).first()
         if not membership:
-            return Response({"detail": "User is not an admin of any organisation."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "No ets administrador de cap organització."}, status=status.HTTP_403_FORBIDDEN)
         
         organisation = membership.organisation
         
@@ -1091,7 +1088,7 @@ class ClinicTherapistListView(APIView):
     def get(self, request):
         membership = request.user.organisation_memberships.filter(is_admin=True).first()
         if not membership:
-            return Response({"detail": "User is not an admin of any organisation."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "No ets administrador de cap organització."}, status=status.HTTP_403_FORBIDDEN)
         
         organisation = membership.organisation
         

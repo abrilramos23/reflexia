@@ -1,0 +1,17 @@
+$kind: http-request
+description: >-
+  Update the status of a follow-up question.
+
+  **Request body:**
+  - `status` (string): `pending`, `answered`, or `resolved`
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
+url: "{{base_url}}/api/entries/patients/{{patient_id}}/questions/{{question_id}}/"
+method: PATCH
+order: 2060
+body:
+  mode: raw
+  raw: |
+    {
+      "status": "answered"
+    }

@@ -1,0 +1,14 @@
+$kind: http-request
+description: >-
+  List all follow-up questions created by the therapist across all patients.
+
+  **Query parameters:**
+  - `ordering` (string, optional): `-created_at` for newest first
+  - `status` (string, optional): `pending`, `answered`, `resolved`
+  - `limit` (integer, optional): Number of questions per page
+  - `offset` (integer, optional): Pagination offset
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist only)
+url: "{{base_url}}/api/entries/questions/"
+method: GET
+order: 2090

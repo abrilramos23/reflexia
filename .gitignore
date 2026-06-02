@@ -9,3 +9,4 @@ reflexia-backend/__pycache__/
 reflexia-backend/**/__pycache__/
 reflexia-backend/**/*.pyc
 reflexia-backend/db.sqlite3
+reflexia-backend/celerybeat-schedule*

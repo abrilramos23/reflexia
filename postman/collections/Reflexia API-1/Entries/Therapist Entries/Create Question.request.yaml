@@ -1,0 +1,19 @@
+$kind: http-request
+description: >-
+  Create a follow-up question for a patient entry.
+
+  **Request body:**
+  - `question` (string, required): The question text
+  - `entry_id` (uuid, required in body): The entry ID this question relates to
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
+url: "{{base_url}}/api/entries/patients/{{patient_id}}/questions/"
+method: POST
+order: 2040
+body:
+  mode: raw
+  raw: |
+    {
+      "question": "When you said you felt anxious about the presentation, what specifically worried you the most?",
+      "entry_id": "{{entry_id}}"
+    }

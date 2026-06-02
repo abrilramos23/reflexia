@@ -1,0 +1,11 @@
+$kind: http-request
+description: >-
+  Export a single journal entry as PDF or JSON.
+
+  **Query parameters:**
+  - `format` (string, optional): `pdf` or `json` (default: pdf)
+
+  **Auth:** JWT Bearer (IsAuthenticated - Patient can export their entries)
+url: "{{base_url}}/api/entries/{{entry_id}}/export/"
+method: GET
+order: 1050

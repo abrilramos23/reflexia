@@ -5,7 +5,6 @@ from apps.users.models import (
     InvitacioOrganitzacio,
     Organisation,
     OrganisationMember,
-    # Subscription,
     Patient,
     ProfessionalDirectoryEntry,
     Therapist,
@@ -19,15 +18,7 @@ class OrganisationAdmin(admin.ModelAdmin):
     list_display  = ("name", "type", "is_active", "created_at")
     list_filter   = ("type", "is_active")
     search_fields = ("name",)
-
-
-"""
-@admin.register(Subscription)
-class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ("organisation", "plan", "status", "ini_date", "end_date")
-    list_filter = ("plan", "status")
-"""
-
+    
 
 @admin.register(OrganisationMember)
 class OrganisationMemberAdmin(admin.ModelAdmin):
@@ -55,8 +46,9 @@ class UserAdmin(DjangoUserAdmin):
         "is_staff",
         "is_active",
         "two_factor_enabled",
+        "legal_terms_accepted",
     )
-    list_filter   = ("role", "is_staff", "is_active", "two_factor_enabled")
+    list_filter   = ("role", "is_staff", "is_active", "two_factor_enabled", "legal_terms_accepted")
     search_fields = ("email", "first_name", "last_name")
 
     fieldsets = (
@@ -64,6 +56,7 @@ class UserAdmin(DjangoUserAdmin):
         ("Personal info", {"fields": ("first_name", "last_name")}),
         ("Role", {"fields": ("role",)}),
         ("Security", {"fields": ("two_factor_enabled",)}),
+        ("Legal", {"fields": ("legal_terms_accepted", "legal_terms_accepted_at", "legal_terms_version")}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Important dates", {"fields": ("last_login", "registration_date")}),
     )
@@ -89,8 +82,8 @@ class UserAdmin(DjangoUserAdmin):
 
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):
-    list_display  = ("email", "first_name", "last_name", "birth_date", "consent_accepted")
-    list_filter   = ("consent_accepted",)
+    list_display  = ("email", "first_name", "last_name", "birth_date", "legal_terms_accepted")
+    list_filter   = ("legal_terms_accepted",)
     search_fields = ("email", "first_name", "last_name")
 
 

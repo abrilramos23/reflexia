@@ -26,7 +26,7 @@ class PatientAnalysisMixin:
     def ensure_patient(self, request):
         patient = self.get_patient(request)
         if patient is None:
-            return None, Response({"detail": "Only patients can access analyses."}, status=status.HTTP_403_FORBIDDEN)
+            return None, Response({"detail": "Només els pacients poden accedir a les anàlisis."}, status=status.HTTP_403_FORBIDDEN)
         return patient, None
 
 
@@ -119,6 +119,7 @@ class TherapistPatientAnalysisMixin:
             Patient,
             pk=patient_id,
             therapist_links__therapist=therapist,
+            therapist_links__is_active=True,
         )
 
 

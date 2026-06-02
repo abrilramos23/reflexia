@@ -14,6 +14,7 @@ describe('EntriesPage', () => {
       user: {
         role: 'patient',
         consent_accepted: true,
+        legal_terms_accepted: true,
       },
       listEntries: vi.fn().mockResolvedValue([
         {

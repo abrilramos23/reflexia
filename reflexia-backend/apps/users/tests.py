@@ -196,6 +196,51 @@ class TherapistRegistrationTests(APITestCase):
         self.assertIn("license_number", response.data)
         self.assertEqual(Therapist.objects.count(), 0)
 
+    def test_register_therapist_validates_name_matches_directory(self):
+        payload = {
+            "first_name": "Laura",
+            "last_name": "Gomez",
+            "email": "laura@example.com",
+            "license_number": "30809",
+            "specialty": "Clinical Psychology",
+            "registration_path": "independent",
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Therapist.objects.count(), 1)
+
+    def test_register_therapist_rejects_mismatched_name(self):
+        payload = {
+            "first_name": "Maria",
+            "last_name": "Gomez",
+            "email": "laura@example.com",
+            "license_number": "30809",
+            "specialty": "Clinical Psychology",
+            "registration_path": "independent",
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Therapist.objects.count(), 0)
+
+    def test_register_therapist_rejects_mismatched_last_name(self):
+        payload = {
+            "first_name": "Laura",
+            "last_name": "Lopez",
+            "email": "laura@example.com",
+            "license_number": "30809",
+            "specialty": "Clinical Psychology",
+            "registration_path": "independent",
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Therapist.objects.count(), 0)
+
 
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
@@ -315,6 +360,7 @@ class OrganisationMembershipConstraintTests(APITestCase):
             last_name="Lopez",
             license_number="16385",
             specialty="Clinical Psychology",
+            legal_terms_accepted=True,
         )
         self.other_therapist = Therapist.objects.create_user(
             email="other-constraint@example.com",
@@ -371,6 +417,7 @@ class PatientRegistrationTests(APITestCase):
             last_name="Lopez",
             license_number="16385",
             specialty="Clinical Psychology",
+            legal_terms_accepted=True,
         )
         OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
         self.url = "/api/users/register/patient/"
@@ -382,8 +429,6 @@ class PatientRegistrationTests(APITestCase):
             "last_name": "Martin",
             "email": "pablo@example.com",
             "birth_date": "2000-05-10",
-            "consent_accepted": True,
-            "consent_date": "2026-03-29T12:00:00Z",
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -472,7 +517,6 @@ class TherapistPatientManagementTests(APITestCase):
             birth_date="2000-03-15",
             is_active=True,
         )
-        # Link patients to therapist (required for therapist patience list)
         TherapistPatient.objects.create(therapist=self.therapist, patient=self.patient)
         self.list_url = "/api/users/patients/"
         self.register_url = "/api/users/register/patient/"
@@ -489,7 +533,7 @@ class TherapistPatientManagementTests(APITestCase):
         self.assertIn("email", response.data[0])
         self.assertEqual(Patient.objects.count(), 2)
 
-    def test_register_patient_requires_consent_date_when_consent_accepted(self):
+    def test_registered_patient_starts_with_pending_legal_acceptance(self):
         self.client.force_authenticate(user=self.therapist)
         response = self.client.post(
             self.register_url,
@@ -498,14 +542,13 @@ class TherapistPatientManagementTests(APITestCase):
                 "last_name": "Martin",
                 "email": "pablo@example.com",
                 "birth_date": "2000-05-10",
-                "consent_accepted": True,
             },
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("consent_date", response.data)
-        self.assertEqual(Patient.objects.count(), 2)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        patient = Patient.objects.get(email="pablo@example.com")
+        self.assertFalse(patient.legal_terms_accepted)
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
@@ -604,6 +647,7 @@ class LoginTests(APITestCase):
             last_name="Lopez",
             license_number="16385",
             specialty="Clinical Psychology",
+            legal_terms_accepted=True,
         )
         OrganisationMember.objects.create(user=self.therapist, organisation=self.org, is_admin=True)
 
@@ -649,8 +693,8 @@ class LoginTests(APITestCase):
         self.assertEqual(response.data["user"]["role"], "therapist")
 
     def test_login_returns_jwt_tokens_for_patient_with_consent(self):
-        self.patient.consent_accepted = True
-        self.patient.save(update_fields=["consent_accepted"])
+        self.patient.legal_terms_accepted = True
+        self.patient.save(update_fields=["legal_terms_accepted"])
 
         response = self.client.post(
             self.login_url,
@@ -664,7 +708,10 @@ class LoginTests(APITestCase):
         self.assertIn("refresh", response.data)
         self.assertEqual(response.data["user"]["role"], "patient")
 
-    def test_login_requires_patient_consent_before_home(self):
+    def test_login_requires_legal_acceptance_before_home(self):
+        self.patient.legal_terms_accepted = False
+        self.patient.save(update_fields=["legal_terms_accepted"])
+
         response = self.client.post(
             self.login_url,
             {"email": "patient@example.com", "password": "StrongPass123!"},
@@ -675,6 +722,19 @@ class LoginTests(APITestCase):
         self.assertEqual(response.data["login_status"], "consent_required")
         self.assertIn("access", response.data)
         self.assertIn("refresh", response.data)
+
+    def test_login_requires_therapist_legal_acceptance_before_home(self):
+        self.therapist.legal_terms_accepted = False
+        self.therapist.save(update_fields=["legal_terms_accepted"])
+
+        response = self.client.post(
+            self.login_url,
+            {"email": "therapist@example.com", "password": "StrongPass123!"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["login_status"], "consent_required")
 
     def test_login_flags_two_factor_when_enabled(self):
         self.therapist.two_factor_enabled = True
@@ -699,7 +759,7 @@ class LoginTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(str(response.data["detail"][0]), "This account is inactive. Please activate it first.")
+        self.assertEqual(str(response.data["detail"][0]), "Compte inactiu. Si us plau, activa'l primer.")
 
     def test_login_rejects_invalid_credentials(self):
         response = self.client.post(
@@ -709,7 +769,7 @@ class LoginTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(str(response.data["detail"][0]), "Invalid email or password.")
+        self.assertEqual(str(response.data["detail"][0]), "Correu electrònic o contrasenya no vàlida.")
 
     def test_me_returns_authenticated_user(self):
         refresh = RefreshToken.for_user(self.therapist)
@@ -731,7 +791,7 @@ class LoginTests(APITestCase):
         outstanding_token = OutstandingToken.objects.get(user=self.therapist)
         self.assertTrue(BlacklistedToken.objects.filter(token=outstanding_token).exists())
 
-    def test_patient_can_accept_consent(self):
+    def test_user_can_accept_consent(self):
         refresh = RefreshToken.for_user(self.patient)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
 
@@ -739,10 +799,11 @@ class LoginTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.patient.refresh_from_db()
-        self.assertTrue(self.patient.consent_accepted)
-        self.assertIsNotNone(self.patient.consent_date)
+        self.assertTrue(self.patient.legal_terms_accepted)
+        self.assertIsNotNone(self.patient.legal_terms_accepted_at)
+        self.assertEqual(self.patient.legal_terms_version, User.LEGAL_TERMS_VERSION)
 
-    def test_patient_can_reject_consent_and_account_becomes_inactive(self):
+    def test_user_can_reject_consent_and_account_becomes_inactive(self):
         refresh = RefreshToken.for_user(self.patient)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
 
@@ -754,7 +815,7 @@ class LoginTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.patient.refresh_from_db()
-        self.assertFalse(self.patient.consent_accepted)
+        self.assertFalse(self.patient.legal_terms_accepted)
         self.assertFalse(self.patient.is_active)
         outstanding_token = OutstandingToken.objects.get(user=self.patient)
         self.assertTrue(BlacklistedToken.objects.filter(token=outstanding_token).exists())
@@ -837,6 +898,12 @@ class LoginTests(APITestCase):
 class ConsentDocumentTests(APITestCase):
     def test_consent_document_is_available(self):
         response = self.client.get("/api/users/consent/document/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+
+    def test_professional_consent_document_is_available(self):
+        response = self.client.get("/api/users/consent/document/?role=therapist")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response["Content-Type"], "application/pdf")

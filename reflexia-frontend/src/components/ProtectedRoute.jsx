@@ -9,7 +9,7 @@ export function ProtectedRoute({ children }) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
-  if (user?.role === 'patient' && user.consent_accepted === false && location.pathname !== '/consent') {
+  if (user?.legal_terms_accepted === false && location.pathname !== '/consent') {
     return <Navigate to="/consent" replace />
   }
 

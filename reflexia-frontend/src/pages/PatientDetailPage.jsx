@@ -6,12 +6,22 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { firstErrorMessage, formatEntryDate, formatEntryStatus, formatRiskLevel } from '../lib/entries.js'
 
 export function PatientDetailPage() {
-  const { user, getPatient, getPatientEvolution, listPatientEntries, listPatientQuestions, createPatientQuestion, exportPatientEntriesPdf } = useAuth()
+  const {
+    user,
+    api,
+    getPatient,
+    getPatientEvolution,
+    listPatientEntries,
+    listPatientQuestions,
+    createPatientQuestion,
+    exportPatientEntriesPdf,
+  } = useAuth()
   const { patientId } = useParams()
   
   const [patient, setPatient] = useState(null)
   const [entries, setEntries] = useState([])
   const [questions, setQuestions] = useState([])
+  const [alerts, setAlerts] = useState([])
   const [evolution, setEvolution] = useState(null)
   const [activeTab, setActiveTab] = useState('entries') 
   const [newQuestionText, setNewQuestionText] = useState('')
@@ -29,11 +39,12 @@ export function PatientDetailPage() {
       setIsLoading(true)
       setError('')
       try {
-        const [patientData, entriesData, questionsData, evolutionData] = await Promise.all([
+        const [patientData, entriesData, questionsData, evolutionData, alertsResponse] = await Promise.all([
           getPatient(patientId),
           listPatientEntries(patientId),
           listPatientQuestions(patientId),
           getPatientEvolution(patientId),
+          api.get('/alerts/', { params: { patient_id: patientId } }),
         ])
 
         if (!isCancelled) {
@@ -41,6 +52,7 @@ export function PatientDetailPage() {
           setEntries(entriesData)
           setQuestions(questionsData)
           setEvolution(evolutionData)
+          setAlerts(alertsResponse.data)
         }
       } catch (err) {
         if (!isCancelled) {
@@ -102,6 +114,12 @@ export function PatientDetailPage() {
     }
   }
 
+  const pendingAlerts = alerts.filter((alert) => alert.status === 'pending')
+  const highRiskAlerts = alerts.filter((alert) => alert.risk_level === 'high')
+  const priorityAlerts = alerts
+    .filter((alert) => alert.status === 'pending' || alert.risk_level === 'high')
+    .slice(0, 4)
+
   if (isLoading) {
     return (
       <div className="screen-shell">
@@ -162,6 +180,46 @@ export function PatientDetailPage() {
           </div>
         </section>
 
+        <section className={`screen-card dashboard-panel profile-card--wide patient-alert-panel ${priorityAlerts.length ? 'patient-alert-panel--urgent' : ''}`}>
+          <div className="panel-heading">
+            <p className="eyebrow">Alertes del pacient</p>
+            <div className="entries-toolbar">
+              <span className="status-pill dashboard-status-pill--pending">
+                {pendingAlerts.length} pendents
+              </span>
+              <span className="status-pill risk-pill--high">
+                {highRiskAlerts.length} risc alt
+              </span>
+              <span className="status-pill dashboard-status-pill--muted">
+                {alerts.length} totals
+              </span>
+            </div>
+          </div>
+
+          {priorityAlerts.length ? (
+            <ul className="patient-list">
+              {priorityAlerts.map((alert) => (
+                <li key={alert.id} className={`compact-list-item ${alertListItemClassName(alert)}`}>
+                  <Link to={`/alerts/${alert.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                    <div className="item-heading-row">
+                      <strong>{formatRiskLevel(alert.risk_level)}</strong>
+                      <span className={`status-pill ${alertStatusClassName(alert.status)}`}>
+                        {formatAlertStatus(alert.status)}
+                      </span>
+                      <span className="muted">{formatEntryDate(alert.created_at)}</span>
+                    </div>
+                    <p className="muted" style={{ margin: 0 }}>
+                      Entrada associada: {formatEntryDate(alert.entry_date)}
+                    </p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted" style={{ margin: 0 }}>Aquest pacient no té alertes pendents ni de risc alt.</p>
+          )}
+        </section>
+
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
             <p className="eyebrow">Evolució emocional</p>
@@ -195,14 +253,14 @@ export function PatientDetailPage() {
               ) : (
                 <ul className="patient-list">
                   {entries.map((entry) => (
-                    <li key={entry.id} className="compact-list-item">
+                    <li key={entry.id} className={`compact-list-item ${riskItemClassName(entry.analysis?.risk_level)}`}>
                       <Link to={`/patients/${patientId}/entries/${entry.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', width: '100%' }}>
                         <div className="item-heading-row">
                           <strong>{formatEntryDate(entry.created_at)}</strong>
                           <span className="status-pill">{formatEntryStatus(entry)}</span>
                         </div>
                         <p className="muted" style={{ margin: '0.5rem 0' }}>{entry.preview}</p>
-                        <span className="status-pill" style={{ fontSize: '0.75rem' }}>
+                        <span className={`status-pill risk-pill--${entry.analysis?.risk_level || 'none'}`} style={{ fontSize: '0.75rem' }}>
                           {formatRiskLevel(entry.analysis?.risk_level)}
                         </span>
                         {entry.therapist_question && (
@@ -243,6 +301,52 @@ export function PatientDetailPage() {
       </div>
     </div>
   )
+}
+
+function formatAlertStatus(status) {
+  const labels = {
+    pending: 'Pendent',
+    validated: 'Validada',
+    dismissed: 'Descartada',
+  }
+
+  return labels[status] || status || 'Sense estat'
+}
+
+function alertStatusClassName(status) {
+  if (status === 'validated') {
+    return 'dashboard-status-pill--active'
+  }
+
+  if (status === 'dismissed') {
+    return 'dashboard-status-pill--muted'
+  }
+
+  return 'dashboard-status-pill--pending'
+}
+
+function alertListItemClassName(alert) {
+  if (alert.risk_level === 'high') {
+    return 'alert-list-item alert-list-item--high'
+  }
+
+  if (alert.status === 'pending') {
+    return 'alert-list-item alert-list-item--pending'
+  }
+
+  return 'alert-list-item'
+}
+
+function riskItemClassName(riskLevel) {
+  if (riskLevel === 'high') {
+    return 'clinical-risk-item clinical-risk-item--high'
+  }
+
+  if (riskLevel === 'moderate') {
+    return 'clinical-risk-item clinical-risk-item--moderate'
+  }
+
+  return ''
 }
 
 function triggerBrowserDownload(blob, filename) {

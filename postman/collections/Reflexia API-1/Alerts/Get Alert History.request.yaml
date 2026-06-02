@@ -1,0 +1,9 @@
+$kind: http-request
+description: >-
+  Get the history and escalation timeline of an alert.
+  Shows all status changes, validations, notifications, and escalations.
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
+url: "{{base_url}}/api/alerts/{{alert_id}}/history/"
+method: GET
+order: 5050

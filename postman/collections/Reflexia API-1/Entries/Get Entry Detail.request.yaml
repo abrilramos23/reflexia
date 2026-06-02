@@ -1,0 +1,8 @@
+$kind: http-request
+description: >-
+  Get details of a specific journal entry.
+
+  **Auth:** JWT Bearer (IsAuthenticated - Patient can access their own entries)
+url: "{{base_url}}/api/entries/{{entry_id}}/"
+method: GET
+order: 1040

@@ -1,9 +1,8 @@
 import { Link, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { FaPlus } from 'react-icons/fa'
+import { FaBell, FaExclamationTriangle, FaPlus } from 'react-icons/fa'
 import { EmotionalEvolutionPanel } from '../components/EmotionalEvolutionPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { consentDocumentUrl } from '../lib/api.js'
 import { formatEntryDate } from '../lib/entries.js'
 
 function formatRole(role) {
@@ -90,6 +89,7 @@ export function DashboardPage() {
     registerTherapist,
     getTherapistDashboardData,
     getEntriesEditorContext,
+    api,
   } = useAuth()
   const [patientEvolution, setPatientEvolution] = useState(null)
   const [recentEntries, setRecentEntries] = useState([])
@@ -97,6 +97,7 @@ export function DashboardPage() {
   const [isEvolutionLoading, setIsEvolutionLoading] = useState(false)
   const [therapistPatients, setTherapistPatients] = useState([])
   const [therapistDashboardData, setTherapistDashboardData] = useState(null)
+  const [therapistAlerts, setTherapistAlerts] = useState([])
   const [isTherapistDataLoading, setIsTherapistDataLoading] = useState(false)
   const [therapistInviteForm, setTherapistInviteForm] = useState({
     first_name: '',
@@ -138,14 +139,16 @@ export function DashboardPage() {
 
         if (user.role === 'therapist' || isClinicAdmin) {
           setIsTherapistDataLoading(true)
-          const [patients, dashboardData] = await Promise.all([
+          const [patients, dashboardData, alertsResponse] = await Promise.all([
             listTherapistPatients(),
             getTherapistDashboardData(),
+            api.get('/alerts/'),
           ])
 
           if (!isCancelled) {
             setTherapistPatients(sortByRegistrationDate(patients))
             setTherapistDashboardData(dashboardData)
+            setTherapistAlerts(alertsResponse.data)
           }
         }
       } catch (error) {
@@ -194,17 +197,23 @@ export function DashboardPage() {
     }
   }
 
+  const pendingAlerts = therapistAlerts.filter((alert) => alert.status === 'pending')
+  const highRiskAlerts = therapistAlerts.filter((alert) => alert.risk_level === 'high')
+  const priorityAlerts = therapistAlerts
+    .filter((alert) => alert.status === 'pending' || alert.risk_level === 'high')
+    .slice(0, 3)
+  const hasPriorityAlerts = pendingAlerts.length > 0 || highRiskAlerts.length > 0
+
   return (
     <div className="screen-shell">
       <div className="profile-grid">
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
-            <p className="eyebrow">Tauler inicial</p>
             <h1 className="section-title">
               {user.role === 'therapist'
-                ? 'Resum de la teva activitat.'
+                ? 'Resum de la teva activitat'
                 : user.role === 'patient'
-                  ? 'El teu espai personal.'
+                  ? 'El teu espai personal'
                   : 'Compte actiu'}
             </h1>
           </div>
@@ -222,13 +231,7 @@ export function DashboardPage() {
             </div>
             <div className="stat-card">
               <span>Consentiment</span>
-              <strong>
-                {user.role === 'patient'
-                  ? user.consent_accepted
-                    ? 'Acceptat'
-                    : 'Pendent'
-                  : 'No aplica'}
-              </strong>
+              <strong>{user.legal_terms_accepted ? 'Acceptat' : 'Pendent'}</strong>
             </div>
           </div>
         </section>
@@ -255,7 +258,7 @@ export function DashboardPage() {
                   </>
                 ) : (
                   <>
-                    <h3 style={{ marginBlockEnd: '0' }}>Cap pregunta activa disponible</h3>
+                    <p className="muted" style={{ marginBlockEnd: '0' }}>Cap pregunta activa disponible</p>
                   </>
                 )}
               </div>
@@ -294,7 +297,7 @@ export function DashboardPage() {
                   </ul>
                 ) : (
                   <>
-                    <h3>Encara no hi ha entrades disponibles</h3>
+                    <p className="muted">Encara no hi ha entrades disponibles</p>
                   </>
                 )}
               </div>
@@ -326,11 +329,35 @@ export function DashboardPage() {
                 <p className="eyebrow">Visió clínica</p>
               </div>
 
+              {!isTherapistDataLoading ? (
+                <Link
+                  to="/alerts"
+                  className={`dashboard-metric-card dashboard-alert-summary ${hasPriorityAlerts ? 'dashboard-metric-card--alert' : ''}`}
+                >
+                  <div className="item-heading-row">
+                    <strong>Alertes clíniques</strong>
+                  </div>
+                  <p>
+                    {hasPriorityAlerts
+                      ? 'Revisa primer els casos pendents o amb risc alt.'
+                      : 'No hi ha alertes pendents ni de risc alt ara mateix.'}
+                  </p>
+                  <div className="entries-toolbar">
+                    <span className="status-pill dashboard-status-pill--pending">
+                      {pendingAlerts.length} pendents
+                    </span>
+                    <span className="status-pill risk-pill--high">
+                      {highRiskAlerts.length} risc alt
+                    </span>
+                  </div>
+                </Link>
+              ) : null}
+
               <div className="dashboard-metrics-grid">
-                <div className="dashboard-metric-card dashboard-metric-card--active">
+                <Link className="dashboard-metric-card dashboard-metric-card--active" to="/patients" style={{ textDecoration: 'none' }}>
                   <span style={{ fontWeight: 'bold' }}>Pacients actius</span>
                   <strong>{therapistDashboardData?.metrics.active_patients ?? '-'}</strong>
-                </div>
+                </Link>
 
                 <div className="dashboard-metric-card">
                   <span style={{ fontWeight: 'bold' }}>Total d&apos;entrades</span>
@@ -347,12 +374,6 @@ export function DashboardPage() {
                   <strong>{therapistDashboardData?.metrics.pending_analyses ?? '-'}</strong>
                 </div>
               </div>
-
-              <div className="button-row" style={{ marginTop: '1rem' }}>
-                <Link className="button" style={{ textDecoration: 'none' }} to="/patients">
-                  Veure pacients
-                </Link>
-              </div>
             </section>
 
             <section className="screen-card dashboard-panel profile-card--wide">
@@ -366,11 +387,11 @@ export function DashboardPage() {
                 ) : therapistDashboardData?.recent_activity.length ? (
                   <ul className="patient-list">
                     {therapistDashboardData.recent_activity.map((item) => (
-                      <li className="compact-list-item" key={item.id}>
+                      <li className={`compact-list-item ${riskItemClassName(item.risk_level)}`} key={item.id}>
                         <Link to={`/patients/${item.patient_id}/entries/${item.id}`} style={{ textDecoration: 'none' }}>
                           <div className="item-heading-row">
                             <strong>{item.patient_name}</strong>
-                            <span className="muted">•</span>
+                            <span className="muted"> </span>
                             <span>{formatEntryDate(item.updated_at)}</span>
                             {item.primary_emotion ? (
                               <span className={`status-pill risk-pill--${item.risk_level?.toLowerCase() || 'none'}`}>
@@ -397,4 +418,24 @@ export function DashboardPage() {
       </div>
     </div>
   )
+}
+
+function riskItemClassName(riskLevel) {
+  if (riskLevel === 'high') {
+    return 'clinical-risk-item clinical-risk-item--high'
+  }
+
+  if (riskLevel === 'moderate') {
+    return 'clinical-risk-item clinical-risk-item--moderate'
+  }
+
+  return ''
+}
+
+function priorityAlertItemClassName(alert) {
+  if (alert.risk_level === 'high') {
+    return 'alert-list-item alert-list-item--high'
+  }
+
+  return 'alert-list-item alert-list-item--pending'
 }

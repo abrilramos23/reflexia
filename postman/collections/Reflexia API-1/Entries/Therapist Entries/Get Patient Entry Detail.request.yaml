@@ -1,0 +1,9 @@
+$kind: http-request
+description: >-
+  Get a specific entry for a patient (therapist view).
+  Includes analysis, emotional dimensions, and any private notes or questions.
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
+url: "{{base_url}}/api/entries/patients/{{patient_id}}/{{entry_id}}/"
+method: GET
+order: 2020

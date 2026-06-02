@@ -140,16 +140,12 @@ def register_patient(
     last_name,
     email,
     birth_date,
-    consent_accepted=False,
-    consent_date=None,
 ):
     patient = Patient(
         first_name=first_name,
         last_name=last_name,
         email=email,
         birth_date=birth_date,
-        consent_accepted=consent_accepted,
-        consent_date=consent_date,
         role=User.Role.PATIENT,
         is_active=False,
     )
@@ -183,6 +179,9 @@ def send_organisation_invitation_email(*, invitation, admin, invitation_url):
         f"{admin.first_name} {admin.last_name} t'ha convidat a unir-te a {organisation.name} a Reflexia.\n"
         "Fes servir aquest enllaç per completar el registre com a terapeuta:\n\n"
         f"{invitation_url}\n\n"
+        "Abans d'accedir-hi hauràs d'acceptar les condicions professionals, "
+        "el deure de confidencialitat i la política de protecció de dades aplicable "
+        "al tractament de dades de salut.\n\n"
         "Aquest enllaç només es pot utilitzar una vegada."
     )
     send_mail(
@@ -217,6 +216,8 @@ def send_therapist_activation_email(*, therapist, activation_url):
     message = (
         f"Hola {therapist.first_name},\n\n"
         "Un administrador ha creat el teu compte de terapeuta a Reflexia.\n"
+        "En el primer accés hauràs d'acceptar les condicions professionals, confidencialitat "
+        "i normativa de protecció de dades abans d'entrar al panell.\n"
         "Utilitza aquest enllaç per definir la contrasenya i activar l'accés:\n\n"
         f"{activation_url}\n\n"
         "Si no esperaves aquest correu, pots ignorar-lo."
@@ -344,6 +345,7 @@ def delete_user_account(*, user):
     if hasattr(user, "therapist_profile"):
         active_patient_links = TherapistPatient.objects.filter(
             therapist=user.therapist_profile,
+            is_active=True,
             patient__is_active=True,
         ).select_related("patient")
         active_patients_count = active_patient_links.count()
@@ -363,7 +365,6 @@ def delete_user_account(*, user):
                 }
             )
 
-    # Check if user is the sole admin of any organisation
     sole_admin_orgs = []
     memberships = user.organisation_memberships.filter(is_admin=True)
     for membership in memberships:
@@ -372,7 +373,6 @@ def delete_user_account(*, user):
             is_admin=True
         ).count()
         if admin_count <= 1:
-            # Es bloqueja només si hi ha altres membres que quedarien sense administrador.
             member_count = OrganisationMember.objects.filter(organisation=membership.organisation).count()
             if member_count > 1:
                 sole_admin_orgs.append(membership.organisation)
@@ -426,7 +426,7 @@ def deactivate_patient_by_therapist(*, therapist, patient):
         patient=patient,
     ).exists()
     if not relation_exists:
-        raise DjangoValidationError({"patient": ["This patient is not assigned to the authenticated therapist."]})
+        raise DjangoValidationError({"patient": ["Aquest pacient no està assignat al terapeuta autenticat."]})
 
     patient.email = f"deleted-{patient.pk}@deleted.reflexia.local"
     patient.first_name = "Pacient"

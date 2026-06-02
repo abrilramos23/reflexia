@@ -266,6 +266,18 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  async function listIncomingSupportTherapistRequests() {
+    const response = await api.get('/contacts/support-therapists/requests/')
+    return response.data
+  }
+
+  async function respondSupportTherapistRequest(requestId, action) {
+    const response = await api.post(`/contacts/support-therapists/requests/${requestId}/respond/`, {
+      action,
+    })
+    return response.data
+  }
+
   async function deleteSupportTherapist(supportTherapistId) {
     const response = await api.delete(`/contacts/support-therapists/${supportTherapistId}/`)
     return response.data
@@ -507,6 +519,7 @@ export function AuthProvider({ children }) {
   const isClinicAdmin = user?.is_clinic_admin ?? user?.memberships?.some((m) => m.is_admin) ?? false
 
   const value = {
+    api,
     user,
     role: user?.role,
     isClinicAdmin,
@@ -528,6 +541,8 @@ export function AuthProvider({ children }) {
     listSupportTherapists,
     listAvailableSupportTherapists,
     createSupportTherapist,
+    listIncomingSupportTherapistRequests,
+    respondSupportTherapistRequest,
     deleteSupportTherapist,
     registerTherapist,
     createOrganisationInvitation,

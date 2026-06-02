@@ -17,6 +17,16 @@
   align-items: start;
 }
 
+.login-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 0 32px;
+}
+
 .register-screen-grid {
   display: flex;
   justify-content: center;
@@ -84,7 +94,9 @@
 }
 
 .auth-form-stack {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  width: 40%;
   gap: 20px;
 }
 
@@ -610,6 +622,47 @@
   margin-bottom: 6px;
 }
 
+.clinical-risk-item,
+.alert-list-item {
+  position: relative;
+  overflow: hidden;
+}
+
+
+.clinical-risk-item--moderate {
+  border-color: rgba(180, 154, 72, 0.24);
+}
+
+.clinical-risk-item--moderate::before {
+  background: #b49a48;
+}
+
+.clinical-risk-item--high,
+.alert-list-item--high {
+  border-color: rgba(160, 57, 57, 0.26);
+}
+
+.clinical-risk-item--high::before,
+.alert-list-item--high::before {
+  background: #a03939;
+}
+
+.alert-list-item--pending {
+  border-color: rgba(180, 154, 72, 0.22);
+}
+
+.alert-list-item--pending::before {
+  background: #b49a48;
+}
+
+.patient-alert-panel--urgent {
+  border-color: rgba(160, 57, 57, 0.18);
+}
+
+.alert-list-item svg {
+  color: var(--brand-deep);
+}
+
 .action-chip {
   border: 1px solid rgba(61, 102, 89, 0.12);
   background: rgba(255, 255, 255, 0.6);
@@ -694,6 +747,18 @@
 
 .dashboard-metric-card--alert {
   background: linear-gradient(180deg, rgba(255, 248, 244, 0.96) 0%, rgba(255, 242, 233, 0.92) 100%);
+}
+
+.dashboard-alert-summary {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.dashboard-alert-summary svg {
+  color: var(--brand-deep);
 }
 
 .dashboard-metric-card--active {
@@ -953,12 +1018,14 @@
 }
 
 .risk-pill--moderate {
-  background: rgba(180, 154, 72, 0.14);
+  background: rgba(180, 154, 72, 0.2);
+  border: 1px solid rgba(180, 154, 72, 0.24);
   color: #7f6721;
 }
 
 .risk-pill--high {
-  background: rgba(160, 57, 57, 0.12);
+  background: rgba(160, 57, 57, 0.18);
+  border: 1px solid rgba(160, 57, 57, 0.26);
   color: #7b2626;
 }
 
@@ -1083,6 +1150,7 @@
   .action-chip {
     width: 100%;
   }
+
 }
 
 .input-disabled {

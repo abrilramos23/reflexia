@@ -1,0 +1,9 @@
+$kind: http-request
+description: >-
+  Get editor context for creating a new journal entry.
+  Returns prompt templates and emotional dimensions available for the current session.
+
+  **Auth:** JWT Bearer (IsAuthenticated)
+url: "{{base_url}}/api/entries/editor/"
+method: GET
+order: 1010

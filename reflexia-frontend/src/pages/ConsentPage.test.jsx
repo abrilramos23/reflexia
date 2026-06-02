@@ -10,6 +10,7 @@ vi.mock('../context/AuthContext', () => ({
 
 vi.mock('../lib/api.js', () => ({
   consentDocumentUrl: 'http://localhost/api/users/consent/document/',
+  consentDocumentUrlForRole: (role = 'patient') => `http://localhost/api/users/consent/document/?role=${role}`,
 }))
 
 function renderConsent(user) {
@@ -31,26 +32,33 @@ function renderConsent(user) {
 
 describe('ConsentPage', () => {
   it('redirects to dashboard when consent has already been accepted', () => {
-    renderConsent({ role: 'patient', consent_accepted: true })
+    renderConsent({ role: 'patient', legal_terms_accepted: true })
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.queryByText('Acceptar i continuar')).not.toBeInTheDocument()
   })
 
   it('renders accept and reject buttons for a patient without consent', () => {
-    renderConsent({ role: 'patient', consent_accepted: false })
+    renderConsent({ role: 'patient', legal_terms_accepted: false })
 
     expect(screen.getByRole('button', { name: 'Acceptar i continuar' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Rebutjar i tancar compte' })).toBeInTheDocument()
   })
 
   it('shows an error when trying to accept without checking the checkbox', () => {
-    renderConsent({ role: 'patient', consent_accepted: false })
+    renderConsent({ role: 'patient', legal_terms_accepted: false })
 
     fireEvent.click(screen.getByRole('button', { name: 'Acceptar i continuar' }))
 
     expect(
-      screen.getByText('Has de marcar la casella per acceptar el consentiment informat.'),
+      screen.getByText('Has de marcar la casella per acceptar el document legal.'),
     ).toBeInTheDocument()
+  })
+
+  it('renders professional consent copy for therapists', () => {
+    renderConsent({ role: 'therapist', legal_terms_accepted: false })
+
+    expect(screen.getByText('Primer accés del terapeuta')).toBeInTheDocument()
+    expect(screen.getByText('Consentiment professional')).toBeInTheDocument()
   })
 })

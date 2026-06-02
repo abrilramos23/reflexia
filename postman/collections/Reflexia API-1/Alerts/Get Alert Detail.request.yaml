@@ -1,0 +1,9 @@
+$kind: http-request
+description: >-
+  Get details of a specific clinical alert.
+  Includes risk assessment, associated entry, patient info, and validation status.
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
+url: "{{base_url}}/api/alerts/{{alert_id}}/"
+method: GET
+order: 5020

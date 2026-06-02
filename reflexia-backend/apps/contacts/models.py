@@ -2,6 +2,7 @@ import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from apps.users.models import Patient, Therapist
 
@@ -29,7 +30,7 @@ class AssociatedContact(models.Model):
 
     def clean(self):
         if not self.email and not self.phone:
-            raise ValidationError("At least one contact method is required.")
+            raise ValidationError("Cal indicar com a mínim un mètode de contacte.")
 
 
 class DefaultContact(models.Model):
@@ -57,6 +58,11 @@ class DefaultContact(models.Model):
 
 
 class SupportTherapist(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        ACCEPTED = "accepted", "Accepted"
+        REJECTED = "rejected", "Rejected"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     therapist = models.ForeignKey(
         Therapist,
@@ -68,10 +74,14 @@ class SupportTherapist(models.Model):
         on_delete=models.CASCADE,
         related_name="supported_by_links",
     )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    requested_at = models.DateTimeField(default=timezone.now)
+    responded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = "support therapist relationship"
         verbose_name_plural = "support therapist relationships"
+        ordering = ("-requested_at",)
         constraints = [
             models.UniqueConstraint(
                 fields=("therapist", "support"),
@@ -85,4 +95,16 @@ class SupportTherapist(models.Model):
 
     def clean(self):
         if self.therapist_id == self.support_id:
-            raise ValidationError("A therapist cannot be their own support therapist.")
+            raise ValidationError("Un terapeuta no pot ser el seu propi terapeuta de suport.")
+
+    def accept(self):
+        self.status = self.Status.ACCEPTED
+        self.responded_at = timezone.now()
+        self.save(update_fields=["status", "responded_at"])
+        return self
+
+    def reject(self):
+        self.status = self.Status.REJECTED
+        self.responded_at = timezone.now()
+        self.save(update_fields=["status", "responded_at"])
+        return self

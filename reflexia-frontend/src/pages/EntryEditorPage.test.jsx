@@ -14,6 +14,7 @@ describe('EntryEditorPage', () => {
       user: {
         role: 'patient',
         consent_accepted: true,
+        legal_terms_accepted: true,
       },
       getEntriesEditorContext: vi.fn().mockResolvedValue({
         active_question: {

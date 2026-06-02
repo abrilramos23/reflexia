@@ -205,7 +205,7 @@ def build_entry_context(*, entry):
         "patient": {
             "id": str(patient.pk),
             "birth_date": patient.birth_date,
-            "consent_accepted": patient.consent_accepted,
+            "consent_accepted": patient.legal_terms_accepted,
             "registration_date": patient.registration_date,
         },
         "assigned_therapists": [

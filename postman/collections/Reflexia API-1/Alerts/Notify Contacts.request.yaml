@@ -1,0 +1,18 @@
+$kind: http-request
+description: >-
+  Notify emergency contacts about a validated alert.
+  Sends notifications to all associated contacts configured for emergency alerts.
+
+  **Request body:**
+  - `notification_text` (string, optional): Custom notification message
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
+url: "{{base_url}}/api/alerts/{{alert_id}}/notify-contacts/"
+method: POST
+order: 5040
+body:
+  mode: raw
+  raw: |
+    {
+      "notification_text": "Clinical alert: Patient showing high-risk indicators. Professional attention required."
+    }

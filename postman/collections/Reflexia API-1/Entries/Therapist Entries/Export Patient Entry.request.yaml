@@ -1,0 +1,11 @@
+$kind: http-request
+description: >-
+  Export a single entry for a patient as PDF or JSON (therapist view).
+
+  **Query parameters:**
+  - `format` (string, optional): `pdf` or `json` (default: pdf)
+
+  **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
+url: "{{base_url}}/api/entries/patients/{{patient_id}}/{{entry_id}}/export/"
+method: GET
+order: 2080

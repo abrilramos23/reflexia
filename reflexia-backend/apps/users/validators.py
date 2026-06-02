@@ -8,21 +8,21 @@ class StrongPasswordValidator:
         errors = []
 
         if len(password) < 8:
-            errors.append("Password must contain at least 8 characters.")
+            errors.append("La contrasenya ha de tenir almenys 8 caràcters.")
         if not re.search(r"[A-Z]", password):
-            errors.append("Password must contain at least one uppercase letter.")
+            errors.append("La contrasenya ha de tenir almenys una lletra majúscula.")
         if not re.search(r"[a-z]", password):
-            errors.append("Password must contain at least one lowercase letter.")
+            errors.append("La contrasenya ha de tenir almenys una lletra minúscula.")
         if not re.search(r"\d", password):
-            errors.append("Password must contain at least one number.")
+            errors.append("La contrasenya ha de tenir almenys un número.")
         if not re.search(r"[^A-Za-z0-9]", password):
-            errors.append("Password must contain at least one special character.")
+            errors.append("La contrasenya ha de tenir almenys un caràcter especial.")
 
         if errors:
             raise ValidationError(errors)
 
     def get_help_text(self):
         return (
-            "Your password must contain at least 8 characters, one uppercase "
-            "letter, one lowercase letter, one number, and one special character."
+            "La contrasenya ha de contenir almenys 8 caràcters, una lletra majúscula, "
+            "una lletra minúscula, un número i un caràcter especial."
         )

@@ -24,6 +24,8 @@ import { ClinicTherapistsPage } from './pages/ClinicTherapistsPage.jsx'
 import { SupportTherapistsPage } from './pages/SupportTherapistsPage.jsx'
 import { TrustedContactsPage } from './pages/TrustedContactsPage.jsx'
 import { TherapistQuestionsPage } from './pages/TherapistQuestionsPage.jsx'
+import { AlertsPage } from './pages/AlertsPage.jsx'
+import { AlertDetailPage } from './pages/AlertDetailPage.jsx'
 
 function LoadingScreen() {
   return (
@@ -181,6 +183,22 @@ function App() {
         element={
           <ProtectedLayout>
             <TherapistQuestionsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/alerts"
+        element={
+          <ProtectedLayout>
+            <AlertsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/alerts/:alertId"
+        element={
+          <ProtectedLayout>
+            <AlertDetailPage />
           </ProtectedLayout>
         }
       />

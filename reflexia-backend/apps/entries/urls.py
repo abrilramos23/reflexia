@@ -23,7 +23,6 @@ urlpatterns = [
     path("<uuid:entry_id>/", JournalEntryDetailView.as_view(), name="entry-detail"),
     path("<uuid:entry_id>/export/", PatientEntryExportView.as_view(), name="entry-export"),
 
-    # Therapist-Patient views
     path("patients/<uuid:patient_id>/", TherapistPatientEntriesView.as_view(), name="therapist-patient-entry-list"),
     path("patients/<uuid:patient_id>/export/", TherapistPatientEntriesExportView.as_view(), name="therapist-patient-entry-export-history"),
     path("patients/<uuid:patient_id>/<uuid:entry_id>/", TherapistPatientEntryDetailView.as_view(), name="therapist-patient-entry-detail"),
