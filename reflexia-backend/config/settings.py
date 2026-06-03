@@ -86,7 +86,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'apps.users.validators.StrongPasswordValidator'},
 ]
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ca'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
