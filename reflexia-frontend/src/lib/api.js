@@ -9,6 +9,7 @@ export function consentDocumentUrlForRole(role = 'patient') {
 }
 
 const accessTokenStorageKey = 'reflexia.accessToken'
+const authExpiredListeners = new Set()
 
 export const api = axios.create({
   baseURL: apiBaseUrl,
@@ -27,6 +28,27 @@ export function setStoredAccessToken(token) {
   localStorage.removeItem(accessTokenStorageKey)
 }
 
+export function onAuthExpired(listener) {
+  authExpiredListeners.add(listener)
+  return () => authExpiredListeners.delete(listener)
+}
+
+function notifyAuthExpired() {
+  authExpiredListeners.forEach((listener) => listener())
+}
+
+function hasAuthorizationHeader(headers) {
+  if (!headers) {
+    return false
+  }
+
+  if (typeof headers.get === 'function') {
+    return Boolean(headers.get('Authorization') || headers.get('authorization'))
+  }
+
+  return Boolean(headers.Authorization || headers.authorization)
+}
+
 api.interceptors.request.use((config) => {
   const token = getStoredAccessToken()
 
@@ -36,3 +58,14 @@ api.interceptors.request.use((config) => {
 
   return config
 })
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && hasAuthorizationHeader(error.config?.headers)) {
+      notifyAuthExpired()
+    }
+
+    return Promise.reject(error)
+  },
+)

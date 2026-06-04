@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { api, setStoredAccessToken } from '../lib/api.js'
+import { api, onAuthExpired, setStoredAccessToken } from '../lib/api.js'
 
 const AuthContext = createContext(null)
 
@@ -101,6 +101,15 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(getStoredUser)
   const [pendingTwoFactor, setPendingTwoFactor] = useState(getStoredPendingTwoFactor)
   const [isBootstrapping, setIsBootstrapping] = useState(true)
+
+  useEffect(() => {
+    return onAuthExpired(() => {
+      clearSession()
+      setUser(null)
+      setPendingTwoFactor(null)
+      setIsBootstrapping(false)
+    })
+  }, [])
 
   useEffect(() => {
     let isMounted = true
