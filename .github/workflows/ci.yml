@@ -31,6 +31,7 @@ jobs:
       DB_PASSWORD: reflexia
       SECRET_KEY: ci-secret-key-that-is-long-enough-for-jwt-tests
       DEBUG: False
+      ALLOWED_HOSTS: localhost,
 
     steps:
       - name: Checkout codi
