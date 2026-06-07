@@ -28,44 +28,41 @@ export function ForgotPasswordPage() {
   return (
     <div className="screen-shell">
       <AppHeader />
-      <div className="screen-grid">
-        <aside className="screen-card hero-panel">
-          <div className="hero-copy">
-            <p className="eyebrow">Recuperació</p>
-            <h1>Recupera l’accés</h1>
-          </div>
-        </aside>
+      <div className="login-screen">
+        <div className="auth-form-stack">
+            <section className="screen-card form-panel">
+              <div className="panel-heading">
+                <p className="eyebrow">Recuperar contrasenya</p>
+              </div>
 
-        <section className="screen-card form-panel">
-          <div className="panel-heading">
-            <p className="eyebrow">Recuperar contrasenya</p>
-            <h2>T’enviarem un correu</h2>
-          </div>
+              {message ? <div className="message">{message}</div> : null}
+              {error ? <div className="error-banner">{error}</div> : null}
 
-          {message ? <div className="message">{message}</div> : null}
-          {error ? <div className="error-banner">{error}</div> : null}
+              <form className="form-stack" onSubmit={handleSubmit}>
+                <div className="field-group">
+                  <label htmlFor="email">Correu electrònic</label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                  />
+                  <p className="form-hint">
+                    T’enviarem un enllaç per restablir la teva contrasenya.
+                  </p>
+                </div>
 
-          <form className="form-stack" onSubmit={handleSubmit}>
-            <div className="field-group">
-              <label htmlFor="email">Correu electrònic</label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </div>
-
-            <div className="button-row">
-              <button className="button-secondary" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Enviant...' : 'Enviar enllaç'}
-              </button>
-              <Link style={{ textDecoration: 'none' }} className="text-link" to="/login" icon="arrow-left">
-              </Link>
-            </div>
-          </form>
-        </section>
+                <div className="button-row">
+                  <button className="button-secondary" type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? 'Enviant...' : 'Enviar enllaç'}
+                  </button>
+                  <Link style={{ textDecoration: 'none' }} className="text-link" to="/login" icon="arrow-left">
+                  </Link>
+                </div>
+              </form>
+            </section>
+        </div>
       </div>
     </div>
   )
