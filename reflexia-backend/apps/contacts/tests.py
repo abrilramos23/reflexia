@@ -47,18 +47,20 @@ class AssociatedContactTests(APITestCase):
         self.assertEqual(list_response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(list_response.data), 1)
 
-    def test_patient_contact_requires_email_or_phone(self):
+    def test_patient_contact_requires_email(self):
         self.client.force_authenticate(user=self.patient)
         response = self.client.post(
             self.url,
             {
                 "name": "Maria Perez",
                 "relation": "Sister",
+                "phone": "600000000",
             },
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
 
 
 class SupportTherapistTests(APITestCase):

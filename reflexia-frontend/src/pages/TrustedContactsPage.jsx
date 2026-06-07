@@ -95,7 +95,7 @@ export function TrustedContactsPage() {
       const payload = {
         name: contactForm.name,
         relation: contactForm.relation,
-        email: contactForm.email || null,
+        email: contactForm.email,
         phone: contactForm.phone || null,
         is_default: contactForm.is_default,
       }
@@ -272,6 +272,7 @@ export function TrustedContactsPage() {
                           email: event.target.value,
                         }))
                       }
+                      required
                     />
                   </div>
 
