@@ -1,12 +1,15 @@
 .env
 node_modules/
+dist/
 *.log
 .DS_Store
 
 # Python / Django
 reflexia-backend/venv/
+reflexia-backend/.venv/
 reflexia-backend/__pycache__/
 reflexia-backend/**/__pycache__/
 reflexia-backend/**/*.pyc
 reflexia-backend/db.sqlite3
 reflexia-backend/celerybeat-schedule*
+reflexia-backend/staticfiles/

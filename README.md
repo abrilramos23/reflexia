@@ -76,6 +76,16 @@ npm test
 
 També es pot validar manualment l'API amb la col·lecció de Postman inclosa al repositori.
 
+## Producció
+
+El projecte inclou exemples de configuració per a entorns local i de producció:
+
+- `reflexia-backend/.env.example`
+- `reflexia-backend/.env.production.example`
+- `reflexia-frontend/.env.example`
+- `reflexia-frontend/.env.production.example`
+
+
 ## AVÍS
 
 L'anàlisi emocional s'ha d'interpretar com una ajuda orientativa. No substitueix el criteri professional del terapeuta, i per aquest motiu l'aplicació manté la revisió professional com a part del flux.

@@ -1,3 +1,7 @@
+from datetime import datetime
+from uuid import UUID
+
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.alerts.models import Alert, AlertNotification
@@ -55,10 +59,10 @@ class AlertListSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
-    def get_patient_name(self, obj):
+    def get_patient_name(self, obj) -> str:
         return f"{obj.patient.first_name} {obj.patient.last_name}"
 
-    def get_entry_date(self, obj):
+    def get_entry_date(self, obj) -> datetime:
         return obj.emotional_analysis.entry.created_at
 
 
@@ -114,26 +118,27 @@ class AlertDetailSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
-    def get_patient_name(self, obj):
+    def get_patient_name(self, obj) -> str:
         return f"{obj.patient.first_name} {obj.patient.last_name}"
 
-    def get_entry_content(self, obj):
+    def get_entry_content(self, obj) -> str:
         entry = obj.emotional_analysis.entry
         content = entry.content
         return content[:500] + "..." if len(content) > 500 else content
 
-    def get_entry_date(self, obj):
+    def get_entry_date(self, obj) -> datetime:
         return obj.emotional_analysis.entry.created_at
 
-    def get_entry_id(self, obj):
+    def get_entry_id(self, obj) -> UUID:
         return obj.emotional_analysis.entry.id
 
+    @extend_schema_field(AssociatedContactForAlertSerializer(many=True))
     def get_associated_contacts(self, obj):
         contacts = obj.patient.default_contact_links.select_related("contact")
         contact_list = [link.contact for link in contacts]
         return AssociatedContactForAlertSerializer(contact_list, many=True).data
 
-    def get_validating_therapist_name(self, obj):
+    def get_validating_therapist_name(self, obj) -> str | None:
         if obj.validating_therapist:
             return f"{obj.validating_therapist.first_name} {obj.validating_therapist.last_name}"
         return None
