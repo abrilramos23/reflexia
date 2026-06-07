@@ -62,14 +62,8 @@ export function ActivateAccountPage() {
   return (
     <div className="screen-shell">
       <AppHeader />
-      <div className="screen-grid">
-        <aside className="screen-card hero-panel">
-          <div className="hero-copy">
-            <p className="eyebrow">Activació de compte</p>
-            <h1>Defineix la contrasenya</h1>
-          </div>
-        </aside>
-
+      <div className="login-screen">
+        <div className="auth-form-stack">
         <section className="screen-card form-panel">
           <div className="panel-heading">
             <p className="eyebrow">Primer accés</p>
@@ -111,6 +105,7 @@ export function ActivateAccountPage() {
             </div>
           </form>
         </section>
+        </div>
       </div>
     </div>
   )
