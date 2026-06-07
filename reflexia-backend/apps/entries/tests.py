@@ -145,6 +145,8 @@ class EntriesPatientFlowTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertTrue(response.content.startswith(b"%PDF"))
+        self.assertIn("Entrada de journaling de Paula Sanchez".encode("latin-1"), response.content)
+        self.assertIn(b"/Author (Reflexia)", response.content)
 
 
 class TherapistEntriesAndQuestionsTests(APITestCase):

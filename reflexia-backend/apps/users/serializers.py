@@ -38,8 +38,6 @@ def validate_therapist_name_against_directory(license_number, first_name, last_n
         missing_words = user_name_words - directory_name_words
         raise serializers.ValidationError(
             f"El nom proporcionat no coincideix amb el directori. "
-            f"Directori: {directory_entry.complete_name}. "
-            f"Mancant: {', '.join(missing_words)}"
         )
 
     return directory_entry

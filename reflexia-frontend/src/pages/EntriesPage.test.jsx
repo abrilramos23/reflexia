@@ -40,7 +40,8 @@ describe('EntriesPage', () => {
 
     expect(await screen.findByText('Primera entrada del pacient.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Escriure nova entrada' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Veure detall' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Primera entrada del pacient/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Veure detall' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Editar' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Eliminar' })).toBeInTheDocument()
   })

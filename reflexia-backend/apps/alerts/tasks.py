@@ -5,7 +5,11 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 
 from apps.alerts.models import Alert, AlertNotification
-from apps.alerts.services import send_alert_email_to_contact, send_reminder_email
+from apps.alerts.services import (
+    notify_escalation_level,
+    send_alert_email_to_contact,
+    send_reminder_email,
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -76,44 +80,33 @@ def send_alert_to_contact_task(self, alert_id, contact_id):
 
 @shared_task
 def escalate_pending_alerts():
-    from datetime import timedelta
     now = timezone.now()
+    pending_alerts = Alert.objects.filter(status=Alert.Status.PENDING)
 
-    one_hour_ago = now - timedelta(hours=1)
-    alerts_level_0 = Alert.objects.filter(
-        status=Alert.Status.PENDING,
-        escalation_level=0,
-        created_at__lt=one_hour_ago,
-    )
+    for alert in pending_alerts:
+        target_level = _target_escalation_level(alert, now)
+        if target_level <= alert.escalation_level:
+            continue
 
-    for alert in alerts_level_0:
-        alert.escalation_level = 1
+        alert.escalation_level = target_level
         alert.last_escalation_at = now
         alert.save(update_fields=['escalation_level', 'last_escalation_at'])
+        notify_escalation_level(alert)
 
-    four_hours_ago = now - timedelta(hours=4)
-    alerts_level_1 = Alert.objects.filter(
-        status=Alert.Status.PENDING,
-        escalation_level__lt=2,
-        created_at__lt=four_hours_ago,
-    )
 
-    for alert in alerts_level_1:
-        alert.escalation_level = 2
-        alert.last_escalation_at = now
-        alert.save(update_fields=['escalation_level', 'last_escalation_at'])
+def _target_escalation_level(alert, now):
+    age = now - alert.created_at
 
-    one_day_ago = now - timedelta(hours=24)
-    alerts_level_2 = Alert.objects.filter(
-        status=Alert.Status.PENDING,
-        escalation_level__lt=3,
-        created_at__lt=one_day_ago,
-    )
+    if age >= timedelta(hours=24):
+        return 3
 
-    for alert in alerts_level_2:
-        alert.escalation_level = 3
-        alert.last_escalation_at = now
-        alert.save(update_fields=['escalation_level', 'last_escalation_at'])
+    if age >= timedelta(hours=4):
+        return 2
+
+    if age >= timedelta(hours=1):
+        return 1
+
+    return 0
 
 
 @shared_task

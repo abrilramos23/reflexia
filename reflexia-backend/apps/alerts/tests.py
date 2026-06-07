@@ -1,16 +1,17 @@
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from unittest.mock import patch
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.users.models import Patient, Therapist, TherapistPatient
+from apps.users.models import Organisation, OrganisationMember, Patient, Therapist, TherapistPatient
 from apps.entries.models import JournalEntry
 from apps.analysis.models import EmotionalAnalysis
 from apps.alerts.models import Alert
 from apps.alerts.serializers import AlertDetailSerializer
 from apps.alerts.tasks import escalate_pending_alerts
-from apps.contacts.models import AssociatedContact, DefaultContact
+from apps.contacts.models import AssociatedContact, DefaultContact, SupportTherapist
 
 
 class AlertAutoGenerationTestCase(TestCase):
@@ -439,6 +440,16 @@ class AlertEscalationTaskTestCase(TestCase):
             birth_date="2001-01-10",
             is_active=True,
         )
+        self.therapist = Therapist.objects.create_user(
+            email="escalation-therapist@example.com",
+            password="StrongPass123!",
+            first_name="Marta",
+            last_name="Lopez",
+            license_number="ESC-001",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        TherapistPatient.objects.create(therapist=self.therapist, patient=self.patient)
 
     def _create_alert(self, created_at, status_value=Alert.Status.PENDING, escalation_level=0):
         entry = JournalEntry.objects.create(patient=self.patient, content="Text")
@@ -495,3 +506,91 @@ class AlertEscalationTaskTestCase(TestCase):
         self.assertEqual(dismissed.escalation_level, 0)
         self.assertIsNone(validated.last_escalation_at)
         self.assertIsNone(dismissed.last_escalation_at)
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_escalation_sends_email_to_assigned_therapist(self):
+        alert = self._create_alert(timezone.now() - timezone.timedelta(hours=2))
+
+        escalate_pending_alerts()
+
+        alert.refresh_from_db()
+        self.assertEqual(alert.escalation_level, 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.therapist.email])
+        self.assertIn("nivell 1", mail.outbox[0].subject.lower())
+        self.assertIn(str(alert.pk), mail.outbox[0].body)
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_high_escalation_sends_email_to_support_therapists(self):
+        organisation = Organisation.objects.create(
+            name="Escalation Clinic",
+            type=Organisation.Type.CLINIC,
+        )
+        OrganisationMember.objects.create(
+            user=self.therapist,
+            organisation=organisation,
+            is_admin=True,
+        )
+        accepted_support = Therapist.objects.create_user(
+            email="accepted-support@example.com",
+            password="StrongPass123!",
+            first_name="Joan",
+            last_name="Serra",
+            license_number="ESC-002",
+            specialty="Trauma Therapy",
+            is_active=True,
+        )
+        pending_support = Therapist.objects.create_user(
+            email="pending-support@example.com",
+            password="StrongPass123!",
+            first_name="Laia",
+            last_name="Vila",
+            license_number="ESC-003",
+            specialty="Clinical Psychology",
+            is_active=True,
+        )
+        OrganisationMember.objects.create(
+            user=accepted_support,
+            organisation=organisation,
+        )
+        OrganisationMember.objects.create(
+            user=pending_support,
+            organisation=organisation,
+        )
+        SupportTherapist.objects.create(
+            therapist=self.therapist,
+            support=accepted_support,
+            status=SupportTherapist.Status.ACCEPTED,
+        )
+        SupportTherapist.objects.create(
+            therapist=self.therapist,
+            support=pending_support,
+            status=SupportTherapist.Status.PENDING,
+        )
+        alert = self._create_alert(timezone.now() - timezone.timedelta(hours=25))
+
+        escalate_pending_alerts()
+
+        alert.refresh_from_db()
+        self.assertEqual(alert.escalation_level, 3)
+        recipients = {recipient for message in mail.outbox for recipient in message.to}
+        self.assertEqual(
+            recipients,
+            {self.therapist.email, accepted_support.email},
+        )
+        self.assertTrue(
+            all("Escalat alt" in message.subject for message in mail.outbox)
+        )
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_escalation_does_not_resend_email_when_level_is_unchanged(self):
+        alert = self._create_alert(
+            timezone.now() - timezone.timedelta(hours=25),
+            escalation_level=3,
+        )
+
+        escalate_pending_alerts()
+
+        alert.refresh_from_db()
+        self.assertEqual(alert.escalation_level, 3)
+        self.assertEqual(len(mail.outbox), 0)

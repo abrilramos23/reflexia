@@ -10,7 +10,7 @@ from apps.users.models import Patient, Therapist
 class AssociatedContact(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=150)
-    email = models.EmailField(max_length=255, blank=True, null=True)
+    email = models.EmailField(max_length=255)
     phone = models.CharField(max_length=50, blank=True, null=True)
     relation = models.CharField(max_length=100)
 
@@ -20,17 +20,14 @@ class AssociatedContact(models.Model):
         ordering = ("name",)
         constraints = [
             models.CheckConstraint(
-                check=(
-                    (models.Q(email__isnull=False) & ~models.Q(email=""))
-                    | (models.Q(phone__isnull=False) & ~models.Q(phone=""))
-                ),
-                name="associated_contact_requires_email_or_phone",
+                check=~models.Q(email=""),
+                name="associated_contact_requires_email",
             )
         ]
 
     def clean(self):
-        if not self.email and not self.phone:
-            raise ValidationError("Cal indicar com a mínim un mètode de contacte.")
+        if not self.email:
+            raise ValidationError("Cal indicar el correu electrònic del contacte.")
 
 
 class DefaultContact(models.Model):

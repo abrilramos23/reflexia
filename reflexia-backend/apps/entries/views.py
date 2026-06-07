@@ -298,7 +298,7 @@ class PatientEntryExportView(PatientEntriesMixin, APIView):
         if entry is None:
             return Response({"detail": "Entrada no trobada."}, status=status.HTTP_404_NOT_FOUND)
 
-        pdf_bytes = render_entries_pdf(title="Exportació d'una entrada de journaling", entries=[entry])
+        pdf_bytes = render_entries_pdf(title="Entrada de journaling", entries=[entry])
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{build_export_filename(prefix="entry", suffix=str(entry.pk)[:8])}"'
         return response
@@ -317,7 +317,7 @@ class PatientEntriesExportView(PatientEntriesMixin, APIView):
             return error_response
 
         entries = list(self.get_visible_entries_queryset(patient=patient))
-        pdf_bytes = render_entries_pdf(title="Historial de journaling", entries=entries)
+        pdf_bytes = render_entries_pdf(title="Historial personal de journaling", entries=entries)
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{build_export_filename(prefix="entries-history")}"'
         return response
@@ -479,7 +479,7 @@ class TherapistPatientEntryExportView(TherapistPatientMixin, APIView):
     def get(self, request, patient_id, entry_id):
         patient = self.get_patient(request, patient_id)
         entry = get_object_or_404(self.get_visible_entries_queryset(patient=patient), pk=entry_id)
-        pdf_bytes = render_entries_pdf(title="Exportació d'una entrada del pacient", entries=[entry])
+        pdf_bytes = render_entries_pdf(title="Entrada de journaling del pacient", entries=[entry])
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{build_export_filename(prefix="patient-entry", suffix=str(entry.pk)[:8])}"'
         return response
@@ -495,7 +495,7 @@ class TherapistPatientEntriesExportView(TherapistPatientMixin, APIView):
     def get(self, request, patient_id):
         patient = self.get_patient(request, patient_id)
         entries = list(self.get_visible_entries_queryset(patient=patient))
-        pdf_bytes = render_entries_pdf(title="Historial de journaling del pacient", entries=entries)
+        pdf_bytes = render_entries_pdf(title="Historial visible de journaling del pacient", entries=entries)
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{build_export_filename(prefix="patient-history", suffix=str(patient.pk)[:8])}"'
         return response

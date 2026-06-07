@@ -56,10 +56,10 @@ describe('AlertsPage', () => {
     expect(await screen.findByText('Paula Sanchez')).toBeInTheDocument()
     expect(screen.getByText('Nil Costa')).toBeInTheDocument()
     expect(screen.getByText('1 pendents')).toBeInTheDocument()
-    expect(screen.getByText('1 risc alt')).toBeInTheDocument()
+    expect(screen.getByText('2 risc alt')).toBeInTheDocument()
     expect(screen.getByText('2 totals')).toBeInTheDocument()
     expect(screen.getAllByText('Pendent')).toHaveLength(2)
-    expect(screen.getByText('Risc alt')).toBeInTheDocument()
+    expect(screen.getAllByText('Risc alt')).toHaveLength(2)
   })
 
   it('sends status and risk filters as API params', async () => {

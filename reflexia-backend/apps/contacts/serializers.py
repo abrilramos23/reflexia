@@ -23,11 +23,10 @@ class AssociatedContactSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         email = attrs.get("email", getattr(self.instance, "email", ""))
-        phone = attrs.get("phone", getattr(self.instance, "phone", ""))
 
-        if not email and not phone:
+        if not email:
             raise serializers.ValidationError(
-                {"non_field_errors": ["Cal indicar com a mínim un mètode de contacte."]}
+                {"email": ["Cal indicar el correu electrònic del contacte."]}
             )
         return attrs
 

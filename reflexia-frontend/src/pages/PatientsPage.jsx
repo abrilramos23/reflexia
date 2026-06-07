@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { FaPlus, FaUserSlash } from 'react-icons/fa'
+import { FaPlus, FaTimes, FaUserSlash } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext.jsx'
 
 function firstErrorMessage(error) {
@@ -31,6 +31,35 @@ function sortPatients(patients) {
   )
 }
 
+function patientFullName(patient) {
+  return `${patient.first_name} ${patient.last_name}`.trim()
+}
+
+function matchesPatientFilters(patient, filters) {
+  const searchTerm = filters.search.trim().toLowerCase()
+  const searchableText = [
+    patient.first_name,
+    patient.last_name,
+    patient.email,
+    patient.birth_date,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  const matchesSearch = !searchTerm || searchableText.includes(searchTerm)
+  const matchesAccountStatus =
+    filters.accountStatus === 'all' ||
+    (filters.accountStatus === 'active' && patient.is_active) ||
+    (filters.accountStatus === 'inactive' && !patient.is_active)
+  const matchesConsentStatus =
+    filters.consentStatus === 'all' ||
+    (filters.consentStatus === 'accepted' && patient.consent_accepted) ||
+    (filters.consentStatus === 'pending' && !patient.consent_accepted)
+
+  return matchesSearch && matchesAccountStatus && matchesConsentStatus
+}
+
 export function PatientsPage() {
   const { user, registerPatient, listTherapistPatients, deactivatePatient } = useAuth()
   const [patientForm, setPatientForm] = useState({
@@ -46,19 +75,20 @@ export function PatientsPage() {
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false)
   const [busyPatientId, setBusyPatientId] = useState('')
   const [isRegisterSectionOpen, setIsRegisterSectionOpen] = useState(false)
-
-  if (!user) {
-    return <Navigate to="/login" replace />
-  }
-
-  if (user.role !== 'therapist') {
-    return <Navigate to="/dashboard" replace />
-  }
+  const [patientFilters, setPatientFilters] = useState({
+    search: '',
+    accountStatus: 'all',
+    consentStatus: 'all',
+  })
 
   useEffect(() => {
     let isCancelled = false
 
     async function loadPatients() {
+      if (user?.role !== 'therapist') {
+        return
+      }
+
       try {
         const patients = await listTherapistPatients()
         if (!isCancelled) {
@@ -76,7 +106,35 @@ export function PatientsPage() {
     return () => {
       isCancelled = true
     }
-  }, [listTherapistPatients])
+  }, [listTherapistPatients, user?.role])
+
+  const filteredPatients = useMemo(
+    () => therapistPatients.filter((patient) => matchesPatientFilters(patient, patientFilters)),
+    [patientFilters, therapistPatients],
+  )
+
+  const patientCounts = useMemo(
+    () => ({
+      total: therapistPatients.length,
+      active: therapistPatients.filter((patient) => patient.is_active).length,
+      inactive: therapistPatients.filter((patient) => !patient.is_active).length,
+      pendingConsent: therapistPatients.filter((patient) => !patient.consent_accepted).length,
+    }),
+    [therapistPatients],
+  )
+
+  const hasPatientFilters =
+    patientFilters.search.trim() !== '' ||
+    patientFilters.accountStatus !== 'all' ||
+    patientFilters.consentStatus !== 'all'
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (user.role !== 'therapist') {
+    return <Navigate to="/dashboard" replace />
+  }
 
   async function handlePatientSubmit(event) {
     event.preventDefault()
@@ -250,16 +308,76 @@ export function PatientsPage() {
 
         <section className="screen-card dashboard-panel profile-card--wide">
           <div className="panel-heading">
-            <p className="eyebrow" style={{ marginBottom: '0rem' }}>Llista de pacients</p>
+            <p className="eyebrow eyebrow--flush">Llista de pacients</p>
           </div>
 
           {patientsError ? <div className="error-banner">{patientsError}</div> : null}
 
+          <div className="inline-fields">
+            <div className="field-group">
+              <label htmlFor="patient-search">Cerca</label>
+              <input
+                id="patient-search"
+                type="search"
+                placeholder="Nom del pacient"
+                value={patientFilters.search}
+                onChange={(event) =>
+                  setPatientFilters((currentFilters) => ({
+                    ...currentFilters,
+                    search: event.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="field-group">
+              <label htmlFor="patient-account-status-filter">Estat del compte</label>
+              <select
+                id="patient-account-status-filter"
+                value={patientFilters.accountStatus}
+                onChange={(event) =>
+                  setPatientFilters((currentFilters) => ({
+                    ...currentFilters,
+                    accountStatus: event.target.value,
+                  }))
+                }
+              >
+                <option value="all">Tots els comptes</option>
+                <option value="active">Actius</option>
+                <option value="inactive">Inactius</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="inline-fields">
+
+            {hasPatientFilters ? (
+              <div className="field-group">
+                <button
+                  id="clear-patient-filters"
+                  type="button"
+                  className="action-chip"
+                  onClick={() =>
+                    setPatientFilters({
+                      search: '',
+                      accountStatus: 'all',
+                      consentStatus: 'all',
+                    })
+                  }
+                >
+                  Netejar filtres
+                </button>
+              </div>
+            ) : null}
+          </div>
+
           {therapistPatients.length === 0 ? (
             <p className="muted">Encara no tens pacients assignats.</p>
+          ) : filteredPatients.length === 0 ? (
+            <p className="muted">No hi ha pacients que coincideixin amb els filtres seleccionats.</p>
           ) : (
             <ul className="patient-list">
-              {therapistPatients.map((patient) => (
+              {filteredPatients.map((patient) => (
                 <li className="compact-list-item" key={patient.id}>
                   <Link
                     to={`/patients/${patient.id}`}
@@ -268,7 +386,7 @@ export function PatientsPage() {
                   >
                     <div style={{ flex: 1 }}>
                       <div className="item-heading-row">
-                        <strong>{patient.first_name} {patient.last_name}</strong>
+                        <strong>{patientFullName(patient)}</strong>
                         <span className="status-pill">
                           {patient.is_active ? 'Compte actiu' : 'Compte inactiu'}
                         </span>
