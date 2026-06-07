@@ -2,10 +2,13 @@ from django.conf import settings
 from django.core.mail import send_mail
 
 from apps.alerts.models import Alert, AlertNotification
+from apps.contacts.models import SupportTherapist
 from apps.entries.models import JournalEntry
 import logging
 
 logger = logging.getLogger(__name__)
+
+HIGH_ESCALATION_LEVEL = 3
 
 
 def send_alert_email_to_contact(alert, contact):
@@ -66,4 +69,95 @@ def send_reminder_email(patient, days, last_entry_date):
         )
 
 def notify_escalation_level(alert):
-    pass
+    therapists = _active_alert_therapists(alert)
+    if not therapists:
+        return 0
+
+    recipients = _unique_therapist_recipients(therapists)
+
+    if alert.escalation_level >= HIGH_ESCALATION_LEVEL:
+        support_therapists = _accepted_support_therapists(therapists)
+        recipients.extend(_unique_therapist_recipients(support_therapists, existing=recipients))
+
+    sent_count = 0
+    for therapist in recipients:
+        try:
+            send_escalation_email_to_therapist(alert, therapist)
+            sent_count += 1
+        except Exception as exc:
+            logger.error(
+                "Error enviant escalat d'alerta %s a %s: %s",
+                alert.pk,
+                therapist.email,
+                exc,
+            )
+
+    return sent_count
+
+
+def send_escalation_email_to_therapist(alert, therapist):
+    subject = _escalation_subject(alert)
+    message = _escalation_message(alert, therapist)
+
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [therapist.email],
+        fail_silently=False,
+    )
+
+
+def _active_alert_therapists(alert):
+    return [
+        link.therapist
+        for link in alert.patient.therapist_links.filter(is_active=True).select_related("therapist")
+        if link.therapist.email
+    ]
+
+
+def _accepted_support_therapists(therapists):
+    return [
+        link.support
+        for link in SupportTherapist.objects.filter(
+            therapist__in=therapists,
+            status=SupportTherapist.Status.ACCEPTED,
+        ).select_related("support")
+        if link.support.email
+    ]
+
+
+def _unique_therapist_recipients(therapists, existing=None):
+    seen = {therapist.email.lower() for therapist in existing or [] if therapist.email}
+    recipients = []
+
+    for therapist in therapists:
+        email = therapist.email.lower()
+        if email in seen:
+            continue
+        seen.add(email)
+        recipients.append(therapist)
+
+    return recipients
+
+
+def _escalation_subject(alert):
+    if alert.escalation_level >= HIGH_ESCALATION_LEVEL:
+        return "Escalat alt d'una alerta clínica a Reflexia"
+
+    return f"Escalat de nivell {alert.escalation_level} d'una alerta clínica a Reflexia"
+
+
+def _escalation_message(alert, therapist):
+    patient = alert.patient
+    alert_url = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')}/alerts/{alert.pk}"
+
+    return (
+        f"Hola {therapist.first_name},\n\n"
+        f"L'alerta clínica de {patient.first_name} {patient.last_name} "
+        f"ha escalat al nivell {alert.escalation_level} perquè continua pendent de revisió.\n\n"
+        f"Nivell de risc: {alert.get_risk_level_display()}\n"
+        f"Data de creació de l'alerta: {alert.created_at.strftime('%d/%m/%Y %H:%M')}\n\n"
+        f"Pots revisar-la aquí:\n{alert_url}\n\n"
+        "Aquest missatge és automàtic i no substitueix el criteri professional."
+    )
