@@ -24,6 +24,7 @@ jobs:
           --health-timeout=5s
           --health-retries=5
     env:
+      DATABASE_URL: postgres://reflexia:reflexia@localhost:5432/reflexiadb
       DB_HOST: localhost
       DB_PORT: 5432
       DB_NAME: reflexiadb
@@ -32,6 +33,7 @@ jobs:
       SECRET_KEY: ci-secret-key-that-is-long-enough-for-jwt-tests
       DEBUG: False
       ALLOWED_HOSTS: localhost,
+      SECURE_SSL_REDIRECT: False
 
     steps:
       - name: Checkout codi
