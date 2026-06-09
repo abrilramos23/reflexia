@@ -724,6 +724,27 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
+.dashboard-metric-card--button {
+  width: 100%;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.dashboard-metric-card--button:hover,
+.dashboard-metric-card--button:focus-visible,
+.dashboard-metric-card--selected {
+  border-color: rgba(61, 102, 89, 0.42);
+  box-shadow: 0 12px 28px rgba(39, 72, 61, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.dashboard-metric-card--button:focus-visible {
+  outline: 3px solid rgba(79, 155, 122, 0.24);
+  outline-offset: 2px;
+}
+
 .dashboard-metric-card span {
   display: block;
   color: var(--muted);

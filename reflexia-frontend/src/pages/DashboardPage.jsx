@@ -1,9 +1,9 @@
 import { Link, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { FaBell, FaExclamationTriangle, FaPlus } from 'react-icons/fa'
+import { FaPlus } from 'react-icons/fa'
 import { EmotionalEvolutionPanel } from '../components/EmotionalEvolutionPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { formatEntryDate } from '../lib/entries.js'
+import { formatEntryDate, formatEntryStatus, formatRiskLevel } from '../lib/entries.js'
 
 function formatRole(role) {
   if (role === 'therapist') return 'Terapeuta'
@@ -33,50 +33,10 @@ function firstErrorMessage(error) {
   return 'S’ha produït un error inesperat.'
 }
 
-function formatShortDate(value) {
-  if (!value) {
-    return 'Sense data'
-  }
-
-  try {
-    return new Intl.DateTimeFormat('ca-ES', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    }).format(new Date(value))
-  } catch {
-    return value
-  }
-}
-
 function sortByRegistrationDate(items) {
   return [...items].sort(
     (left, right) => new Date(right.registration_date).getTime() - new Date(left.registration_date).getTime(),
   )
-}
-
-function buildTherapistActivityItem(patient) {
-  if (!patient.is_active) {
-    return {
-      label: 'Compte inactiu',
-      description: 'Compte desactivat.',
-      tone: 'muted',
-    }
-  }
-
-  if (!patient.consent_accepted) {
-    return {
-      label: 'Consentiment pendent',
-      description: 'Consentiment pendent.',
-      tone: 'pending',
-    }
-  }
-
-  return {
-    label: 'Seguiment actiu',
-    description: 'Consentiment acceptat.',
-    tone: 'active',
-  }
 }
 
 export function DashboardPage() {
@@ -86,6 +46,7 @@ export function DashboardPage() {
     getMyEvolution,
     listEntries,
     listTherapistPatients,
+    listPatientEntries,
     registerTherapist,
     getTherapistDashboardData,
     getEntriesEditorContext,
@@ -99,6 +60,10 @@ export function DashboardPage() {
   const [therapistDashboardData, setTherapistDashboardData] = useState(null)
   const [therapistAlerts, setTherapistAlerts] = useState([])
   const [isTherapistDataLoading, setIsTherapistDataLoading] = useState(false)
+  const [selectedEntryMetric, setSelectedEntryMetric] = useState(null)
+  const [metricEntries, setMetricEntries] = useState([])
+  const [metricEntriesError, setMetricEntriesError] = useState('')
+  const [isMetricEntriesLoading, setIsMetricEntriesLoading] = useState(false)
   const [therapistInviteForm, setTherapistInviteForm] = useState({
     first_name: '',
     last_name: '',
@@ -197,12 +162,55 @@ export function DashboardPage() {
     }
   }
 
+  async function handleEntryMetricClick(metric) {
+    setSelectedEntryMetric(metric)
+    setMetricEntriesError('')
+    setIsMetricEntriesLoading(true)
+
+    try {
+      const patientsWithEntries = await Promise.all(
+        therapistPatients.map(async (patient) => {
+          const entries = await listPatientEntries(patient.id)
+          return entries.map((entry) => ({
+            ...entry,
+            patient_id: patient.id,
+            patient_name: `${patient.first_name} ${patient.last_name}`,
+          }))
+        }),
+      )
+
+      const todayKey = new Date().toDateString()
+      const entries = patientsWithEntries
+        .flat()
+        .filter((entry) => {
+          if (metric === 'today') {
+            return new Date(entry.created_at).toDateString() === todayKey
+          }
+
+          if (metric === 'pending_analyses') {
+            return entry.analysis?.reviewed_by_therapist === false
+          }
+
+          return true
+        })
+        .sort((left, right) => new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime())
+
+      setMetricEntries(entries)
+    } catch (error) {
+      setMetricEntries([])
+      setMetricEntriesError(firstErrorMessage(error.response?.data || error))
+    } finally {
+      setIsMetricEntriesLoading(false)
+    }
+  }
+
   const pendingAlerts = therapistAlerts.filter((alert) => alert.status === 'pending')
   const highRiskAlerts = therapistAlerts.filter((alert) => alert.risk_level === 'high')
   const priorityAlerts = therapistAlerts
     .filter((alert) => alert.status === 'pending' || alert.risk_level === 'high')
     .slice(0, 3)
   const hasPriorityAlerts = pendingAlerts.length > 0 || highRiskAlerts.length > 0
+  const selectedMetricConfig = selectedEntryMetric ? entryMetricConfigs[selectedEntryMetric] : null
 
   return (
     <div className="screen-shell">
@@ -359,22 +367,75 @@ export function DashboardPage() {
                   <strong>{therapistDashboardData?.metrics.active_patients ?? '-'}</strong>
                 </Link>
 
-                <div className="dashboard-metric-card">
+                <button
+                  className={`dashboard-metric-card dashboard-metric-card--button ${selectedEntryMetric === 'all' ? 'dashboard-metric-card--selected' : ''}`}
+                  type="button"
+                  onClick={() => handleEntryMetricClick('all')}
+                >
                   <span style={{ fontWeight: 'bold' }}>Total d&apos;entrades</span>
                   <strong>{therapistDashboardData?.metrics.total_entries ?? '-'}</strong>
-                </div>
+                </button>
 
-                <div className="dashboard-metric-card">
+                <button
+                  className={`dashboard-metric-card dashboard-metric-card--button ${selectedEntryMetric === 'today' ? 'dashboard-metric-card--selected' : ''}`}
+                  type="button"
+                  onClick={() => handleEntryMetricClick('today')}
+                >
                   <span style={{ fontWeight: 'bold' }}>Entrades d&apos;avui</span>
                   <strong>{therapistDashboardData?.metrics.entries_today ?? '-'}</strong>
-                </div>
+                </button>
 
-                <div className="dashboard-metric-card dashboard-metric-card--pending">
+                <button
+                  className={`dashboard-metric-card dashboard-metric-card--button dashboard-metric-card--pending ${selectedEntryMetric === 'pending_analyses' ? 'dashboard-metric-card--selected' : ''}`}
+                  type="button"
+                  onClick={() => handleEntryMetricClick('pending_analyses')}
+                >
                   <span style={{ fontWeight: 'bold' }}>Anàlisis pendents</span>
                   <strong>{therapistDashboardData?.metrics.pending_analyses ?? '-'}</strong>
-                </div>
+                </button>
               </div>
             </section>
+
+            {selectedMetricConfig ? (
+              <section className="screen-card dashboard-panel profile-card--wide">
+                <div className="panel-heading" style={{ marginBottom: '0rem' }}>
+                  <p className="eyebrow">{selectedMetricConfig.eyebrow}</p>
+                  <h2>{selectedMetricConfig.title}</h2>
+                </div>
+
+                <div className="content-card section-stack">
+                  {metricEntriesError ? <div className="error-banner">{metricEntriesError}</div> : null}
+                  {isMetricEntriesLoading ? (
+                    <p className="muted">Carregant entrades...</p>
+                  ) : metricEntries.length ? (
+                    <ul className="patient-list">
+                      {metricEntries.map((entry) => (
+                        <li className={`compact-list-item ${riskItemClassName(entry.analysis?.risk_level)}`} key={entry.id}>
+                          <Link to={`/patients/${entry.patient_id}/entries/${entry.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', width: '100%' }}>
+                            <div className="item-heading-row">
+                              <strong>{entry.patient_name}</strong>
+                              <span>{formatEntryDate(entry.created_at)}</span>
+                              <span className="status-pill">{formatEntryStatus(entry)}</span>
+                            </div>
+                            <p className="muted">{entry.preview}</p>
+                            <div className="entries-toolbar">
+                              <span className={`status-pill risk-pill--${entry.analysis?.risk_level || 'none'}`}>
+                                {formatRiskLevel(entry.analysis?.risk_level)}
+                              </span>
+                              {entry.analysis?.reviewed_by_therapist === false ? (
+                                <span className="status-pill dashboard-status-pill--pending">Pendent de revisió</span>
+                              ) : null}
+                            </div>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="muted">{selectedMetricConfig.empty}</p>
+                  )}
+                </div>
+              </section>
+            ) : null}
 
             <section className="screen-card dashboard-panel profile-card--wide">
               <div className="panel-heading" style={{ marginBottom: '0rem' }}>
@@ -432,10 +493,20 @@ function riskItemClassName(riskLevel) {
   return ''
 }
 
-function priorityAlertItemClassName(alert) {
-  if (alert.risk_level === 'high') {
-    return 'alert-list-item alert-list-item--high'
-  }
-
-  return 'alert-list-item alert-list-item--pending'
+const entryMetricConfigs = {
+  all: {
+    eyebrow: 'Entrades dels pacients',
+    title: 'Totes les entrades',
+    empty: 'Encara no hi ha entrades dels teus pacients.',
+  },
+  today: {
+    eyebrow: 'Entrades dels pacients',
+    title: 'Entrades creades avui',
+    empty: 'Avui encara no hi ha cap entrada.',
+  },
+  pending_analyses: {
+    eyebrow: 'Revisió clínica',
+    title: 'Entrades amb anàlisi pendent',
+    empty: 'No hi ha anàlisis pendents de revisió.',
+  },
 }
