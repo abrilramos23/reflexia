@@ -149,11 +149,26 @@ class AlertValidationSerializer(serializers.Serializer):
     validation_note = serializers.CharField(
         required=False, allow_blank=True, max_length=1000
     )
+    justification = serializers.CharField(
+        required=False, allow_blank=True, max_length=1000
+    )
 
     def validate_action(self, value):
         if value not in ["VALIDATE", "DISMISS"]:
             raise serializers.ValidationError("Acció no vàlida. Utilitza 'VALIDATE' o 'DISMISS'.")
         return value
+
+    def validate(self, attrs):
+        action = attrs.get("action")
+        justification = attrs.get("justification", "").strip()
+
+        if action == "VALIDATE" and not justification:
+            raise serializers.ValidationError(
+                {"justification": "Cal indicar la justificació clínica per validar l'alerta."}
+            )
+
+        attrs["justification"] = justification
+        return attrs
 
 
 class AlertNotifyContactsSerializer(serializers.Serializer):
@@ -161,8 +176,15 @@ class AlertNotifyContactsSerializer(serializers.Serializer):
         child=serializers.UUIDField(),
         required=True,
     )
+    justification = serializers.CharField(required=True, max_length=1000)
 
     def validate_contact_ids(self, value):
         if not value:
             raise serializers.ValidationError("Cal seleccionar almenys un contacte.")
+        return value
+
+    def validate_justification(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Cal indicar la justificació que rebran els contactes.")
         return value

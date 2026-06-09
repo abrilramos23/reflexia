@@ -16,6 +16,7 @@ const baseAlert = {
   entry_content: '<p>Em sento sobrepassada avui.</p>',
   risk_level: 'high',
   status: 'pending',
+  justification: '',
   analysis_primary_emotion: 'anxiety',
   analysis_summary: 'Risc alt detectat.',
   associated_contacts: [
@@ -95,7 +96,10 @@ describe('AlertDetailPage', () => {
     const { api } = renderAlertDetailPage()
 
     await screen.findByRole('button', { name: 'Validar alerta' })
-    fireEvent.change(screen.getByLabelText('Nota (opcional)'), {
+    fireEvent.change(screen.getByLabelText('Justificació clínica'), {
+      target: { value: 'El contingut descriu risc alt i cal activar suport proper.' },
+    })
+    fireEvent.change(screen.getByLabelText('Nota interna (opcional)'), {
       target: { value: 'Fer seguiment avui.' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Validar alerta' }))
@@ -104,6 +108,7 @@ describe('AlertDetailPage', () => {
       expect(api.patch).toHaveBeenCalledWith('/alerts/alert-1/', {
         action: 'VALIDATE',
         validation_note: 'Fer seguiment avui.',
+        justification: 'El contingut descriu risc alt i cal activar suport proper.',
       })
     })
     expect(await screen.findByText('Alerta validada correctament.')).toBeInTheDocument()
@@ -128,6 +133,7 @@ describe('AlertDetailPage', () => {
       expect(api.patch).toHaveBeenCalledWith('/alerts/alert-1/', {
         action: 'DISMISS',
         validation_note: '',
+        justification: '',
       })
     })
     expect(await screen.findByText('Alerta descartada correctament.')).toBeInTheDocument()
@@ -138,6 +144,7 @@ describe('AlertDetailPage', () => {
       alert: {
         ...baseAlert,
         status: 'validated',
+        justification: 'Cal activar el contacte de suport per risc alt.',
       },
     })
 
@@ -147,6 +154,7 @@ describe('AlertDetailPage', () => {
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/alerts/alert-1/notify-contacts/', {
         contact_ids: ['contact-1'],
+        justification: 'Cal activar el contacte de suport per risc alt.',
       })
     })
     expect(await screen.findByText('Notificacions enviades: 1.')).toBeInTheDocument()
@@ -158,6 +166,7 @@ describe('AlertDetailPage', () => {
       alert: {
         ...baseAlert,
         status: 'validated',
+        justification: 'Cal activar el contacte de suport per risc alt.',
       },
     })
 

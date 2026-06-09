@@ -91,7 +91,7 @@ class AlertDetailView(APIView):
     @extend_schema(
         tags=["Alerts"],
         summary="Validar o desestimar una alerta",
-        description="Valida o desestima una alerta. S'ha de proporcionar l'acció (VALIDATE o DISMISS) i opcionalment una nota de validació.",
+        description="Valida o desestima una alerta. S'ha de proporcionar l'acció (VALIDATE o DISMISS). Per validar-la cal indicar una justificació clínica, i opcionalment una nota interna de validació.",
         request=AlertValidationSerializer,
         responses={200: AlertDetailSerializer},
     )
@@ -103,6 +103,7 @@ class AlertDetailView(APIView):
 
         action_type = serializer.validated_data["action"]
         validation_note = serializer.validated_data.get("validation_note", "")
+        justification = serializer.validated_data.get("justification", "")
 
         if action_type == "VALIDATE":
             alert.status = Alert.Status.VALIDATED
@@ -111,12 +112,14 @@ class AlertDetailView(APIView):
 
         alert.validating_therapist = request.user.therapist_profile
         alert.validation_note = validation_note
+        alert.justification = justification
         alert.validated_at = timezone.now()
         alert.save(
             update_fields=[
                 "status",
                 "validating_therapist",
                 "validation_note",
+                "justification",
                 "validated_at",
             ]
         )
@@ -130,7 +133,7 @@ class AlertNotifyContactsView(APIView):
     @extend_schema(
         tags=["Alerts"],
         summary="Notificar contactes d'una alerta validada",
-        description="Envia notificacions als contactes especificats d'una alerta que ha estat validada. La alerta ha d'estar en estat VALIDATED per usar aquest endpoint.",
+        description="Envia notificacions als contactes especificats d'una alerta que ha estat validada. La alerta ha d'estar en estat VALIDATED i cal indicar la justificació que rebran els contactes.",
         request=AlertNotifyContactsSerializer,
         responses={200: None},
     )
@@ -153,6 +156,7 @@ class AlertNotifyContactsView(APIView):
         serializer.is_valid(raise_exception=True)
 
         contact_ids = serializer.validated_data["contact_ids"]
+        justification = serializer.validated_data["justification"]
 
         contacts = DefaultContact.objects.filter(
             patient=alert.patient,
@@ -164,15 +168,16 @@ class AlertNotifyContactsView(APIView):
 
         from apps.alerts.tasks import batch_send_alerts_to_contacts
 
-        batch_send_alerts_to_contacts.delay(
-            str(alert.id),
-            [str(c.contact.id) for c in contacts],
-        )
-
+        alert.justification = justification
         alert.notification_status = Alert.NotificationStatus.NOTIFIED
         alert.last_notified_at = timezone.now()
         alert.save(
-            update_fields=["notification_status", "last_notified_at"]
+            update_fields=["justification", "notification_status", "last_notified_at"]
+        )
+
+        batch_send_alerts_to_contacts.delay(
+            str(alert.id),
+            [str(c.contact.id) for c in contacts],
         )
 
         return Response(

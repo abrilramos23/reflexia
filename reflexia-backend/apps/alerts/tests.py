@@ -10,6 +10,7 @@ from apps.entries.models import JournalEntry
 from apps.analysis.models import EmotionalAnalysis
 from apps.alerts.models import Alert
 from apps.alerts.serializers import AlertDetailSerializer
+from apps.alerts.services import send_alert_email_to_contact
 from apps.alerts.tasks import escalate_pending_alerts
 from apps.contacts.models import AssociatedContact, DefaultContact, SupportTherapist
 
@@ -260,6 +261,7 @@ class AlertAPITestCase(APITestCase):
             {
                 "action": "VALIDATE",
                 "validation_note": "Cal fer seguiment avui.",
+                "justification": "El contingut descriu risc alt i cal activar suport proper.",
             },
             format="json",
         )
@@ -269,7 +271,28 @@ class AlertAPITestCase(APITestCase):
         self.assertEqual(self.alert.status, Alert.Status.VALIDATED)
         self.assertEqual(self.alert.validating_therapist, self.therapist)
         self.assertEqual(self.alert.validation_note, "Cal fer seguiment avui.")
+        self.assertEqual(
+            self.alert.justification,
+            "El contingut descriu risc alt i cal activar suport proper.",
+        )
         self.assertIsNotNone(self.alert.validated_at)
+
+    def test_therapist_cannot_validate_alert_without_justification(self):
+        self.client.force_authenticate(user=self.therapist)
+
+        response = self.client.patch(
+            f"/api/alerts/{self.alert.pk}/",
+            {
+                "action": "VALIDATE",
+                "validation_note": "Cal fer seguiment avui.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.alert.refresh_from_db()
+        self.assertEqual(self.alert.status, Alert.Status.PENDING)
+        self.assertEqual(self.alert.justification, "")
 
     def test_therapist_can_dismiss_alert_through_endpoint(self):
         self.client.force_authenticate(user=self.therapist)
@@ -356,7 +379,10 @@ class AlertNotificationAPITestCase(APITestCase):
 
         response = self.client.post(
             f"/api/alerts/{self.alert.pk}/notify-contacts/",
-            {"contact_ids": [str(self.contact.pk)]},
+            {
+                "contact_ids": [str(self.contact.pk)],
+                "justification": "Cal activar el contacte de suport per risc alt.",
+            },
             format="json",
         )
 
@@ -370,7 +396,10 @@ class AlertNotificationAPITestCase(APITestCase):
 
         response = self.client.post(
             f"/api/alerts/{self.alert.pk}/notify-contacts/",
-            {"contact_ids": [str(self.contact.pk), str(self.other_contact.pk)]},
+            {
+                "contact_ids": [str(self.contact.pk), str(self.other_contact.pk)],
+                "justification": "Cal activar el contacte de suport per risc alt.",
+            },
             format="json",
         )
 
@@ -378,8 +407,27 @@ class AlertNotificationAPITestCase(APITestCase):
         self.assertEqual(response.data["notified_count"], 1)
         delay_mock.assert_called_once_with(str(self.alert.pk), [str(self.contact.pk)])
         self.alert.refresh_from_db()
+        self.assertEqual(
+            self.alert.justification,
+            "Cal activar el contacte de suport per risc alt.",
+        )
         self.assertEqual(self.alert.notification_status, Alert.NotificationStatus.NOTIFIED)
         self.assertIsNotNone(self.alert.last_notified_at)
+
+    def test_notify_contacts_requires_justification(self):
+        self.alert.status = Alert.Status.VALIDATED
+        self.alert.save(update_fields=["status"])
+        self.client.force_authenticate(user=self.therapist)
+
+        response = self.client.post(
+            f"/api/alerts/{self.alert.pk}/notify-contacts/",
+            {"contact_ids": [str(self.contact.pk)], "justification": "   "},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.alert.refresh_from_db()
+        self.assertEqual(self.alert.notification_status, Alert.NotificationStatus.NOT_NOTIFIED)
 
     def test_notify_contacts_rejects_contacts_not_linked_to_patient(self):
         self.alert.status = Alert.Status.VALIDATED
@@ -388,13 +436,27 @@ class AlertNotificationAPITestCase(APITestCase):
 
         response = self.client.post(
             f"/api/alerts/{self.alert.pk}/notify-contacts/",
-            {"contact_ids": [str(self.other_contact.pk)]},
+            {
+                "contact_ids": [str(self.other_contact.pk)],
+                "justification": "Cal activar el contacte de suport per risc alt.",
+            },
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.alert.refresh_from_db()
         self.assertEqual(self.alert.notification_status, Alert.NotificationStatus.NOT_NOTIFIED)
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_contact_email_includes_alert_justification(self):
+        self.alert.justification = "La pacient ha expressat risc alt i necessita suport immediat."
+        self.alert.save(update_fields=["justification"])
+
+        send_alert_email_to_contact(self.alert, self.contact)
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Justificació de la notificació", mail.outbox[0].body)
+        self.assertIn(self.alert.justification, mail.outbox[0].body)
 
 
 class AlertSerializerTestCase(TestCase):

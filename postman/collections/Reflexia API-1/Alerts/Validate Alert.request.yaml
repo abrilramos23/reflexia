@@ -3,9 +3,9 @@ description: >-
   Validate and review a clinical alert (therapist validation required).
 
   **Request body:**
-  - `status` (string, required): `validated` or `dismissed`
-  - `validation_notes` (string, optional): Therapist's validation notes
-  - `action_taken` (string, optional): Description of actions taken
+  - `action` (string, required): `VALIDATE` or `DISMISS`
+  - `justification` (string, required when validating): Clinical justification for validating the alert
+  - `validation_note` (string, optional): Internal therapist validation note
 
   **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
 url: "{{base_url}}/api/alerts/{{alert_id}}/"
@@ -15,7 +15,7 @@ body:
   mode: raw
   raw: |
     {
-      "status": "validated",
-      "validation_notes": "Alert acknowledged. Patient showing signs of depression. Recommending psychiatric consultation.",
-      "action_taken": "Scheduled follow-up appointment, provided crisis resources"
+      "action": "VALIDATE",
+      "justification": "High-risk indicators require activating the patient's support network.",
+      "validation_note": "Scheduled follow-up appointment and provided crisis resources."
     }

@@ -52,8 +52,10 @@ export function AlertDetailPage() {
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [validatingNote, setValidatingNote] = useState('')
+  const [validationJustification, setValidationJustification] = useState('')
   const [isValidating, setIsValidating] = useState(false)
   const [selectedContacts, setSelectedContacts] = useState([])
+  const [notificationJustification, setNotificationJustification] = useState('')
   const [notifyingContacts, setNotifyingContacts] = useState(false)
   const [notifications, setNotifications] = useState([])
 
@@ -72,6 +74,7 @@ export function AlertDetailPage() {
         const response = await api.get(`/alerts/${alertId}/`)
         if (!isCancelled) {
           setAlert(response.data)
+          setNotificationJustification(response.data.justification ?? '')
           const defaultContacts = (response.data.associated_contacts ?? []).map((contact) => contact.id)
           setSelectedContacts(defaultContacts)
         }
@@ -107,6 +110,11 @@ export function AlertDetailPage() {
   }
 
   async function handleValidate(action) {
+    if (action === 'VALIDATE' && validationJustification.trim().length === 0) {
+      setError('Cal indicar la justificació clínica per validar l\'alerta.')
+      return
+    }
+
     setError('')
     setSuccessMessage('')
     setIsValidating(true)
@@ -115,15 +123,18 @@ export function AlertDetailPage() {
       const response = await api.patch(`/alerts/${alertId}/`, {
         action,
         validation_note: validatingNote,
+        justification: validationJustification,
       })
 
       setAlert(response.data)
+      setNotificationJustification(response.data.justification ?? validationJustification)
       setSuccessMessage(
         action === 'VALIDATE'
           ? 'Alerta validada correctament.'
           : 'Alerta descartada correctament.',
       )
       setValidatingNote('')
+      setValidationJustification('')
     } catch (err) {
       setError(firstErrorMessage(err.response?.data || err))
     } finally {
@@ -137,6 +148,11 @@ export function AlertDetailPage() {
       return
     }
 
+    if (notificationJustification.trim().length === 0) {
+      setError('Cal indicar la justificació que rebran els contactes.')
+      return
+    }
+
     setError('')
     setSuccessMessage('')
     setNotifyingContacts(true)
@@ -144,6 +160,7 @@ export function AlertDetailPage() {
     try {
       const response = await api.post(`/alerts/${alertId}/notify-contacts/`, {
         contact_ids: selectedContacts,
+        justification: notificationJustification,
       })
       const failedCount = response.data.failed_count
 
@@ -269,7 +286,18 @@ export function AlertDetailPage() {
             </div>
             <div className="form-stack">
               <div className="field-group">
-                <label htmlFor="validation-note">Nota (opcional)</label>
+                <label htmlFor="validation-justification">Justificació clínica</label>
+                <textarea
+                  id="validation-justification"
+                  value={validationJustification}
+                  onChange={(e) => setValidationJustification(e.target.value)}
+                  placeholder="Explica per què cal validar aquesta alerta..."
+                  required
+                />
+              </div>
+
+              <div className="field-group">
+                <label htmlFor="validation-note">Nota interna (opcional)</label>
                 <textarea
                   id="validation-note"
                   value={validatingNote}
@@ -300,6 +328,15 @@ export function AlertDetailPage() {
           </section>
         ) : null}
 
+        {alert.justification ? (
+          <section className="screen-card dashboard-panel profile-card--wide">
+            <div className="panel-heading">
+              <p className="eyebrow">Justificació</p>
+            </div>
+            <p>{alert.justification}</p>
+          </section>
+        ) : null}
+
         {canNotify ? (
           <section className="screen-card dashboard-panel profile-card--wide">
             <div className="panel-heading">
@@ -308,6 +345,17 @@ export function AlertDetailPage() {
 
             {associatedContacts.length > 0 ? (
               <>
+                <div className="field-group">
+                  <label htmlFor="notification-justification">Justificació per als contactes</label>
+                  <textarea
+                    id="notification-justification"
+                    value={notificationJustification}
+                    onChange={(e) => setNotificationJustification(e.target.value)}
+                    placeholder="Explica el motiu de la notificació que rebran els contactes..."
+                    required
+                  />
+                </div>
+
                 <ul className="patient-list">
                   {associatedContacts.map((contact) => (
                     <li key={contact.id} className="compact-list-item">
@@ -344,7 +392,11 @@ export function AlertDetailPage() {
                   type="button"
                   className="button"
                   onClick={handleNotifyContacts}
-                  disabled={notifyingContacts || selectedContacts.length === 0}
+                  disabled={
+                    notifyingContacts ||
+                    selectedContacts.length === 0 ||
+                    notificationJustification.trim().length === 0
+                  }
                 >
                   {notifyingContacts
                     ? 'Enviant notificacions...'
