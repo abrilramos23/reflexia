@@ -400,7 +400,6 @@ export function DashboardPage() {
               <section className="screen-card dashboard-panel profile-card--wide">
                 <div className="panel-heading" style={{ marginBottom: '0rem' }}>
                   <p className="eyebrow">{selectedMetricConfig.eyebrow}</p>
-                  <h2>{selectedMetricConfig.title}</h2>
                 </div>
 
                 <div className="content-card section-stack">
@@ -495,18 +494,15 @@ function riskItemClassName(riskLevel) {
 
 const entryMetricConfigs = {
   all: {
-    eyebrow: 'Entrades dels pacients',
-    title: 'Totes les entrades',
+    eyebrow: 'Totes les entrades',
     empty: 'Encara no hi ha entrades dels teus pacients.',
   },
   today: {
-    eyebrow: 'Entrades dels pacients',
-    title: 'Entrades creades avui',
+    eyebrow: 'Entrades creades avui',
     empty: 'Avui encara no hi ha cap entrada.',
   },
   pending_analyses: {
-    eyebrow: 'Revisió clínica',
-    title: 'Entrades amb anàlisi pendent',
+    eyebrow: 'Anàlisis pendents de revisió',
     empty: 'No hi ha anàlisis pendents de revisió.',
   },
 }
