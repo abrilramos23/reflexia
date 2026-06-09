@@ -54,14 +54,8 @@ export function TwoFactorPage() {
   return (
     <div className="screen-shell">
       <AppHeader />
-      <div className="screen-grid">
-        <aside className="screen-card hero-panel">
-          <div className="hero-copy">
-            <p className="eyebrow">Segon factor</p>
-            <h1>Verifica l’accés</h1>
-          </div>
-        </aside>
-
+      <div className="login-screen">
+        <div className="auth-form-stack">
         <section className="screen-card form-panel">
           <div className="panel-heading">
             <p className="eyebrow">2FA</p>
@@ -92,6 +86,7 @@ export function TwoFactorPage() {
             </div>
           </form>
         </section>
+        </div>
       </div>
     </div>
   )
