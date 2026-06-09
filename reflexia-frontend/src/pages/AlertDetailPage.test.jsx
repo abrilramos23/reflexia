@@ -175,4 +175,20 @@ describe('AlertDetailPage', () => {
 
     expect(screen.getByRole('button', { name: 'Notificar 0 contactes' })).toBeDisabled()
   })
+
+  it('shows clinical next steps when a validated alert has no contacts', async () => {
+    renderAlertDetailPage({
+      alert: {
+        ...baseAlert,
+        status: 'validated',
+        justification: 'Cal activar suport proper.',
+        associated_contacts: [],
+      },
+    })
+
+    expect(
+      await screen.findByText(/Gestiona aquesta alerta per altres canals/),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Notificar/ })).not.toBeInTheDocument()
+  })
 })

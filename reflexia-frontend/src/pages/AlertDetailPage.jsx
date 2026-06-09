@@ -404,7 +404,11 @@ export function AlertDetailPage() {
                 </button>
               </>
             ) : (
-              <p className="muted">No hi ha contactes associats.</p>
+              <div className="error-banner">
+                No hi ha contactes associats per notificar. Gestiona aquesta alerta per altres canals:
+                contacta directament amb el pacient, registra el seguiment intern i demana-li que configuri
+                contactes de confiança quan sigui possible.
+              </div>
             )}
           </section>
         ) : null}
