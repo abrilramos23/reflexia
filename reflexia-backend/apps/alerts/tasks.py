@@ -2,7 +2,6 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
-from django.conf import settings
 
 from apps.alerts.models import Alert, AlertNotification
 from apps.alerts.services import (
@@ -20,7 +19,8 @@ def send_inactivity_reminders():
     from apps.users.models import Patient
 
     days = 3
-    threshold = timezone.now() - timedelta(days=days)
+    today = timezone.localtime(timezone.now()).date()
+    threshold_date = today - timedelta(days=days)
 
     active_patients = Patient.objects.filter(
         is_active=True,
@@ -30,23 +30,24 @@ def send_inactivity_reminders():
     reminders_sent = 0
 
     for patient in active_patients:
-        has_any_entry = JournalEntry.objects.filter(
-            patient=patient,
-        ).exclude(
-            status=JournalEntry.STATUS_DELETED,
-        ).exists()
-
-        if not has_any_entry:
-            continue
-
         last_entry = JournalEntry.objects.filter(
             patient=patient,
         ).exclude(
             status=JournalEntry.STATUS_DELETED,
         ).order_by('-created_at').first()
 
-        if last_entry and last_entry.created_at < threshold:
-            send_reminder_email(patient, days, last_entry.created_at)
+        reference_date = (
+            last_entry.created_at
+            if last_entry
+            else patient.legal_terms_accepted_at or patient.registration_date
+        )
+
+        if timezone.localtime(reference_date).date() <= threshold_date:
+            send_reminder_email(
+                patient,
+                days,
+                last_entry.created_at if last_entry else None,
+            )
             reminders_sent += 1
 
     logger.info(f"Recordatoris d'inactivitat enviats: {reminders_sent}")

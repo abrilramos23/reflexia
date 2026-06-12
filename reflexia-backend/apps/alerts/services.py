@@ -38,19 +38,17 @@ def send_alert_email_to_contact(alert, contact):
     )
 
 
-def send_reminder_email(patient, days, last_entry_date):
-    context = {
-        'first_name': patient.first_name,
-        'days': days,
-        'last_entry_date': last_entry_date.strftime('%d/%m/%Y'),
-        'app_url': getattr(settings, 'FRONTEND_URL', 'http://localhost:5173'),
-    }
-
+def send_reminder_email(patient, days, last_entry_date=None):
     subject = f"Com estàs, {patient.first_name}?"
+    last_entry_message = (
+        f"L'última vegada que vas escriure va ser el {last_entry_date.strftime('%d/%m/%Y')}.\n\n"
+        if last_entry_date
+        else "Encara no consta cap entrada al teu diari emocional.\n\n"
+    )
     message = (
         f"Hola {patient.first_name},\n\n"
         f"Notem que fa {days} dies que no escrius cap entrada al teu diari emocional a Reflexia.\n"
-        f"L'última vegada que vas escriure va ser el {last_entry_date.strftime('%d/%m/%Y')}.\n\n"
+        f"{last_entry_message}"
         f"Si necessites suport o simplement vols compartir com et sents, recorda que el teu diari és un espai segur per expressar-te.\n"
         f"Si tens dificultats, no dubtis a contactar amb el teu terapeuta o amb els teus contactes de suport.\n\n"
         f"---\n"

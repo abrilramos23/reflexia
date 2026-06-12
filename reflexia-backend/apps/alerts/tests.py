@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -11,7 +13,7 @@ from apps.analysis.models import EmotionalAnalysis
 from apps.alerts.models import Alert
 from apps.alerts.serializers import AlertDetailSerializer
 from apps.alerts.services import send_alert_email_to_contact
-from apps.alerts.tasks import escalate_pending_alerts
+from apps.alerts.tasks import escalate_pending_alerts, send_inactivity_reminders
 from apps.contacts.models import AssociatedContact, DefaultContact, SupportTherapist
 
 
@@ -490,6 +492,72 @@ class AlertSerializerTestCase(TestCase):
         self.assertEqual(data["entry_content"], "x" * 500 + "...")
         self.assertEqual(len(data["associated_contacts"]), 1)
         self.assertEqual(data["associated_contacts"][0]["id"], str(contact.pk))
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class InactivityReminderTaskTestCase(TestCase):
+    def _create_patient(self, email, reference_date):
+        return Patient.objects.create_user(
+            email=email,
+            password="StrongPass123!",
+            first_name="Paula",
+            last_name="Sanchez",
+            birth_date="2001-01-10",
+            is_active=True,
+            legal_terms_accepted=True,
+            legal_terms_accepted_at=reference_date,
+        )
+
+    def _create_entry(self, patient, created_at):
+        entry = JournalEntry.objects.create(patient=patient, content="Text")
+        JournalEntry.objects.filter(pk=entry.pk).update(
+            created_at=created_at,
+            updated_at=created_at,
+        )
+        entry.refresh_from_db()
+        return entry
+
+    def test_sends_reminder_on_third_calendar_day_without_waiting_full_72_hours(self):
+        now = timezone.make_aware(datetime(2026, 6, 12, 10, 0))
+        last_entry_date = now - timezone.timedelta(days=3) + timezone.timedelta(hours=1)
+        patient = self._create_patient("inactive@example.com", now - timezone.timedelta(days=10))
+        self._create_entry(patient, last_entry_date)
+
+        with patch("apps.alerts.tasks.timezone.now", return_value=now):
+            reminders_sent = send_inactivity_reminders()
+
+        self.assertEqual(reminders_sent, 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [patient.email])
+        self.assertIn("fa 3 dies", mail.outbox[0].body)
+        self.assertIn("09/06/2026", mail.outbox[0].body)
+
+    def test_sends_reminder_to_patient_who_has_never_written(self):
+        now = timezone.make_aware(datetime(2026, 6, 12, 10, 0))
+        patient = self._create_patient(
+            "never-written@example.com",
+            now - timezone.timedelta(days=3),
+        )
+
+        with patch("apps.alerts.tasks.timezone.now", return_value=now):
+            reminders_sent = send_inactivity_reminders()
+
+        self.assertEqual(reminders_sent, 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [patient.email])
+        self.assertIn("Encara no consta cap entrada", mail.outbox[0].body)
+
+    def test_does_not_send_before_third_calendar_day(self):
+        now = timezone.make_aware(datetime(2026, 6, 12, 10, 0))
+        last_entry_date = now - timezone.timedelta(days=2)
+        patient = self._create_patient("recent@example.com", now - timezone.timedelta(days=10))
+        self._create_entry(patient, last_entry_date)
+
+        with patch("apps.alerts.tasks.timezone.now", return_value=now):
+            reminders_sent = send_inactivity_reminders()
+
+        self.assertEqual(reminders_sent, 0)
+        self.assertEqual(len(mail.outbox), 0)
 
 
 class AlertEscalationTaskTestCase(TestCase):
