@@ -262,22 +262,20 @@ export function AlertDetailPage() {
           </div>
 
           <div className="content-card section-stack entries-summary-card">
-            <div className="item-heading-row">
+            <div className="item-heading-row alert-entry-heading-row">
               <h3>Entrada</h3>
-              <div className="entries-toolbar" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="status-pill dashboard-status-pill--muted">
-                  {formatAlertDate(alert.entry_date)}
-                </span>
-                {alert.patient_id && alert.entry_id ? (
-                  <Link
-                    className="button-secondary"
-                    style={{ textDecoration: 'none' }}
-                    to={`/patients/${alert.patient_id}/entries/${alert.entry_id}`}
-                  >
-                    <FaExternalLinkAlt /> Revisar entrada
-                  </Link>
-                ) : null}
-              </div>
+              <span className="status-pill dashboard-status-pill--muted">
+                {formatAlertDate(alert.entry_date)}
+              </span>
+              {alert.patient_id && alert.entry_id ? (
+                <Link
+                  className="button-secondary alert-entry-review-link"
+                  style={{ textDecoration: 'none' }}
+                  to={`/patients/${alert.patient_id}/entries/${alert.entry_id}`}
+                >
+                  <FaExternalLinkAlt /> Revisar entrada
+                </Link>
+              ) : null}
             </div>
             <div
               className="entries-rendered-content"
