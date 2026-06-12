@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, Navigate } from 'react-router-dom'
-import { FaArrowLeft } from 'react-icons/fa'
+import { FaArrowLeft, FaExternalLinkAlt } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext.jsx'
 import {
   formatAlertStatus,
@@ -56,6 +56,8 @@ export function AlertDetailPage() {
   const [isValidating, setIsValidating] = useState(false)
   const [selectedContacts, setSelectedContacts] = useState([])
   const [notificationJustification, setNotificationJustification] = useState('')
+  const [notificationError, setNotificationError] = useState('')
+  const [notificationMessage, setNotificationMessage] = useState('')
   const [notifyingContacts, setNotifyingContacts] = useState(false)
   const [notifications, setNotifications] = useState([])
 
@@ -75,6 +77,8 @@ export function AlertDetailPage() {
         if (!isCancelled) {
           setAlert(response.data)
           setNotificationJustification(response.data.justification ?? '')
+          setNotificationError('')
+          setNotificationMessage('')
           const defaultContacts = (response.data.associated_contacts ?? []).map((contact) => contact.id)
           setSelectedContacts(defaultContacts)
         }
@@ -144,17 +148,20 @@ export function AlertDetailPage() {
 
   async function handleNotifyContacts() {
     if (selectedContacts.length === 0) {
-      setError('Selecciona almenys un contacte.')
+      setNotificationMessage('')
+      setNotificationError('Selecciona almenys un contacte.')
       return
     }
 
     if (notificationJustification.trim().length === 0) {
-      setError('Cal indicar la justificació que rebran els contactes.')
+      setNotificationMessage('')
+      setNotificationError('Cal indicar la justificació que rebran els contactes.')
       return
     }
 
     setError('')
-    setSuccessMessage('')
+    setNotificationError('')
+    setNotificationMessage('')
     setNotifyingContacts(true)
 
     try {
@@ -164,16 +171,18 @@ export function AlertDetailPage() {
       })
       const failedCount = response.data.failed_count
 
-      setSuccessMessage(
+      setNotificationMessage(
         typeof failedCount === 'number'
           ? `Notificacions enviades: ${response.data.notified_count}. Fallides: ${failedCount}.`
           : `Notificacions enviades: ${response.data.notified_count}.`,
       )
+      setNotificationJustification('')
+      setSelectedContacts([])
 
       const historyResponse = await api.get(`/alerts/${alertId}/history/`)
       setNotifications(historyResponse.data)
     } catch (err) {
-      setError(firstErrorMessage(err.response?.data || err))
+      setNotificationError(firstErrorMessage(err.response?.data || err))
     } finally {
       setNotifyingContacts(false)
     }
@@ -255,9 +264,20 @@ export function AlertDetailPage() {
           <div className="content-card section-stack entries-summary-card">
             <div className="item-heading-row">
               <h3>Entrada</h3>
-              <span className="status-pill dashboard-status-pill--muted">
-                {formatAlertDate(alert.entry_date)}
-              </span>
+              <div className="entries-toolbar">
+                <span className="status-pill dashboard-status-pill--muted">
+                  {formatAlertDate(alert.entry_date)}
+                </span>
+                {alert.patient_id && alert.entry_id ? (
+                  <Link
+                    className="button-secondary"
+                    style={{ textDecoration: 'none' }}
+                    to={`/patients/${alert.patient_id}/entries/${alert.entry_id}`}
+                  >
+                    <FaExternalLinkAlt /> Revisar entrada
+                  </Link>
+                ) : null}
+              </div>
             </div>
             <div
               className="entries-rendered-content"
@@ -342,6 +362,8 @@ export function AlertDetailPage() {
             <div className="panel-heading">
               <p className="eyebrow">Notificar contactes</p>
             </div>
+            {notificationError ? <div className="error-banner">{notificationError}</div> : null}
+            {notificationMessage ? <div className="message">{notificationMessage}</div> : null}
 
             {associatedContacts.length > 0 ? (
               <>
@@ -350,7 +372,10 @@ export function AlertDetailPage() {
                   <textarea
                     id="notification-justification"
                     value={notificationJustification}
-                    onChange={(e) => setNotificationJustification(e.target.value)}
+                    onChange={(e) => {
+                      setNotificationError('')
+                      setNotificationJustification(e.target.value)
+                    }}
                     placeholder="Explica el motiu de la notificació que rebran els contactes..."
                     required
                   />
@@ -366,11 +391,13 @@ export function AlertDetailPage() {
                           checked={selectedContacts.includes(contact.id)}
                           onChange={(e) => {
                             if (e.target.checked) {
+                              setNotificationError('')
                               setSelectedContacts((currentContacts) => [
                                 ...currentContacts,
                                 contact.id,
                               ])
                             } else {
+                              setNotificationError('')
                               setSelectedContacts((currentContacts) =>
                                 currentContacts.filter((id) => id !== contact.id),
                               )

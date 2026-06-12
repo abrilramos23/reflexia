@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AlertDetailPage } from './AlertDetailPage'
@@ -10,8 +10,10 @@ vi.mock('../context/AuthContext', () => ({
 
 const baseAlert = {
   id: 'alert-1',
+  patient_id: 'patient-1',
   patient_name: 'Paula Sanchez',
   patient_email: 'paula@example.com',
+  entry_id: 'entry-1',
   entry_date: '2026-05-20T10:00:00Z',
   entry_content: '<p>Em sento sobrepassada avui.</p>',
   risk_level: 'high',
@@ -85,6 +87,10 @@ describe('AlertDetailPage', () => {
     expect(await screen.findByRole('heading', { name: 'Paula Sanchez' })).toBeInTheDocument()
     expect(screen.getByText('paula@example.com')).toBeInTheDocument()
     expect(screen.getByText('Em sento sobrepassada avui.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Revisar entrada' })).toHaveAttribute(
+      'href',
+      '/patients/patient-1/entries/entry-1',
+    )
     expect(screen.getByText('Ansietat')).toBeInTheDocument()
     expect(screen.getByText('Risc alt detectat.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Validar alerta' })).toBeInTheDocument()
@@ -139,7 +145,7 @@ describe('AlertDetailPage', () => {
     expect(await screen.findByText('Alerta descartada correctament.')).toBeInTheDocument()
   })
 
-  it('notifies selected contacts without rendering undefined failed counts', async () => {
+  it('notifies selected contacts, shows section feedback and resets the notification form', async () => {
     const { api } = renderAlertDetailPage({
       alert: {
         ...baseAlert,
@@ -157,7 +163,16 @@ describe('AlertDetailPage', () => {
         justification: 'Cal activar el contacte de suport per risc alt.',
       })
     })
-    expect(await screen.findByText('Notificacions enviades: 1.')).toBeInTheDocument()
+
+    const notificationSection = screen.getByText('Notificar contactes').closest('section')
+    const feedback = await within(notificationSection).findByText('Notificacions enviades: 1.')
+    const textarea = within(notificationSection).getByLabelText('Justificació per als contactes')
+    const checkbox = within(notificationSection).getByRole('checkbox', { name: /Maria Perez/ })
+
+    expect(feedback.compareDocumentPosition(textarea) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(textarea).toHaveValue('')
+    expect(checkbox).not.toBeChecked()
+    expect(within(notificationSection).getByRole('button', { name: 'Notificar 0 contactes' })).toBeDisabled()
     expect(screen.queryByText(/undefined/)).not.toBeInTheDocument()
   })
 
