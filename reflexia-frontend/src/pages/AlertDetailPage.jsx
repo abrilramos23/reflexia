@@ -264,7 +264,7 @@ export function AlertDetailPage() {
           <div className="content-card section-stack entries-summary-card">
             <div className="item-heading-row">
               <h3>Entrada</h3>
-              <div className="entries-toolbar">
+              <div className="entries-toolbar" style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span className="status-pill dashboard-status-pill--muted">
                   {formatAlertDate(alert.entry_date)}
                 </span>
