@@ -2,7 +2,7 @@ import { FaUser, FaUsers, FaBook, FaHome, FaBuilding, FaQuestionCircle, FaBell }
 
 export const sidebarConfig = [
   {
-    label: 'Dashboard',
+    label: 'Inici',
     path: '/dashboard',
     roles: ['therapist', 'patient'],
     icon: FaHome,
