@@ -8,6 +8,10 @@ vi.mock('../context/AuthContext', () => ({
   useAuth: vi.fn(),
 }))
 
+vi.mock('react-chartjs-2', () => ({
+  Bar: () => <div data-testid="evolution-chart" />,
+}))
+
 describe('EntriesPage', () => {
   it('renders the entries list and its actions', async () => {
     useAuth.mockReturnValue({
@@ -30,6 +34,30 @@ describe('EntriesPage', () => {
         },
       ]),
       deleteEntry: vi.fn(),
+      exportEntriesPdf: vi.fn(),
+      getMyEvolution: vi.fn().mockResolvedValue({
+        analyzed_entries_count: 2,
+        has_enough_data: true,
+        risk_counts: { high: 0 },
+        frequent_emotions: [
+          { emotion: 'Calma', average_percentage: 62, occurrences: 2 },
+          { emotion: 'Tristesa', average_percentage: 24, occurrences: 1 },
+        ],
+        data_points: [
+          {
+            date: '2026-04-10T10:00:00Z',
+            primary_emotion: 'Tristesa',
+            risk_level: 'low',
+            emotions: { Calma: 50, Tristesa: 30 },
+          },
+          {
+            date: '2026-04-12T10:00:00Z',
+            primary_emotion: 'Calma',
+            risk_level: 'low',
+            emotions: { Calma: 74, Tristesa: 18 },
+          },
+        ],
+      }),
     })
 
     render(
@@ -39,6 +67,7 @@ describe('EntriesPage', () => {
     )
 
     expect(await screen.findByText('Primera entrada del pacient.')).toBeInTheDocument()
+    expect(screen.getByTestId('evolution-chart')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Escriure nova entrada' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Primera entrada del pacient/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Veure detall' })).not.toBeInTheDocument()

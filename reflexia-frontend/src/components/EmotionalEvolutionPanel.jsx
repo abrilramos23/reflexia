@@ -92,14 +92,14 @@ const chartOptions = {
   },
 }
 
-export function EmotionalEvolutionPanel({ evolution, isLoading = false }) {
+export function EmotionalEvolutionPanel({ evolution, isLoading = false, embedded = false }) {
   if (isLoading) {
     return <p className="muted">Carregant evolució...</p>
   }
 
   if (!evolution || !evolution.has_enough_data) {
     return (
-      <div className="content-card section-stack entries-summary-card">
+      <div className={embedded ? 'section-stack entries-summary-empty' : 'content-card section-stack entries-summary-card'}>
         <h3>Encara no hi ha prou informació</h3>
         <p className="muted">{evolution?.message || 'Calen almenys dues entrades analitzades.'}</p>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa'
+import { EmotionalEvolutionPanel } from '../components/EmotionalEvolutionPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import {
   buildEntryPreview,
@@ -12,11 +13,14 @@ import {
 } from '../lib/entries.js'
 
 export function EntriesPage() {
-  const { user, listEntries, deleteEntry, exportEntriesPdf } = useAuth()
+  const { user, listEntries, deleteEntry, exportEntriesPdf, getMyEvolution } = useAuth()
   const [entries, setEntries] = useState([])
+  const [evolution, setEvolution] = useState(null)
   const [pageError, setPageError] = useState('')
+  const [evolutionError, setEvolutionError] = useState('')
   const [pageMessage, setPageMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [isEvolutionLoading, setIsEvolutionLoading] = useState(true)
   const [busyEntryId, setBusyEntryId] = useState('')
   const [isExporting, setIsExporting] = useState(false)
 
@@ -25,22 +29,31 @@ export function EntriesPage() {
 
     async function loadEntries() {
       setPageError('')
+      setEvolutionError('')
 
-      try {
-        const response = await listEntries()
+      const [entriesResult, evolutionResult] = await Promise.allSettled([
+        listEntries(),
+        getMyEvolution(),
+      ])
 
-        if (!isCancelled) {
-          setEntries(sortEntries(response))
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          setPageError(firstErrorMessage(error.response?.data || error))
-        }
-      } finally {
-        if (!isCancelled) {
-          setIsLoading(false)
-        }
+      if (isCancelled) {
+        return
       }
+
+      if (entriesResult.status === 'fulfilled') {
+        setEntries(sortEntries(entriesResult.value))
+      } else {
+        setPageError(firstErrorMessage(entriesResult.reason.response?.data || entriesResult.reason))
+      }
+
+      if (evolutionResult.status === 'fulfilled') {
+        setEvolution(evolutionResult.value)
+      } else {
+        setEvolutionError('No s’ha pogut carregar l’evolució emocional.')
+      }
+
+      setIsLoading(false)
+      setIsEvolutionLoading(false)
     }
 
     loadEntries()
@@ -118,6 +131,17 @@ export function EntriesPage() {
             <button className="button-secondary" type="button" disabled={isExporting || isLoading || !entries.length} onClick={handleExportHistory}>
               {isExporting ? 'Generant PDF...' : 'Exportar historial PDF'}
             </button>
+          </div>
+
+          <div className="content-card section-stack entries-summary-card">
+            <div className="panel-heading">
+              <p className="eyebrow">Evolució emocional</p>
+            </div>
+            {evolutionError ? (
+              <p className="muted">{evolutionError}</p>
+            ) : (
+              <EmotionalEvolutionPanel evolution={evolution} isLoading={isEvolutionLoading} embedded />
+            )}
           </div>
 
           <div className="content-card section-stack entries-list-card">
