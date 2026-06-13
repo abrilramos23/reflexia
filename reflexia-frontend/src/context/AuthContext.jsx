@@ -515,13 +515,23 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
-  async function listPatientEntryNotes(patientId, entryId) {
-    const response = await api.get(`/entries/patients/${patientId}/${entryId}/notes/`)
+  async function listPatientNotes(patientId) {
+    const response = await api.get(`/entries/patients/${patientId}/notes/`)
     return response.data
   }
 
-  async function createPatientEntryNote(patientId, entryId, payload) {
-    const response = await api.post(`/entries/patients/${patientId}/${entryId}/notes/`, payload)
+  async function createPatientNote(patientId, payload) {
+    const response = await api.post(`/entries/patients/${patientId}/notes/`, payload)
+    return response.data
+  }
+
+  async function updatePatientNote(patientId, noteId, payload) {
+    const response = await api.patch(`/entries/patients/${patientId}/notes/${noteId}/`, payload)
+    return response.data
+  }
+
+  async function deletePatientNote(patientId, noteId) {
+    const response = await api.delete(`/entries/patients/${patientId}/notes/${noteId}/`)
     return response.data
   }
 
@@ -583,8 +593,10 @@ export function AuthProvider({ children }) {
     createPatientQuestion,
     getPatientQuestion,
     listAllTherapistQuestions,
-    listPatientEntryNotes,
-    createPatientEntryNote,
+    listPatientNotes,
+    createPatientNote,
+    updatePatientNote,
+    deletePatientNote,
     getClinicStats,
     getTherapistDashboardData,
     updateOrganisation,

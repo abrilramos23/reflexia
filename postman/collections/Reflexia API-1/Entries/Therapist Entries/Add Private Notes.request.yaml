@@ -1,17 +1,17 @@
 $kind: http-request
 description: >-
-  Add or update private notes on a patient's entry (therapist only).
+  Add a private note to a patient (therapist only).
 
   **Request body:**
-  - `notes` (string): Private notes visible only to the therapist
+  - `content` (string): Private note visible only to the therapist
 
   **Auth:** JWT Bearer (IsAuthenticated - Therapist with access to patient)
-url: "{{base_url}}/api/entries/patients/{{patient_id}}/{{entry_id}}/notes/"
+url: "{{base_url}}/api/entries/patients/{{patient_id}}/notes/"
 method: POST
 order: 2030
 body:
   mode: raw
   raw: |
     {
-      "notes": "Patient showing signs of anxiety improvement. Sleep quality still a concern. Consider discussing coping strategies."
+      "content": "Patient showing signs of anxiety improvement. Sleep quality still a concern. Consider discussing coping strategies."
     }

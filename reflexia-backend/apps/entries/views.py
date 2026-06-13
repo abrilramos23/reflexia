@@ -355,25 +355,24 @@ class TherapistPatientEntryDetailView(TherapistPatientMixin, APIView):
         return Response(JournalEntrySerializer(entry).data, status=status.HTTP_200_OK)
 
 
-class TherapistPatientEntryNotesView(TherapistPatientMixin, APIView):
+class TherapistPatientNotesView(TherapistPatientMixin, APIView):
     @extend_schema(
         tags=["Entries"],
-        summary="Llistar notes privades d'una entrada",
+        summary="Llistar notes privades d'un pacient",
         responses={
             200: PrivateNoteSerializer(many=True),
-            404: OpenApiResponse(description="Pacient o entrada no trobats."),
+            404: OpenApiResponse(description="Pacient no trobat o no assignat."),
         },
     )
-    def get(self, request, patient_id, entry_id):
+    def get(self, request, patient_id):
         patient = self.get_patient(request, patient_id)
-        entry = get_object_or_404(self.get_visible_entries_queryset(patient=patient), pk=entry_id)
         therapist = request.user.therapist_profile
-        notes = PrivateNote.objects.filter(entry=entry, therapist=therapist).order_by("-creation_date")
+        notes = PrivateNote.objects.filter(patient=patient, therapist=therapist).order_by("-creation_date")
         return Response(PrivateNoteSerializer(notes, many=True).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         tags=["Entries"],
-        summary="Afegir una nota privada a una entrada",
+        summary="Afegir una nota privada a un pacient",
         request=PrivateNoteCreateSerializer,
         responses={
             201: inline_serializer(
@@ -383,16 +382,15 @@ class TherapistPatientEntryNotesView(TherapistPatientMixin, APIView):
                     "note": PrivateNoteSerializer(),
                 },
             ),
-            404: OpenApiResponse(description="Pacient o entrada no trobats."),
+            404: OpenApiResponse(description="Pacient no trobat o no assignat."),
         },
     )
-    def post(self, request, patient_id, entry_id):
+    def post(self, request, patient_id):
         patient = self.get_patient(request, patient_id)
-        entry = get_object_or_404(self.get_visible_entries_queryset(patient=patient), pk=entry_id)
         therapist = request.user.therapist_profile
         serializer = PrivateNoteCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        note = serializer.save(entry=entry, therapist=therapist)
+        note = serializer.save(patient=patient, therapist=therapist)
         return Response(
             {
                 "message": "Nota privada guardada correctament.",
@@ -400,6 +398,57 @@ class TherapistPatientEntryNotesView(TherapistPatientMixin, APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class TherapistPatientNoteDetailView(TherapistPatientMixin, APIView):
+    def get_note(self, request, patient_id, note_id):
+        patient = self.get_patient(request, patient_id)
+        therapist = request.user.therapist_profile
+        return get_object_or_404(PrivateNote, pk=note_id, patient=patient, therapist=therapist)
+
+    @extend_schema(
+        tags=["Entries"],
+        summary="Modificar una nota privada d'un pacient",
+        request=PrivateNoteCreateSerializer,
+        responses={
+            200: inline_serializer(
+                name="PrivateNoteUpdateResponse",
+                fields={
+                    "message": serializers.CharField(),
+                    "note": PrivateNoteSerializer(),
+                },
+            ),
+            404: OpenApiResponse(description="Pacient o nota no trobats."),
+        },
+    )
+    def patch(self, request, patient_id, note_id):
+        note = self.get_note(request, patient_id, note_id)
+        serializer = PrivateNoteCreateSerializer(note, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        note = serializer.save()
+        return Response(
+            {
+                "message": "Nota privada actualitzada correctament.",
+                "note": PrivateNoteSerializer(note).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        tags=["Entries"],
+        summary="Eliminar una nota privada d'un pacient",
+        responses={
+            200: inline_serializer(
+                name="PrivateNoteDeleteResponse",
+                fields={"message": serializers.CharField()},
+            ),
+            404: OpenApiResponse(description="Pacient o nota no trobats."),
+        },
+    )
+    def delete(self, request, patient_id, note_id):
+        note = self.get_note(request, patient_id, note_id)
+        note.delete()
+        return Response({"message": "Nota privada eliminada correctament."}, status=status.HTTP_200_OK)
 
 
 class TherapistPatientQuestionsView(TherapistPatientMixin, APIView):

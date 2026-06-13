@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { FaArrowLeft } from 'react-icons/fa'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { EmotionalEvolutionPanel } from '../components/EmotionalEvolutionPanel.jsx'
+import { PrivateNotesPanel } from '../components/PrivateNotesPanel.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { firstErrorMessage, formatEntryDate, formatEntryStatus, formatRiskLevel } from '../lib/entries.js'
 
@@ -14,6 +15,10 @@ export function PatientDetailPage() {
     listPatientEntries,
     listPatientQuestions,
     createPatientQuestion,
+    listPatientNotes,
+    createPatientNote,
+    updatePatientNote,
+    deletePatientNote,
     exportPatientEntriesPdf,
   } = useAuth()
   const { patientId } = useParams()
@@ -21,6 +26,7 @@ export function PatientDetailPage() {
   const [patient, setPatient] = useState(null)
   const [entries, setEntries] = useState([])
   const [questions, setQuestions] = useState([])
+  const [notes, setNotes] = useState([])
   const [alerts, setAlerts] = useState([])
   const [evolution, setEvolution] = useState(null)
   const [activeTab, setActiveTab] = useState('entries') 
@@ -39,10 +45,11 @@ export function PatientDetailPage() {
       setIsLoading(true)
       setError('')
       try {
-        const [patientData, entriesData, questionsData, evolutionData, alertsResponse] = await Promise.all([
+        const [patientData, entriesData, questionsData, notesData, evolutionData, alertsResponse] = await Promise.all([
           getPatient(patientId),
           listPatientEntries(patientId),
           listPatientQuestions(patientId),
+          listPatientNotes(patientId),
           getPatientEvolution(patientId),
           api.get('/alerts/', { params: { patient_id: patientId } }),
         ])
@@ -51,6 +58,7 @@ export function PatientDetailPage() {
           setPatient(patientData)
           setEntries(entriesData)
           setQuestions(questionsData)
+          setNotes(notesData)
           setEvolution(evolutionData)
           setAlerts(alertsResponse.data)
         }
@@ -70,7 +78,7 @@ export function PatientDetailPage() {
     return () => {
       isCancelled = true
     }
-  }, [patientId, getPatient, getPatientEvolution, listPatientEntries, listPatientQuestions])
+  }, [patientId, getPatient, getPatientEvolution, listPatientEntries, listPatientQuestions, listPatientNotes])
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -112,6 +120,24 @@ export function PatientDetailPage() {
     } finally {
       setIsExportingEntries(false)
     }
+  }
+
+  async function handleCreateNote(content) {
+    const response = await createPatientNote(patientId, { content })
+    setNotes((currentNotes) => [response.note, ...currentNotes])
+    return response
+  }
+
+  async function handleUpdateNote(noteId, content) {
+    const response = await updatePatientNote(patientId, noteId, { content })
+    setNotes((currentNotes) => currentNotes.map((note) => (note.id === noteId ? response.note : note)))
+    return response
+  }
+
+  async function handleDeleteNote(noteId) {
+    const response = await deletePatientNote(patientId, noteId)
+    setNotes((currentNotes) => currentNotes.filter((note) => note.id !== noteId))
+    return response
   }
 
   const pendingAlerts = alerts.filter((alert) => alert.status === 'pending')
@@ -243,6 +269,13 @@ export function PatientDetailPage() {
             >
               Preguntes ({questions.length})
             </button>
+            <button
+              className={`text-link ${activeTab === 'notes' ? '' : 'muted'}`}
+              onClick={() => setActiveTab('notes')}
+              style={{ paddingBottom: '0.75rem', borderBottom: activeTab === 'notes' ? '2px solid var(--brand-deep)' : 'none', textDecoration: 'none' }}
+            >
+              Notes ({notes.length})
+            </button>
           </div>
 
           {questionMessage ? <div className="message">{questionMessage}</div> : null}
@@ -274,7 +307,7 @@ export function PatientDetailPage() {
                 </ul>
               )}
             </div>
-          ) : (
+          ) : activeTab === 'questions' ? (
             <div className="page-stack">
               {questions.length === 0 ? (
                 <p className="muted">No s&apos;han assignat preguntes a aquest pacient.</p>
@@ -296,6 +329,13 @@ export function PatientDetailPage() {
                 </ul>
               )}
             </div>
+          ) : (
+            <PrivateNotesPanel
+              notes={notes}
+              onCreateNote={handleCreateNote}
+              onUpdateNote={handleUpdateNote}
+              onDeleteNote={handleDeleteNote}
+            />
           )}
         </section>
       </div>

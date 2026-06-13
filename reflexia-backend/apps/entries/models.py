@@ -112,15 +112,16 @@ class PrivateNote(models.Model):
     therapist = models.ForeignKey(
         Therapist,
         on_delete=models.CASCADE,
-        related_name="private_entry_notes",
+        related_name="private_patient_notes",
     )
-    entry = models.ForeignKey(
-        JournalEntry,
+    patient = models.ForeignKey(
+        Patient,
         on_delete=models.CASCADE,
         related_name="private_notes",
     )
     content = models.TextField()
     creation_date = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ("-creation_date",)
@@ -128,4 +129,4 @@ class PrivateNote(models.Model):
         verbose_name_plural = "private notes"
 
     def __str__(self):
-        return f"Private note for {self.entry_id}"
+        return f"Private note for {self.patient_id}"

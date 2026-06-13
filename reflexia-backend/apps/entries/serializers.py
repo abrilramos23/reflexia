@@ -57,8 +57,8 @@ class TherapistQuestionCreateSerializer(serializers.ModelSerializer):
 class PrivateNoteSerializer(serializers.ModelSerializer):
     class Meta:
         model = PrivateNote
-        fields = ("id", "content", "creation_date")
-        read_only_fields = ("id", "creation_date")
+        fields = ("id", "content", "creation_date", "updated_at")
+        read_only_fields = ("id", "creation_date", "updated_at")
 
 
 class PrivateNoteCreateSerializer(serializers.ModelSerializer):

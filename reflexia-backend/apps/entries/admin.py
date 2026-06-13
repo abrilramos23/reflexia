@@ -19,6 +19,6 @@ class JournalEntryAdmin(admin.ModelAdmin):
 
 @admin.register(PrivateNote)
 class PrivateNoteAdmin(admin.ModelAdmin):
-    list_display = ("entry", "therapist", "creation_date")
+    list_display = ("patient", "therapist", "creation_date", "updated_at")
     list_filter = ("creation_date",)
-    search_fields = ("entry__patient__email", "therapist__email", "content")
+    search_fields = ("patient__email", "therapist__email", "content")

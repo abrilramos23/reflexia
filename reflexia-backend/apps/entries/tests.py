@@ -245,25 +245,57 @@ class TherapistEntriesAndQuestionsTests(APITestCase):
         self.assertEqual(response.data[0]["patient_id"], str(self.patient.pk))
         self.assertEqual(response.data[0]["patient_name"], "Paula Sanchez")
 
-    def test_therapist_can_add_and_list_private_notes(self):
+    def test_therapist_can_add_and_list_private_notes_for_assigned_patient(self):
         self.client.force_authenticate(user=self.therapist)
 
         create_response = self.client.post(
-            f"/api/entries/patients/{self.patient.pk}/{self.entry.pk}/notes/",
+            f"/api/entries/patients/{self.patient.pk}/notes/",
             {"content": "Valorar si hi ha un patró d'evitació després de la propera sessió."},
             format="json",
         )
-        list_response = self.client.get(f"/api/entries/patients/{self.patient.pk}/{self.entry.pk}/notes/")
+        list_response = self.client.get(f"/api/entries/patients/{self.patient.pk}/notes/")
 
         self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(PrivateNote.objects.count(), 1)
+        self.assertEqual(PrivateNote.objects.first().patient, self.patient)
         self.assertEqual(list_response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(list_response.data), 1)
         self.assertEqual(list_response.data[0]["content"], "Valorar si hi ha un patró d'evitació després de la propera sessió.")
 
+    def test_therapist_can_update_and_delete_private_note_for_assigned_patient(self):
+        note = PrivateNote.objects.create(
+            therapist=self.therapist,
+            patient=self.patient,
+            content="Nota inicial",
+        )
+        self.client.force_authenticate(user=self.therapist)
+
+        update_response = self.client.patch(
+            f"/api/entries/patients/{self.patient.pk}/notes/{note.pk}/",
+            {"content": "Nota revisada"},
+            format="json",
+        )
+        delete_response = self.client.delete(f"/api/entries/patients/{self.patient.pk}/notes/{note.pk}/")
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.data["note"]["content"], "Nota revisada")
+        self.assertEqual(delete_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(PrivateNote.objects.filter(pk=note.pk).exists())
+
     def test_other_therapist_cannot_access_private_notes_of_unassigned_patient(self):
+        note = PrivateNote.objects.create(
+            therapist=self.therapist,
+            patient=self.patient,
+            content="Nota privada",
+        )
         self.client.force_authenticate(user=self.other_therapist)
 
-        response = self.client.get(f"/api/entries/patients/{self.patient.pk}/{self.entry.pk}/notes/")
+        list_response = self.client.get(f"/api/entries/patients/{self.patient.pk}/notes/")
+        update_response = self.client.patch(
+            f"/api/entries/patients/{self.patient.pk}/notes/{note.pk}/",
+            {"content": "Intent d'edició"},
+            format="json",
+        )
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(list_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(update_response.status_code, status.HTTP_404_NOT_FOUND)
