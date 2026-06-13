@@ -367,8 +367,12 @@ export function AlertDetailPage() {
               <>
                 <div className="field-group">
                   <label htmlFor="notification-justification">Justificació per als contactes</label>
+                  <p id="notification-justification-note" className="muted">
+                    La normativa exigeix registrar el motiu clínic abans d&apos;avisar els contactes.
+                  </p>
                   <textarea
                     id="notification-justification"
+                    aria-describedby="notification-justification-note"
                     value={notificationJustification}
                     onChange={(e) => {
                       setNotificationError('')

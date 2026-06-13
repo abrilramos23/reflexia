@@ -169,6 +169,11 @@ describe('AlertDetailPage', () => {
     const textarea = within(notificationSection).getByLabelText('Justificació per als contactes')
     const checkbox = within(notificationSection).getByRole('checkbox', { name: /Maria Perez/ })
 
+    expect(
+      within(notificationSection).getByText(
+        'La normativa exigeix registrar el motiu clínic abans d\'avisar els contactes.',
+      ),
+    ).toBeInTheDocument()
     expect(feedback.compareDocumentPosition(textarea) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(textarea).toHaveValue('')
     expect(checkbox).not.toBeChecked()
