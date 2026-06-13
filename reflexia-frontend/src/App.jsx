@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import './App.css'
 import { PublicRoute } from './components/PublicRoute.jsx'
 import { useAuth } from './context/AuthContext.jsx'
@@ -38,6 +39,16 @@ function LoadingScreen() {
   )
 }
 
+export function ScrollToTop() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [pathname])
+
+  return null
+}
+
 function App() {
   const { user, isClinicAdmin, isBootstrapping } = useAuth()
 
@@ -46,182 +57,185 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        }
-      />
-      <Route path="/activate-account" element={<ActivateAccountPage />} />
-      <Route
-        path="/register/therapist"
-        element={
-          <PublicRoute>
-            <TherapistRegisterPage />
-          </PublicRoute>
-        }
-      />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route
-        path="/2fa"
-        element={
-          <PublicRoute>
-            <TwoFactorPage />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/consent"
-        element={
-          <ProtectedLayout hideSidebar={true}>
-            <ConsentPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedLayout>
-            <DashboardPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/entries"
-        element={
-          <ProtectedLayout>
-            <EntriesPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/entries/new"
-        element={
-          <ProtectedLayout>
-            <EntryEditorPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/entries/:entryId"
-        element={
-          <ProtectedLayout>
-            <EntryDetailPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/entries/:entryId/edit"
-        element={
-          <ProtectedLayout>
-            <EntryEditorPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <ProtectedLayout>
-            <ProfilePage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/support"
-        element={
-          <ProtectedLayout>
-            <SupportTherapistsPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/contacts"
-        element={
-          <ProtectedLayout>
-            <TrustedContactsPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/patients"
-        element={
-          <ProtectedLayout>
-            <PatientsPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/patients/:patientId"
-        element={
-          <ProtectedLayout>
-            <PatientDetailPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/patients/:patientId/entries/:entryId"
-        element={
-          <ProtectedLayout>
-            <TherapistEntryDetailPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/patients/:patientId/questions/:questionId"
-        element={
-          <ProtectedLayout>
-            <TherapistQuestionDetailPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/questions"
-        element={
-          <ProtectedLayout>
-            <TherapistQuestionsPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/alerts"
-        element={
-          <ProtectedLayout>
-            <AlertsPage />
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/alerts/:alertId"
-        element={
-          <ProtectedLayout>
-            <AlertDetailPage />
-          </ProtectedLayout>
-        }
-      />
-      {/* Clinic Admin Specific Routes */}
-      <Route
-        path="/admin/therapists"
-        element={
-          <ProtectedLayout>
-            {isClinicAdmin ? <ClinicTherapistsPage /> : <Navigate to="/dashboard" replace />}
-          </ProtectedLayout>
-        }
-      />
-      <Route
-        path="/clinic"
-        element={
-          <ProtectedLayout>
-            {isClinicAdmin ? <ClinicAdminDashboard /> : <Navigate to="/dashboard" replace />}
-          </ProtectedLayout>
-        }
-      />
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          }
+        />
+        <Route path="/activate-account" element={<ActivateAccountPage />} />
+        <Route
+          path="/register/therapist"
+          element={
+            <PublicRoute>
+              <TherapistRegisterPage />
+            </PublicRoute>
+          }
+        />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route
+          path="/2fa"
+          element={
+            <PublicRoute>
+              <TwoFactorPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/consent"
+          element={
+            <ProtectedLayout hideSidebar={true}>
+              <ConsentPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedLayout>
+              <DashboardPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/entries"
+          element={
+            <ProtectedLayout>
+              <EntriesPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/entries/new"
+          element={
+            <ProtectedLayout>
+              <EntryEditorPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/entries/:entryId"
+          element={
+            <ProtectedLayout>
+              <EntryDetailPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/entries/:entryId/edit"
+          element={
+            <ProtectedLayout>
+              <EntryEditorPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedLayout>
+              <ProfilePage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/support"
+          element={
+            <ProtectedLayout>
+              <SupportTherapistsPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/contacts"
+          element={
+            <ProtectedLayout>
+              <TrustedContactsPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/patients"
+          element={
+            <ProtectedLayout>
+              <PatientsPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/patients/:patientId"
+          element={
+            <ProtectedLayout>
+              <PatientDetailPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/patients/:patientId/entries/:entryId"
+          element={
+            <ProtectedLayout>
+              <TherapistEntryDetailPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/patients/:patientId/questions/:questionId"
+          element={
+            <ProtectedLayout>
+              <TherapistQuestionDetailPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/questions"
+          element={
+            <ProtectedLayout>
+              <TherapistQuestionsPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/alerts"
+          element={
+            <ProtectedLayout>
+              <AlertsPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/alerts/:alertId"
+          element={
+            <ProtectedLayout>
+              <AlertDetailPage />
+            </ProtectedLayout>
+          }
+        />
+        {/* Clinic Admin Specific Routes */}
+        <Route
+          path="/admin/therapists"
+          element={
+            <ProtectedLayout>
+              {isClinicAdmin ? <ClinicTherapistsPage /> : <Navigate to="/dashboard" replace />}
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/clinic"
+          element={
+            <ProtectedLayout>
+              {isClinicAdmin ? <ClinicAdminDashboard /> : <Navigate to="/dashboard" replace />}
+            </ProtectedLayout>
+          }
+        />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </>
   )
 }
 
