@@ -99,6 +99,7 @@ class JournalEditorContextView(PatientEntriesMixin, APIView):
         active_question = (
             TherapistQuestion.objects.filter(patient=patient, is_active=True)
             .select_related("therapist", "patient")
+            .order_by("created_at", "pk")
             .first()
         )
         return Response(
@@ -487,7 +488,6 @@ class TherapistPatientQuestionsView(TherapistPatientMixin, APIView):
         serializer = TherapistQuestionCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        TherapistQuestion.objects.filter(patient=patient, is_active=True).update(is_active=False)
         question = serializer.save(
             patient=patient,
             therapist=request.user.therapist_profile,

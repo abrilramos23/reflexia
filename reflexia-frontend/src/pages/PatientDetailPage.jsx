@@ -96,7 +96,7 @@ export function PatientDetailPage() {
 
     try {
       const response = await createPatientQuestion(patientId, { text: newQuestionText })
-      setQuestions((currentQuestions) => [response.question, ...currentQuestions.map((question) => ({ ...question, is_active: false, resolved: true }))])
+      setQuestions((currentQuestions) => [response.question, ...currentQuestions])
       setNewQuestionText('')
       setQuestionMessage(response.message)
       setActiveTab('questions')

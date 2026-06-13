@@ -140,7 +140,7 @@ class JournalEntryDraftSerializer(serializers.ModelSerializer):
             return value
 
         try:
-            question = TherapistQuestion.objects.get(pk=value, patient=patient)
+            question = TherapistQuestion.objects.get(pk=value, patient=patient, is_active=True)
         except TherapistQuestion.DoesNotExist as exc:
             raise serializers.ValidationError("La pregunta activa indicada no existeix.") from exc
 
@@ -196,6 +196,7 @@ class JournalEntryDraftSerializer(serializers.ModelSerializer):
         return (
             TherapistQuestion.objects.filter(patient=patient, is_active=True)
             .select_related("therapist", "patient")
+            .order_by("created_at", "pk")
             .first()
         )
 

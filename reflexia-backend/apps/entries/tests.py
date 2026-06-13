@@ -53,6 +53,21 @@ class EntriesPatientFlowTests(APITestCase):
         self.assertEqual(response.data["active_question"]["question"], self.active_question.question)
         self.assertFalse(response.data["active_question"]["resolved"])
 
+    def test_patient_editor_context_returns_oldest_active_question(self):
+        newer_question = TherapistQuestion.objects.create(
+            therapist=self.therapist,
+            patient=self.patient,
+            question="Quina emoció vols observar avui?",
+            is_active=True,
+        )
+        self.client.force_authenticate(user=self.patient)
+
+        response = self.client.get(self.context_url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["active_question"]["id"], str(self.active_question.pk))
+        self.assertNotEqual(response.data["active_question"]["id"], str(newer_question.pk))
+
     def test_patient_can_create_non_empty_draft_and_resolve_active_question(self):
         self.client.force_authenticate(user=self.patient)
 
@@ -69,6 +84,37 @@ class EntriesPatientFlowTests(APITestCase):
         self.assertEqual(entry.therapist_question, self.active_question)
         self.active_question.refresh_from_db()
         self.assertFalse(self.active_question.is_active)
+
+    def test_patient_entries_resolve_active_questions_from_oldest_to_newest(self):
+        newer_question = TherapistQuestion.objects.create(
+            therapist=self.therapist,
+            patient=self.patient,
+            question="Quina emoció vols observar avui?",
+            is_active=True,
+        )
+        self.client.force_authenticate(user=self.patient)
+
+        first_response = self.client.post(
+            self.entries_url,
+            {"content": "Primer responc la pregunta més antiga."},
+            format="json",
+        )
+        second_response = self.client.post(
+            self.entries_url,
+            {"content": "Ara responc la següent pregunta pendent."},
+            format="json",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.status_code, status.HTTP_201_CREATED)
+        first_entry = JournalEntry.objects.get(content="Primer responc la pregunta més antiga.")
+        second_entry = JournalEntry.objects.get(content="Ara responc la següent pregunta pendent.")
+        self.assertEqual(first_entry.therapist_question, self.active_question)
+        self.assertEqual(second_entry.therapist_question, newer_question)
+        self.active_question.refresh_from_db()
+        newer_question.refresh_from_db()
+        self.assertFalse(self.active_question.is_active)
+        self.assertFalse(newer_question.is_active)
 
     def test_patient_cannot_create_empty_entry(self):
         self.client.force_authenticate(user=self.patient)
@@ -224,8 +270,9 @@ class TherapistEntriesAndQuestionsTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.question.refresh_from_db()
-        self.assertFalse(self.question.is_active)
+        self.assertTrue(self.question.is_active)
         self.assertEqual(response.data["question"]["question"], "Quina situació t'ha generat més ansietat avui?")
+        self.assertEqual(TherapistQuestion.objects.filter(patient=self.patient, is_active=True).count(), 2)
 
     def test_therapist_all_questions_lists_only_own_questions_with_patient_context(self):
         other_question = TherapistQuestion.objects.create(
