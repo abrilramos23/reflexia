@@ -248,6 +248,77 @@ class AlertAPITestCase(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_support_therapist_can_fetch_high_escalated_pending_alert_read_only(self):
+        support_contact = AssociatedContact.objects.create(
+            name="Maria Perez",
+            email="maria-support@example.com",
+            relation="Sister",
+        )
+        DefaultContact.objects.create(patient=self.patient, contact=support_contact, is_default=True)
+        SupportTherapist.objects.create(
+            therapist=self.therapist,
+            support=self.other_therapist,
+            status=SupportTherapist.Status.ACCEPTED,
+        )
+        self.alert.escalation_level = 3
+        self.alert.save(update_fields=["escalation_level"])
+        self.client.force_authenticate(user=self.other_therapist)
+
+        response = self.client.get(f"/api/alerts/{self.alert.pk}/", format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.alert.pk))
+        self.assertFalse(response.data["can_manage"])
+        self.assertEqual(response.data["associated_contacts"], [])
+        self.assertEqual(response.data["patient_name"], "Paula Sanchez")
+        self.assertEqual(response.data["entry_content"], "Avui m'he sentit sobrepassada.")
+
+    def test_support_therapist_cannot_fetch_alert_until_it_is_high_escalated_and_pending(self):
+        SupportTherapist.objects.create(
+            therapist=self.therapist,
+            support=self.other_therapist,
+            status=SupportTherapist.Status.ACCEPTED,
+        )
+        self.client.force_authenticate(user=self.other_therapist)
+
+        response = self.client.get(f"/api/alerts/{self.alert.pk}/", format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.alert.escalation_level = 3
+        self.alert.status = Alert.Status.VALIDATED
+        self.alert.save(update_fields=["escalation_level", "status"])
+
+        response = self.client.get(f"/api/alerts/{self.alert.pk}/", format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_support_therapist_cannot_manage_or_list_supported_alerts(self):
+        SupportTherapist.objects.create(
+            therapist=self.therapist,
+            support=self.other_therapist,
+            status=SupportTherapist.Status.ACCEPTED,
+        )
+        self.alert.escalation_level = 3
+        self.alert.save(update_fields=["escalation_level"])
+        self.client.force_authenticate(user=self.other_therapist)
+
+        list_response = self.client.get("/api/alerts/", format="json")
+        patch_response = self.client.patch(
+            f"/api/alerts/{self.alert.pk}/",
+            {
+                "action": "VALIDATE",
+                "justification": "Cal activar suport proper.",
+            },
+            format="json",
+        )
+
+        alert_ids = {item["id"] for item in list_response.data}
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertNotIn(str(self.alert.pk), alert_ids)
+        self.assertIn(str(self.other_alert.pk), alert_ids)
+        self.assertEqual(patch_response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_patient_cannot_use_therapist_alert_list(self):
         self.client.force_authenticate(user=self.patient)
 

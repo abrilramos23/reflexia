@@ -83,9 +83,11 @@ export function AlertDetailPage() {
           setSelectedContacts(defaultContacts)
         }
 
-        const historyResponse = await api.get(`/alerts/${alertId}/history/`)
-        if (!isCancelled) {
-          setNotifications(historyResponse.data)
+        if (response.data.can_manage !== false) {
+          const historyResponse = await api.get(`/alerts/${alertId}/history/`)
+          if (!isCancelled) {
+            setNotifications(historyResponse.data)
+          }
         }
       } catch (err) {
         if (!isCancelled) {
@@ -216,6 +218,7 @@ export function AlertDetailPage() {
   }
 
   const canNotify = alert.status === 'validated'
+  const canManage = alert.can_manage !== false
   const associatedContacts = alert.associated_contacts ?? []
 
   return (
@@ -267,7 +270,7 @@ export function AlertDetailPage() {
               <span className="status-pill dashboard-status-pill--muted">
                 {formatAlertDate(alert.entry_date)}
               </span>
-              {alert.patient_id && alert.entry_id ? (
+              {canManage && alert.patient_id && alert.entry_id ? (
                 <Link
                   className="button-secondary alert-entry-review-link"
                   style={{ textDecoration: 'none' }}
@@ -297,7 +300,7 @@ export function AlertDetailPage() {
           </div>
         </section>
 
-        {alert.status === 'pending' ? (
+        {canManage && alert.status === 'pending' ? (
           <section className="screen-card dashboard-panel profile-card--wide">
             <div className="panel-heading">
               <p className="eyebrow">Validació</p>
@@ -355,7 +358,7 @@ export function AlertDetailPage() {
           </section>
         ) : null}
 
-        {canNotify ? (
+        {canManage && canNotify ? (
           <section className="screen-card dashboard-panel profile-card--wide">
             <div className="panel-heading">
               <p className="eyebrow">Notificar contactes</p>

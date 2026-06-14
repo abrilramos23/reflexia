@@ -89,6 +89,7 @@ class AlertDetailSerializer(serializers.ModelSerializer):
     validating_therapist_name = serializers.SerializerMethodField()
     risk_label = serializers.CharField(source="get_risk_level_display", read_only=True)
     status_label = serializers.CharField(source="get_status_display", read_only=True)
+    can_manage = serializers.SerializerMethodField()
 
     class Meta:
         model = Alert
@@ -115,6 +116,7 @@ class AlertDetailSerializer(serializers.ModelSerializer):
             "justification",
             "validating_therapist_name",
             "associated_contacts",
+            "can_manage",
         )
         read_only_fields = fields
 
@@ -134,6 +136,9 @@ class AlertDetailSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(AssociatedContactForAlertSerializer(many=True))
     def get_associated_contacts(self, obj):
+        if self.context.get("can_manage", True) is False:
+            return []
+
         contacts = obj.patient.default_contact_links.select_related("contact")
         contact_list = [link.contact for link in contacts]
         return AssociatedContactForAlertSerializer(contact_list, many=True).data
@@ -142,6 +147,9 @@ class AlertDetailSerializer(serializers.ModelSerializer):
         if obj.validating_therapist:
             return f"{obj.validating_therapist.first_name} {obj.validating_therapist.last_name}"
         return None
+
+    def get_can_manage(self, obj) -> bool:
+        return self.context.get("can_manage", True)
 
 
 class AlertValidationSerializer(serializers.Serializer):

@@ -98,6 +98,25 @@ describe('AlertDetailPage', () => {
     expect(screen.getByText('Enviada')).toBeInTheDocument()
   })
 
+  it('renders support access as read-only without history or internal entry link', async () => {
+    const { api } = renderAlertDetailPage({
+      alert: {
+        ...baseAlert,
+        can_manage: false,
+      },
+    })
+
+    expect(await screen.findByRole('heading', { name: 'Paula Sanchez' })).toBeInTheDocument()
+    expect(screen.getByText('paula@example.com')).toBeInTheDocument()
+    expect(screen.getByText('Em sento sobrepassada avui.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Revisar entrada' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Validar alerta' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Descartar alerta' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Historial')).not.toBeInTheDocument()
+    expect(api.get).toHaveBeenCalledTimes(1)
+    expect(api.get).toHaveBeenCalledWith('/alerts/alert-1/')
+  })
+
   it('validates a pending alert through the API and shows feedback', async () => {
     const { api } = renderAlertDetailPage()
 

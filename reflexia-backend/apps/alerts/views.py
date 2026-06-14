@@ -18,9 +18,9 @@ from apps.alerts.serializers import (
     AlertNotifyContactsSerializer,
     AlertNotificationSerializer,
 )
-from apps.alerts.services import send_alert_email_to_contact
+from apps.alerts.services import HIGH_ESCALATION_LEVEL, send_alert_email_to_contact
 from apps.users.permissions import IsTherapistUser
-from apps.contacts.models import DefaultContact
+from apps.contacts.models import DefaultContact, SupportTherapist
 
 
 class AlertListView(APIView):
@@ -68,14 +68,36 @@ class AlertListView(APIView):
 class AlertDetailView(APIView):
     permission_classes = [IsTherapistUser]
 
-    def _get_alert_for_therapist(self, request, alert_id):
+    def _get_alert_for_therapist(self, request, alert_id, *, allow_support_access=False):
         therapist = request.user.therapist_profile
-        return get_object_or_404(
-            Alert,
-            id=alert_id,
+
+        direct_access = Q(
             patient__therapist_links__therapist=therapist,
             patient__therapist_links__is_active=True,
         )
+
+        access_filter = direct_access
+        if allow_support_access:
+            support_access = Q(
+                status=Alert.Status.PENDING,
+                escalation_level__gte=HIGH_ESCALATION_LEVEL,
+                patient__therapist_links__is_active=True,
+                patient__therapist_links__therapist__support_therapist_links__support=therapist,
+                patient__therapist_links__therapist__support_therapist_links__status=SupportTherapist.Status.ACCEPTED,
+            )
+            access_filter |= support_access
+
+        alert = get_object_or_404(
+            Alert.objects.select_related(
+                "emotional_analysis",
+                "emotional_analysis__entry",
+                "patient",
+                "validating_therapist",
+            ).filter(access_filter).distinct(),
+            id=alert_id,
+        )
+        alert.can_manage = Alert.objects.filter(pk=alert.pk).filter(direct_access).exists()
+        return alert
 
     @extend_schema(
         tags=["Alerts"],
@@ -84,8 +106,8 @@ class AlertDetailView(APIView):
         responses={200: AlertDetailSerializer},
     )
     def get(self, request, alert_id):
-        alert = self._get_alert_for_therapist(request, alert_id)
-        serializer = AlertDetailSerializer(alert)
+        alert = self._get_alert_for_therapist(request, alert_id, allow_support_access=True)
+        serializer = AlertDetailSerializer(alert, context={"can_manage": alert.can_manage})
         return Response(serializer.data)
 
     @extend_schema(
